@@ -22,5 +22,8 @@ No application runtime code is included in this phase (by design).
 | 13 | [13-settings-storage.md](13-settings-storage.md) | Settings & secrets |
 | 14 | [14-plugin-architecture.md](14-plugin-architecture.md) | Plugin SPI |
 | 15 | [../roadmap/development-roadmap.md](../roadmap/development-roadmap.md) | Phased roadmap |
+| 16 | [16-quantitative-intelligence-architecture.md](16-quantitative-intelligence-architecture.md) | **Quantitative intelligence layer** — six research engines |
+
+> **North star:** Doc 16 reframes the product as a quantitative hedge-fund research platform. Optimisation is a corpus input; the primary artifact is an evidence-backed `RecommendationDocket`.
 
 Start at the [root README](../../README.md) for product framing.

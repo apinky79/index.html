@@ -8,15 +8,21 @@
 
 ## What this product is
 
-Market Intelligence AI helps algorithmic traders:
+Market Intelligence AI is organised like a **quantitative hedge fund research platform**.
 
-1. Determine the **current market regime**
-2. Analyse price, structure, macro, and historical optimisation data
-3. Recommend **robust** strategy parameter sets for a trading bot
-4. **Explain** every recommendation
-5. Learn from past optimisation outcomes while **avoiding curve fitting**
+It helps algorithmic traders:
 
-It is **not** a price-prediction engine. It is a decision-support and robustness platform.
+1. Classify the **current market regime** (with supporting and contradicting evidence)
+2. Find **historically similar** market periods
+3. Mine **Strategy DNA** — robust parameter families across regimes (not peak-profit trials)
+4. Stress-test candidates with a full **robustness** battery
+5. Issue **evidence-backed parameter range recommendations** for future conditions
+6. **Learn** by grading every recommendation against realised outcomes
+
+It is **not** a backtester product and **not** a price-prediction engine.  
+Optimisation imports are research inputs; the intellectual product is the recommendation docket.
+
+See the quantitative intelligence layer: [docs/architecture/16-quantitative-intelligence-architecture.md](docs/architecture/16-quantitative-intelligence-architecture.md).
 
 ---
 
@@ -39,6 +45,7 @@ It is **not** a price-prediction engine. It is a decision-support and robustness
 | 13 | Settings storage design | [docs/architecture/13-settings-storage.md](docs/architecture/13-settings-storage.md) |
 | 14 | Plugin architecture | [docs/architecture/14-plugin-architecture.md](docs/architecture/14-plugin-architecture.md) |
 | 15 | Development roadmap | [docs/roadmap/development-roadmap.md](docs/roadmap/development-roadmap.md) |
+| 16 | Quantitative intelligence layer | [docs/architecture/16-quantitative-intelligence-architecture.md](docs/architecture/16-quantitative-intelligence-architecture.md) |
 
 Supporting:
 
@@ -51,11 +58,12 @@ Supporting:
 
 | Principle | Meaning |
 |---|---|
-| Modular | Every capability is a replaceable module behind a stable contract |
+| Research-platform organisation | Engines mirror hedge-fund desks (regime, analogues, DNA, robustness, recommendation, learning) |
+| Modular | Every engine is replaceable behind versioned research contracts |
 | Offline-first | Local SQLite + local analytics; cloud is an optional future layer |
-| Robustness over fit | Recommendations favour stable plateaus, not peak backtest equity |
-| Explainability | Every recommendation ships with evidence, regime context, and caveats |
-| Expandable | Economic calendar, ML, brokers, chat, cloud sync plug in without core rewrites |
+| Robustness over fit | DNA families and robustness gates outrank peak backtest equity |
+| Evidence or abstain | No recommendation without an EvidenceGraph; abstention is valid |
+| Expandable | Macro, on-chain, brokers, chat, cloud sync plug in without core rewrites |
 
 ---
 
