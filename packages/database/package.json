@@ -1,8 +1,8 @@
 {
   "name": "@marketdna/database",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
-  "description": "Database access boundary for MarketDNA (Phase 1A stub — no schema)",
+  "description": "MarketDNA persistence — optimisation import store (SQLite metadata index + NDJSON trials)",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -24,10 +24,13 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@marketdna/domain": "workspace:*",
+    "@marketdna/import-engine": "workspace:*",
     "@marketdna/shared": "workspace:*"
   },
   "devDependencies": {
     "@marketdna/typescript-config": "workspace:*",
+    "@types/node": "^22.10.2",
     "rimraf": "^6.0.1",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8"

@@ -6,6 +6,7 @@ import type {
   Probability,
   Score,
 } from './catalog.js';
+import type { TrialMetrics } from './metrics.js';
 import type {
   DocketStatus,
   EntityId,
@@ -74,6 +75,13 @@ export interface OptimisationRun {
   dataFingerprint: string;
   range: DateRange;
   artifactDir: string;
+  /** Optional display metadata captured at import time. */
+  strategyName?: string;
+  instrumentSymbol?: string;
+  timeframeCode?: string;
+  trialCount?: number;
+  sourceFileName?: string;
+  importedAt?: Instant;
 }
 
 /** Single evaluated parameter point. */
@@ -82,6 +90,9 @@ export interface OptimisationTrial {
   runId: EntityId;
   parameters: ParameterSet;
   constraintOk: boolean;
+  /** Pass / trial ordinal when provided by the source format. */
+  pass?: number;
+  metrics?: TrialMetrics;
 }
 
 /** Robust parameter family — core IP shape (types only). */

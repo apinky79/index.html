@@ -1,0 +1,4 @@
+pass,param_emaFast,param_emaSlow,param_atrMult,param_rr,fitness,net_profit,trades,profit_factor,max_drawdown,symbol,timeframe,strategy
+1,9,21,1.0,2.0,1.7,1500,80,1.5,0.12,XAUUSD,H1,GoldPulse
+2,11,25,1.3,2.5,1.4,1100,65,1.3,0.18,XAUUSD,H1,GoldPulse
+3,8,18,1.1,2.2,1.9,2100,102,1.7,0.11,XAUUSD,H1,GoldPulse

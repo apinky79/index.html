@@ -1,0 +1,38 @@
+{
+  "name": "@marketdna/import-engine",
+  "version": "0.2.0",
+  "private": true,
+  "description": "MarketDNA Import Engine — parse, validate, and map optimisation files to the domain model",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "fixtures"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "rimraf dist coverage",
+    "test": "vitest run",
+    "lint": "eslint .",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@marketdna/domain": "workspace:*",
+    "@marketdna/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@marketdna/typescript-config": "workspace:*",
+    "@types/node": "^22.10.2",
+    "rimraf": "^6.0.1",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "format": "marketdna.optimisation",
+  "strategyName": "NativeJsonBot",
+  "strategyId": "strat_native_json_bot",
+  "instrumentSymbol": "NAS100",
+  "timeframe": "H1",
+  "schemaId": "native_json_bot.params",
+  "range": {
+    "start": "2022-01-01T00:00:00.000Z",
+    "end": "2023-01-01T00:00:00.000Z"
+  },
+  "trials": [
+    {
+      "pass": 1,
+      "parameters": { "lookback": 20, "threshold": 0.5 },
+      "metrics": { "fitness": 1.2, "profitFactor": 1.4, "trades": 40 },
+      "constraintOk": true
+    },
+    {
+      "pass": 2,
+      "parameters": { "lookback": 30, "threshold": 0.7 },
+      "metrics": { "fitness": 1.5, "profitFactor": 1.6, "trades": 55 },
+      "constraintOk": true
+    }
+  ]
+}

@@ -1,22 +1,18 @@
 # @marketdna/database
 
-Persistence boundary for MarketDNA.
+Persistence for MarketDNA.
 
-## Phase 1A scope
+## Phase 2
 
-- Package boundary and lifecycle stub only
-- **No Prisma schema**
-- **No migrations**
-- **No domain table definitions**
+Implements the **optimisation import store**:
 
-Later phases introduce SQLite + Prisma per `docs/architecture/04-database-design.md`
-and `docs/architecture/12-local-database.md`.
+- Workspace metadata index (`workspace-index.json`)
+- Per-run `run.json` + `trials.ndjson` artifacts (scalable append / paginated read)
+- Import history ledger
 
-## API (stub)
+Aligned with architecture polyglot storage:
 
-```ts
-import { createDatabaseClient } from '@marketdna/database';
+- Metadata + pointers as the system of record index
+- Bulk trials as columnar-friendly NDJSON artifacts (Parquet-ready layout)
 
-const db = createDatabaseClient({ workspacePath: '/tmp/ws' });
-await db.ping(); // throws until Phase 1B+ wiring
-```
+Prisma schema for the full domain remains future work; this package now serves import browsing.

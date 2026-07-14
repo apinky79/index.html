@@ -1,0 +1,12 @@
+{
+  "Chart": {
+    "Symbol": "BTCUSD",
+    "Period": "h1"
+  },
+  "Parameters": {
+    "emaFast": "10",
+    "emaSlow": "21",
+    "atrMult": "1.25",
+    "rr": "2.0"
+  }
+}

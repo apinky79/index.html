@@ -1,0 +1,51 @@
+{
+  "RobotName": "SampleTrendBot",
+  "Symbol": "EURUSD",
+  "Period": "H1",
+  "StartDate": "2023-01-01",
+  "EndDate": "2024-01-01",
+  "Passes": [
+    {
+      "Pass": 1,
+      "Fitness": 1.84,
+      "NetProfit": 2450.5,
+      "Trades": 120,
+      "ProfitFactor": 1.62,
+      "MaxEquityDrawdownPercent": 12.4,
+      "Parameters": {
+        "emaFast": 9,
+        "emaSlow": 21,
+        "atrMult": 1.2,
+        "rr": 2.0
+      }
+    },
+    {
+      "Pass": 2,
+      "Fitness": 1.55,
+      "NetProfit": 1980.0,
+      "Trades": 98,
+      "ProfitFactor": 1.41,
+      "MaxEquityDrawdownPercent": 15.1,
+      "Parameters": {
+        "emaFast": 12,
+        "emaSlow": 26,
+        "atrMult": 1.4,
+        "rr": 2.5
+      }
+    },
+    {
+      "Pass": 3,
+      "Fitness": 2.01,
+      "NetProfit": 3120.75,
+      "Trades": 143,
+      "ProfitFactor": 1.88,
+      "MaxEquityDrawdownPercent": 9.8,
+      "Parameters": {
+        "emaFast": 10,
+        "emaSlow": 24,
+        "atrMult": 1.1,
+        "rr": 2.2
+      }
+    }
+  ]
+}

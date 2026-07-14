@@ -7,7 +7,7 @@ import { readEnv, requireEnv } from './env.js';
 describe('constants', () => {
   it('exposes MarketDNA identity', () => {
     expect(APP_NAME).toBe('MarketDNA');
-    expect(APP_VERSION).toBe('0.1.0');
+    expect(APP_VERSION).toBe('0.2.0');
     expect(APP_INIT_MESSAGE).toBe('Application Initialised Successfully');
   });
 });
@@ -28,7 +28,7 @@ describe('loadAppConfig', () => {
   it('applies defaults', () => {
     const config = loadAppConfig({});
     expect(config.appName).toBe('MarketDNA');
-    expect(config.appVersion).toBe('0.1.0');
+    expect(config.appVersion).toBe('0.2.0');
     expect(config.nodeEnv).toBe('development');
     expect(config.logLevel).toBe('info');
   });

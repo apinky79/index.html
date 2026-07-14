@@ -36,5 +36,7 @@ export type {
   StrategyDNA,
 } from './research.js';
 
+export type { TrialMetrics } from './metrics.js';
+
 export { V1_INSTRUMENT_SYMBOLS, type V1InstrumentSymbol } from './meta.js';
 export { APP_NAME, APP_VERSION } from './meta.js';

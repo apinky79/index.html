@@ -1,21 +1,18 @@
 # @marketdna/desktop
 
-Electron + React desktop shell for MarketDNA.
+Electron + React desktop app for MarketDNA.
 
-## Phase 1A
+## Phase 2
 
-Blank application shell only:
+Import Engine workbench:
 
-- MarketDNA
-- Version 0.1.0
-- Application Initialised Successfully
-
-No feature UI, charts, recommendations, or data ingestion.
-
-## Scripts
+- Drag and drop / file browser for `.optres`, `.cbotset`, `.csv`, `.json`
+- Import queue + progress
+- Import history
+- Browse `OptimisationRun` metadata and paginated `OptimisationTrial` rows
 
 ```bash
 pnpm --filter @marketdna/desktop dev
-pnpm --filter @marketdna/desktop build
-pnpm --filter @marketdna/desktop test
 ```
+
+Sample file: `data/samples/optimisation/sample.optres`
