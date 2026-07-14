@@ -46,6 +46,7 @@ See the quantitative intelligence layer: [docs/architecture/16-quantitative-inte
 | 14 | Plugin architecture | [docs/architecture/14-plugin-architecture.md](docs/architecture/14-plugin-architecture.md) |
 | 15 | Development roadmap | [docs/roadmap/development-roadmap.md](docs/roadmap/development-roadmap.md) |
 | 16 | Quantitative intelligence layer | [docs/architecture/16-quantitative-intelligence-architecture.md](docs/architecture/16-quantitative-intelligence-architecture.md) |
+| 17 | Domain model (ubiquitous language) | [docs/architecture/17-domain-model.md](docs/architecture/17-domain-model.md) |
 
 Supporting:
 
