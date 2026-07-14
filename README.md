@@ -1,99 +1,108 @@
-# Market Intelligence AI
+# MarketDNA — Phase 1A Development Foundation
 
-**Commercial-grade desktop platform for market regime analysis and robust trading parameter recommendation.**
+Production-ready monorepo scaffold for the MarketDNA desktop research platform.
 
-> This repository currently contains the **foundation architecture and implementation plan only**. No application runtime code has been generated yet, by design.
-
----
-
-## What this product is
-
-Market Intelligence AI is organised like a **quantitative hedge fund research platform**.
-
-It helps algorithmic traders:
-
-1. Classify the **current market regime** (with supporting and contradicting evidence)
-2. Find **historically similar** market periods
-3. Mine **Strategy DNA** — robust parameter families across regimes (not peak-profit trials)
-4. Stress-test candidates with a full **robustness** battery
-5. Issue **evidence-backed parameter range recommendations** for future conditions
-6. **Learn** by grading every recommendation against realised outcomes
-
-It is **not** a backtester product and **not** a price-prediction engine.  
-Optimisation imports are research inputs; the intellectual product is the recommendation docket.
-
-See the quantitative intelligence layer: [docs/architecture/16-quantitative-intelligence-architecture.md](docs/architecture/16-quantitative-intelligence-architecture.md).
+Architecture documentation remains authoritative under `docs/architecture/` (**frozen**).
 
 ---
 
-## Documentation index
+## Phase 1A scope
 
-| # | Deliverable | Document |
-|---|---|---|
-| 1 | Full software architecture | [docs/architecture/01-system-architecture.md](docs/architecture/01-system-architecture.md) |
-| 2 | Folder structure | [docs/architecture/02-folder-structure.md](docs/architecture/02-folder-structure.md) |
-| 3 | Module breakdown | [docs/architecture/03-module-breakdown.md](docs/architecture/03-module-breakdown.md) |
-| 4 | Database design | [docs/architecture/04-database-design.md](docs/architecture/04-database-design.md) |
-| 5 | Entity relationship diagram | [docs/architecture/05-entity-relationship.md](docs/architecture/05-entity-relationship.md) |
-| 6 | API architecture | [docs/architecture/06-api-architecture.md](docs/architecture/06-api-architecture.md) |
-| 7 | Desktop application architecture | [docs/architecture/07-desktop-architecture.md](docs/architecture/07-desktop-architecture.md) |
-| 8 | AI architecture | [docs/architecture/08-ai-architecture.md](docs/architecture/08-ai-architecture.md) |
-| 9 | Data ingestion architecture | [docs/architecture/09-data-ingestion.md](docs/architecture/09-data-ingestion.md) |
-| 10 | Optimisation engine architecture | [docs/architecture/10-optimisation-engine.md](docs/architecture/10-optimisation-engine.md) |
-| 11 | Recommendation engine architecture | [docs/architecture/11-recommendation-engine.md](docs/architecture/11-recommendation-engine.md) |
-| 12 | Local database design | [docs/architecture/12-local-database.md](docs/architecture/12-local-database.md) |
-| 13 | Settings storage design | [docs/architecture/13-settings-storage.md](docs/architecture/13-settings-storage.md) |
-| 14 | Plugin architecture | [docs/architecture/14-plugin-architecture.md](docs/architecture/14-plugin-architecture.md) |
-| 15 | Development roadmap | [docs/roadmap/development-roadmap.md](docs/roadmap/development-roadmap.md) |
-| 16 | Quantitative intelligence layer | [docs/architecture/16-quantitative-intelligence-architecture.md](docs/architecture/16-quantitative-intelligence-architecture.md) |
-| 17 | Domain model (ubiquitous language) | [docs/architecture/17-domain-model.md](docs/architecture/17-domain-model.md) |
+Repository & development foundation only:
 
-Supporting:
+- pnpm + Turborepo monorepo
+- Electron + React + Vite + Tailwind desktop shell
+- Shared packages: `shared`, `domain`, `database`, `analytics-client`
+- ESLint, Prettier, Vitest, TypeScript, GitHub Actions
+- Environment, configuration, and logging frameworks
 
-- [Tech stack rationale](docs/architecture/00-tech-stack.md)
-- [Architecture principles](docs/architecture/00-principles.md)
+**Not in Phase 1A:** database schema, business logic, Python analytics, optimisation, AI, recommendations, data ingestion, feature UI.
 
 ---
 
-## Design posture
+## Prerequisites
 
-| Principle | Meaning |
+- Node.js ≥ 20
+- pnpm 9.15.x (`corepack enable && corepack prepare pnpm@9.15.0 --activate`)
+
+---
+
+## Install
+
+```bash
+pnpm install
+```
+
+Copy environment template if needed:
+
+```bash
+cp .env.example .env
+```
+
+---
+
+## Build
+
+```bash
+pnpm build
+```
+
+Builds all packages and the desktop renderer + Electron main/preload.
+
+---
+
+## Test
+
+```bash
+pnpm test
+```
+
+---
+
+## Lint / typecheck / format
+
+```bash
+pnpm lint
+pnpm typecheck
+pnpm format:check
+```
+
+---
+
+## Run (desktop shell)
+
+```bash
+pnpm dev
+```
+
+Opens Electron displaying:
+
+```text
+MarketDNA
+Version 0.1.0
+Application Initialised Successfully
+```
+
+---
+
+## Workspace packages
+
+| Package | Role |
 |---|---|
-| Research-platform organisation | Engines mirror hedge-fund desks (regime, analogues, DNA, robustness, recommendation, learning) |
-| Modular | Every engine is replaceable behind versioned research contracts |
-| Offline-first | Local SQLite + local analytics; cloud is an optional future layer |
-| Robustness over fit | DNA families and robustness gates outrank peak backtest equity |
-| Evidence or abstain | No recommendation without an EvidenceGraph; abstention is valid |
-| Expandable | Macro, on-chain, brokers, chat, cloud sync plug in without core rewrites |
+| `@marketdna/shared` | Config, env, logging, app identity |
+| `@marketdna/domain` | Ubiquitous language types (no business logic) |
+| `@marketdna/database` | Persistence boundary stub (no schema) |
+| `@marketdna/analytics-client` | Analytics worker client stub (no Python) |
+| `@marketdna/desktop` | Electron + React blank shell |
+| `@marketdna/eslint-config` | Shared ESLint flat config |
+| `@marketdna/typescript-config` | Shared TSConfigs |
 
 ---
 
-## Initial markets (v1 data contracts)
+## Architecture docs
 
-`BTCUSD` · `ETHUSD` · `XAUUSD` · `EURUSD` · `NAS100` · `SPX500`
+See `docs/architecture/README.md`. Do not redesign architecture in this phase.
 
-Instrument identity is abstracted (`InstrumentId`, `Symbol`, `AssetClass`, `Venue`) so the set is unbounded.
+## Phase 1B (preview only — not started)
 
----
-
-## Recommended stack (summary)
-
-| Layer | Choice | Why (short) |
-|---|---|---|
-| Desktop shell | Electron | Mature for trading tools; Node + Chromium; native OS integration |
-| UI | React + TypeScript | Strong ecosystem, fast charting libs, maintainable UI |
-| Local API | Fastify (Node) or NestJS | Typed IPC/HTTP bridge between UI and services |
-| Persistence | SQLite + Prisma | Offline-first, portable, migrations, type-safe access |
-| Analytics / ML / backtest | Python (pandas, Polars, NumPy, scikit-learn) | Institutional-grade numerical stack |
-| Process bridge | gRPC or ZeroMQ + typed IPC | Fast, language-agnostic UI ↔ Python workers |
-| Charts | TradingView Lightweight Charts + Canvas/WebGL | High-performance OHLCV and overlays |
-| Packaging | electron-builder | Commercial installers (Windows / macOS / Linux) |
-
-Full rationale: [docs/architecture/00-tech-stack.md](docs/architecture/00-tech-stack.md)
-
----
-
-## Status
-
-**Phase 0 — Architecture complete.**  
-Implementation begins at Roadmap Phase 1 (scaffold + contracts). See the [development roadmap](docs/roadmap/development-roadmap.md).
+Contracts hardening, local-api skeleton, workspace bootstrap plumbing, and deeper IPC — still **no** full engines or schema-heavy product features unless separately approved.

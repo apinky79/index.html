@@ -1,0 +1,35 @@
+{
+  "name": "@marketdna/domain",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Ubiquitous language types for MarketDNA (domain model — no business logic in Phase 1A)",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "rimraf dist coverage",
+    "test": "vitest run",
+    "lint": "eslint .",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@marketdna/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@marketdna/typescript-config": "workspace:*",
+    "rimraf": "^6.0.1",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}

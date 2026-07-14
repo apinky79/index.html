@@ -1,0 +1,15 @@
+{
+  "extends": "@marketdna/typescript-config/base.json",
+  "compilerOptions": {
+    "outDir": "dist-electron",
+    "rootDir": "electron",
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "lib": ["ES2022"],
+    "types": ["node"],
+    "verbatimModuleSyntax": false,
+    "noEmit": false
+  },
+  "include": ["electron/**/*.ts"],
+  "exclude": ["electron/**/*.test.ts", "dist-electron", "node_modules"]
+}

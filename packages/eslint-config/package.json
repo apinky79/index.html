@@ -1,0 +1,24 @@
+{
+  "name": "@marketdna/eslint-config",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Shared ESLint flat config for MarketDNA",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js"
+  },
+  "scripts": {
+    "test": "node --test test/config.test.js",
+    "lint": "node -e \"console.log('eslint-config: no lint target')\"",
+    "typecheck": "node -e \"console.log('eslint-config: JS-only package')\""
+  },
+  "dependencies": {
+    "@eslint/js": "^9.17.0",
+    "eslint-config-prettier": "^9.1.0",
+    "typescript-eslint": "^8.18.2"
+  },
+  "peerDependencies": {
+    "eslint": "^9.0.0"
+  }
+}

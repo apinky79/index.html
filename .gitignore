@@ -1,0 +1,41 @@
+# Dependencies
+node_modules
+.pnpm-store
+
+# Builds
+dist
+build
+out
+coverage
+*.tsbuildinfo
+
+# Electron
+apps/desktop/release
+apps/desktop/dist-electron
+
+# Env / secrets
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.idea
+.vscode/*
+!.vscode/extensions.json
+
+# Turbo
+.turbo
+
+# Test
+**/coverage
+
+# Packaging
+*.tgz
