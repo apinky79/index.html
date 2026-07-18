@@ -2,12 +2,56 @@
 
 Focused cBot for a BrightFunded-style challenge account:
 
-1. **Double EMA cross** = trigger  
-2. **Price must retest** the Retest EMA (default EMA12) before entry  
+1. **Double EMA cross** = trigger (optional ATR separation to skip chop)  
+2. **Price must retest** the Retest EMA before entry  
 3. Optional **Trend EMA** + **ADX** filters  
-4. **ATR stop**, **1:2 risk-multiple TP**, break-even at 1R  
+4. **ATR stop**, risk-multiple TP, break-even  
 5. Fixed **USD risk** per trade  
 6. **Daily loss halt** (default $1,500)
+
+---
+
+## Low-DD H1 preset (use this next)
+
+Goal: fewer, cleaner trend trades so Monte Carlo drawdown can fall under ~8%.
+
+| Parameter | Value | Optimize? |
+|---|---|---|
+| Timeframe | **H1** | Lock |
+| Bot Trade ID | `BF_EMA_H1` | Lock |
+| Retest EMA Length | **21** | Lock first test |
+| Max Pending Bars | **6** | Lock |
+| Fast EMA Length | **21** | Search `13–34` step `1` |
+| Slow EMA Length | **55** | Search `55–89` step `1` (always > Fast) |
+| Min EMA Separation (ATR) | **0.25** | Search `0.15–0.40` step `0.05` |
+| Use Price EMA Filter | **Yes** | Lock ON |
+| Trend EMA Length | **89** | Lock (or `89–144` step `55`) |
+| Use ADX Trend Filter | **Yes** | Lock ON |
+| ADX TimeFrame | **Hour** | Lock |
+| ADX Period | **14** | Lock |
+| ADX DI Offset | **12** | Lock (stricter than 8) |
+| SL Mode | ATR | Lock |
+| SL Value | **2.2** | Search `2.0–2.8` step `0.1` |
+| TP Mode | RiskMultiplier | Lock |
+| TP Value | **2.5** | Lock first test |
+| Break Even | RiskMultiplier **1.0** | Lock |
+| Trade Risk (USD) | **200** | Lock |
+| Daily Loss Limit | **1500** | Lock |
+| Window | **26 weeks** | — |
+| Spread | **400** | — |
+| Capital | **50000** | — |
+
+### Selector gates (unchanged)
+- Min trades **8**
+- Expected PF **1.5**
+- MC DD **8%**
+- MC PF **1.20**
+- Ignore passes with MC DD shown as **-**
+
+### What success looks like
+At least a few passes with **real** MC DD **&lt; 8%** (not `-`) and MC PF **≥ 1.20**.
+
+If this preset still has all MC DD ≥ 10%, the EMA family needs a different entry model entirely.
 
 ---
 
