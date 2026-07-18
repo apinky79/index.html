@@ -55,20 +55,24 @@ namespace cAlgo.Robots
         // ===========================
         // Entry - EMA Retest
         // ===========================
-        [Parameter("Retest EMA Length", Group = "Entry - EMA Retest", DefaultValue = 12, MinValue = 2, MaxValue = 300)]
+        [Parameter("Retest EMA Length", Group = "Entry - EMA Retest", DefaultValue = 21, MinValue = 2, MaxValue = 300)]
         public int RetestEmaLength { get; set; }
 
-        [Parameter("Max Pending Bars (0=off)", Group = "Entry - EMA Retest", DefaultValue = 12, MinValue = 0, MaxValue = 200)]
+        [Parameter("Max Pending Bars (0=off)", Group = "Entry - EMA Retest", DefaultValue = 6, MinValue = 0, MaxValue = 200)]
         public int MaxPendingBars { get; set; }
 
         // ===========================
         // Trigger - Double EMA
         // ===========================
-        [Parameter("Fast EMA Length", Group = "Trigger - Double EMA", DefaultValue = 8, MinValue = 2, MaxValue = 300)]
+        [Parameter("Fast EMA Length", Group = "Trigger - Double EMA", DefaultValue = 21, MinValue = 2, MaxValue = 300)]
         public int FastEmaLength { get; set; }
 
-        [Parameter("Slow EMA Length", Group = "Trigger - Double EMA", DefaultValue = 21, MinValue = 3, MaxValue = 400)]
+        [Parameter("Slow EMA Length", Group = "Trigger - Double EMA", DefaultValue = 55, MinValue = 3, MaxValue = 400)]
         public int SlowEmaLength { get; set; }
+
+        // Require clear separation before a cross counts (reduces chop triggers).
+        [Parameter("Min EMA Separation (ATR)", Group = "Trigger - Double EMA", DefaultValue = 0.25, MinValue = 0.0)]
+        public double MinEmaSeparationAtr { get; set; }
 
         // ===========================
         // Filter - Price EMA Trend
@@ -76,7 +80,7 @@ namespace cAlgo.Robots
         [Parameter("Use Price EMA Filter", Group = "Filter - Price EMA", DefaultValue = true)]
         public bool UsePriceEmaFilter { get; set; }
 
-        [Parameter("Trend EMA Length", Group = "Filter - Price EMA", DefaultValue = 55, MinValue = 2, MaxValue = 400)]
+        [Parameter("Trend EMA Length", Group = "Filter - Price EMA", DefaultValue = 89, MinValue = 2, MaxValue = 400)]
         public int TrendEmaLength { get; set; }
 
         // ===========================
@@ -91,7 +95,7 @@ namespace cAlgo.Robots
         [Parameter("ADX Period", Group = "Filter - ADX Trend", DefaultValue = 14, MinValue = 1)]
         public int AdxPeriod { get; set; }
 
-        [Parameter("ADX DI Offset", Group = "Filter - ADX Trend", DefaultValue = 8, MinValue = 0)]
+        [Parameter("ADX DI Offset", Group = "Filter - ADX Trend", DefaultValue = 12, MinValue = 0)]
         public int AdxDiOffset { get; set; }
 
         // ===========================
@@ -100,7 +104,7 @@ namespace cAlgo.Robots
         [Parameter("SL Mode", Group = "Stoploss", DefaultValue = StopLossMode.ATR)]
         public StopLossMode SlMode { get; set; }
 
-        [Parameter("SL Value", Group = "Stoploss", DefaultValue = 1.5, MinValue = 0.1)]
+        [Parameter("SL Value", Group = "Stoploss", DefaultValue = 2.2, MinValue = 0.1)]
         public double SlValue { get; set; }
 
         [Parameter("ATR Period", Group = "Stoploss", DefaultValue = 14, MinValue = 1)]
@@ -115,13 +119,13 @@ namespace cAlgo.Robots
         [Parameter("TP Mode", Group = "Take Profit", DefaultValue = TakeProfitMode.RiskMultiplier)]
         public TakeProfitMode TpMode { get; set; }
 
-        [Parameter("TP Value", Group = "Take Profit", DefaultValue = 2.0, MinValue = 0.0)]
+        [Parameter("TP Value", Group = "Take Profit", DefaultValue = 2.5, MinValue = 0.0)]
         public double TpValue { get; set; }
 
         // ===========================
         // Risk Management
         // ===========================
-        [Parameter("Trade Risk (USD)", Group = "Risk Management", DefaultValue = 175.0, MinValue = 0.0)]
+        [Parameter("Trade Risk (USD)", Group = "Risk Management", DefaultValue = 200.0, MinValue = 0.0)]
         public double TradeRiskUsd { get; set; }
 
         [Parameter("Daily Loss Limit (USD)", Group = "Risk Management", DefaultValue = 1500.0, MinValue = 0.0)]
@@ -210,9 +214,8 @@ namespace cAlgo.Robots
             int i = Bars.Count - 2;
             if (i >= 0)
             {
-                bool longState = _fastEma.Result[i] > _slowEma.Result[i];
-                _prevDoubleEmaLong = longState;
-                _prevDoubleEmaShort = !longState;
+                _prevDoubleEmaLong = IsDoubleEmaLongState(i);
+                _prevDoubleEmaShort = IsDoubleEmaShortState(i);
             }
 
             if (EnableDisconnectPause)
@@ -320,9 +323,8 @@ namespace cAlgo.Robots
             int i = Bars.Count - 2;
             if (i >= 0)
             {
-                bool longState = _fastEma.Result[i] > _slowEma.Result[i];
-                _prevDoubleEmaLong = longState;
-                _prevDoubleEmaShort = !longState;
+                _prevDoubleEmaLong = IsDoubleEmaLongState(i);
+                _prevDoubleEmaShort = IsDoubleEmaShortState(i);
             }
         }
 
@@ -338,15 +340,34 @@ namespace cAlgo.Robots
                 || OrderDirection == TradeDirectionMode.ShortOnly;
         }
 
+        private double EmaSeparationThreshold(int barIndex)
+        {
+            if (MinEmaSeparationAtr <= 0)
+                return 0;
+
+            return _atr.Result[barIndex] * MinEmaSeparationAtr;
+        }
+
+        private bool IsDoubleEmaLongState(int i)
+        {
+            double separation = _fastEma.Result[i] - _slowEma.Result[i];
+            return separation > EmaSeparationThreshold(i);
+        }
+
+        private bool IsDoubleEmaShortState(int i)
+        {
+            double separation = _slowEma.Result[i] - _fastEma.Result[i];
+            return separation > EmaSeparationThreshold(i);
+        }
+
         private bool IsDoubleEmaLongTrigger()
         {
             int i = Bars.Count - 2;
             if (i < 0)
                 return false;
 
-            bool met = _fastEma.Result[i] > _slowEma.Result[i];
-            bool rising = met && !_prevDoubleEmaLong;
-            return rising;
+            bool met = IsDoubleEmaLongState(i);
+            return met && !_prevDoubleEmaLong;
         }
 
         private bool IsDoubleEmaShortTrigger()
@@ -355,9 +376,8 @@ namespace cAlgo.Robots
             if (i < 0)
                 return false;
 
-            bool met = _fastEma.Result[i] < _slowEma.Result[i];
-            bool rising = met && !_prevDoubleEmaShort;
-            return rising;
+            bool met = IsDoubleEmaShortState(i);
+            return met && !_prevDoubleEmaShort;
         }
 
         private bool PassesLongFilters()
