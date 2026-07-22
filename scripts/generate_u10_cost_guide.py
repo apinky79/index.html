@@ -496,6 +496,7 @@ def build_pdf():
             ST["Body"],
         )
     )
+    lean_rows = [["Item", "Cost"]] + [[a, money(b)] for a, b in LEAN_ITEMS]
     lean_rows.append(["Total", money(LEAN_LOW)])
     tr = len(lean_rows) - 1
     story.append(data_table(lean_rows, [4.25 * inch, 1.2 * inch], total_row=tr, money_cols=[1]))
