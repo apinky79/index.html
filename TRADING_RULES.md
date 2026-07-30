@@ -26,7 +26,7 @@ Bot: BTCUSD m15 · Hunt weekly · max hold 1 · Approve off.
 | News pause | **ON** · entries only · NFP / FOMC / CPI / CorePCE |
 | Hard gates | MC P95 Max DD ≤ **8%** · MC PF ≥ **1.2** · min trades **5** |
 | VolumeTrend | **ON as Condition** (always was — do not flip mid-plan) |
-| ADX Momentum | **H4** · Condition · Trending · **25** / Ranging **20** · Period **14** (Test G winner — enable after Test E buy call) |
+| ADX Momentum | **ON** · Condition · Trending · **25** / Ranging **20** · Period **14** · TF **h4** (Test G winner — locked) |
 | SL range (opt) | **0.6 → 1.0** · step **0.1** |
 | TP range (opt) | **1.8 → 2.8** · step **0.2** |
 | Sort | Challenge-safe: MC P95 DD → MC PF → MC Win → P95 Min |
