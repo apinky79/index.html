@@ -101,10 +101,11 @@ Risk % this Monday: 0.8% or 0.4%
 ## 5. Pass and print (operating sequence)
 
 1. **Test E** — 2–3 consecutive Challenge forwards green/SKIP before buying.  
-   - E1 done: 20–26 Jul **+$942**  
+   - E1 done: scan **13–19 Jul** → forward **20–26 Jul** · ADX off · **+$942 / 1.66%** (6t) — confirmed  
    - E2: scan 20–26 Jul → forward **27 Jul–2 Aug** (after week closes)  
    - E3 if needed: scan 27 Jul–2 Aug → forward **3–9 Aug**  
-   - Keep ADX Momentum **Disabled** on the E path.
+   - Keep ADX Momentum **Disabled** on the E path until buy call; then enable **H4** (Test G).
+   - Note: G7 matched Control (−263) was a **different TOP PICK** — do not mix with E1 +942.
 2. **In parallel while waiting on E:** **Test G** ADX Momentum panel (§8) — 8 fixed scans, ADX arm only. Does not block buy decision.
 3. Buy **$50k** Classic only if Test E clean (not $100k first).
 4. Run **Challenge rules** until funded.
