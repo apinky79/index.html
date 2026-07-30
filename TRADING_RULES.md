@@ -195,7 +195,7 @@ Same scan → forward pair. Reuse Control; re-run ADX arms as needed.
 | G4 | Digger | 12–18 Jan → **19–25 Jan** | | | | |
 | G5 | Digger | 9–15 Feb → **16–22 Feb** | | | | |
 | G6 | Late digger | 1–7 Jun → **8–14 Jun** | | | | |
-| G7 | Green | 13–19 Jul → **20–26 Jul** | **+942 / 1.66%** | **+640 / 2.00%** (4t) | | H4 still green (−$302 vs Control); **m15 next** |
+| G7 | Green? | 13–19 Jul → **20–26 Jul** | **−263 / 3.66%** (9t) | **+640 / 2.00%** (4t) | | Matched Control ≠ E1 +942 (diff pick/params). H4 **+903** vs matched |
 | G8 | Live | 20–26 Jul → **27 Jul–2 Aug** | (E2) | | | |
 
 If a scan has **no TOP PICK / hard-gate fail** on either arm → log **SKIP** (flat) — still a valid comparison.
