@@ -190,7 +190,7 @@ Same scan → forward pair. Reuse Control; re-run ADX arms as needed.
 | # | Type | Scan → Forward | Control | ADX H4 | ADX m15 | Notes |
 |---|---|---|---|---|---|---|
 | G1 | Digger | 17–23 Nov → **24–30 Nov** | **−2152 / 4.56%** (5t) | **−1699 / 3.65%** (4t) | **−816 / 1.89%** (2t) | m15 best digger save |
-| G2 | Digger | 1–7 Dec → **8–14 Dec** | | | | |
+| G2 | Digger | 1–7 Dec → **8–14 Dec** | | **0 / 0%** (0t) | | H4 flat/SKIP — need Control + m15 |
 | G3 | Digger | 15–21 Dec → **22–28 Dec** | | | | |
 | G4 | Digger | 12–18 Jan → **19–25 Jan** | | | | |
 | G5 | Digger | 9–15 Feb → **16–22 Feb** | | | | |
