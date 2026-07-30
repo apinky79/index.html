@@ -102,11 +102,13 @@ Risk % this Monday: 0.8% or 0.4%
 1. **Test E** — 2–3 consecutive Challenge forwards green/SKIP before buying.  
    - E1 done: 20–26 Jul **+$942**  
    - E2: scan 20–26 Jul → forward **27 Jul–2 Aug** (after week closes)  
-   - E3 if needed: scan 27 Jul–2 Aug → forward **3–9 Aug**
-2. Buy **$50k** Classic only if Test E clean (not $100k first).
-3. Run **Challenge rules** until funded.
-4. Same day as funded: flip to **Funded A2** (0.4% + double-SKIP).
-5. Payout early — equity ≠ money until withdrawn.
+   - E3 if needed: scan 27 Jul–2 Aug → forward **3–9 Aug**  
+   - Keep ADX Momentum **Disabled** on the E path.
+2. **In parallel:** **Test F** ADX Momentum panel (§8) — 8 fixed scans, ADX arm only. Does not block buy decision.
+3. Buy **$50k** Classic only if Test E clean (not $100k first).
+4. Run **Challenge rules** until funded.
+5. Same day as funded: flip to **Funded A2** (0.4% + double-SKIP).
+6. Payout early — equity ≠ money until withdrawn.
 
 ---
 
@@ -127,6 +129,7 @@ Risk % this Monday: 0.8% or 0.4%
 - Sort/trade by Final Score over challenge-safe order  
 - Turn week DD brake OFF to “make more”  
 - Turn VolumeTrend OFF (baseline always had it ON as Condition)  
+- Widen / shrink SL or TP ranges mid-plan (locked: SL 0.6–1.0 / 0.1 · TP 1.8–2.8 / 0.2)  
 - Run Funded at Challenge size  
 - Buy during a digger cluster  
 - Change 3.5% → 3% mid-plan without a dedicated A/B  
@@ -157,34 +160,65 @@ Your Strategy Selector already had **regime settings (disabled)** — same idea:
 - Neural nets / sign forecasts of next-week return (costs + noise kill edge; research shows weak signals need cost-aware filters)
 - Changing opt window length mid-challenge without a walk-forward study
 
-### Test F — Regime gate (do after Test E / in parallel on kill zone)
+### Test F — ADX Momentum in-bot (parallel to Test E)
 
-**Candidate v1 (simplest, test first):**
+**Purpose:** See if ADX Momentum as an entry Condition changes digger vs green weeks.  
+**Does not replace Test E** — keep E on the current stack (ADX Momentum **Disabled**). This is a side A/B only.
 
-Every Monday before forward week:
+#### Optset flip (only these)
 
-1. On **BTCUSD H4**, read **ADX(14)** at last closed bar Sunday/Monday open.  
-2. If **ADX &lt; 20** → **SKIP** the forward week (no bot).  
-3. If **ADX ≥ 25** → TRADE under normal Challenge/Funded rules.  
-4. If **20–25** → TRADE but Funded only at **0.4%** (already); Challenge optional half-size trial later.
+| Param | Control (baseline) | ADX arm |
+|---|---|---|
+| ADX Momentum Mode | **Disabled** | **Condition** |
+| ADX Momentum Condition | — | **Trending** |
+| Trending Threshold | — | **25** |
+| ADX Period | — | **14** |
+| ADX Time Frame | — | **h4** (not m15) |
 
-**Candidate v2 (if v1 skips too much or not enough):**
+Leave alone: VolumeTrend Condition/Rising · Week DD 3.5% · News · SL 0.6–1.0/0.1 · TP 1.8–2.8/0.2 · Entry EMATest · Double EMA Trigger · Challenge **0.8% Monday equity** · hard gates · challenge-safe sort · TOP PICK.
 
-- SKIP when **ADX &lt; 20** **OR** (**ATR(14) H4 &gt; 70th percentile of last 90 days** AND **ADX &lt; 25**)  
-  = block violent chop.
+Do **not** change Exit ADX / ADX Trend Mode for this first panel.
 
-**How to score Test F**
+#### Fixed scan panel (8 weeks)
 
-Replay **same kill-zone forwards** as A2 (24 Nov → mid-Jun):
+Same scan → forward pair for both arms. Use prior Control results where already logged; only re-run the **ADX arm**.
 
-| Arm | Rule |
+| # | Type | Scan week | Forward week | Control $ / DD | ADX $ / DD | Notes |
+|---|---|---|---|---|---|---|
+| G1 | Digger | 17–23 Nov | **24–30 Nov** | | | First kill-zone digger |
+| G2 | Digger | 1–7 Dec | **8–14 Dec** | | | |
+| G3 | Digger | 15–21 Dec | **22–28 Dec** | | | |
+| G4 | Digger | 12–18 Jan | **19–25 Jan** | | | |
+| G5 | Digger | 9–15 Feb | **16–22 Feb** | | | |
+| G6 | Late digger | 1–7 Jun | **8–14 Jun** | | | End of kill zone |
+| G7 | Green | 13–19 Jul | **20–26 Jul** | +942 / 1.66% | | E1 — must not wreck greens |
+| G8 | Live | 20–26 Jul | **27 Jul–2 Aug** | (E2) | | Same week as E2; ADX arm optional re-opt |
+
+If a scan has **no TOP PICK / hard-gate fail** on either arm → log **SKIP** (flat) for that arm — still a valid comparison.
+
+#### How to score
+
+| Metric | Pass ADX arm if… |
 |---|---|
-| Control | A2 rules only (no ADX gate) |
-| F1 | A2 + Monday H4 ADX SKIP if &lt; 20 |
+| Diggers G1–G6 | Sum PnL **better** than Control (less red) **or** more SKIP weeks that would have been diggers |
+| Green G7 | Still green, or SKIP (not a new digger) |
+| G8 | Informational vs E2 |
+| Overall | Sum(G1–G7) ADX ≥ Control, without turning G7 red |
 
-**Pass if:** end equity ≥ A2 **and** fewer / softer digger weeks, without skipping most green weeks (E1-type).
+**If ADX helps diggers but kills G7** → fail (don’t enable for live Challenge).  
+**If ADX helps diggers and G7 stays green/SKIP** → consider enabling for Challenge; then decide Funded later.  
+**If no clear delta** → leave Disabled; move on.
 
-Log each Monday: `ADX_H4=__ decision=TRADE/SKIP`.
+Threshold fallback (only if ADX arm is almost always SKIP): retry G1 + G7 with Trending Threshold **20** once — not the full panel.
+
+### Test F2 — Manual Monday H4 ADX week gate (later)
+
+Separate from in-bot Momentum. After Test E / after F panel if useful:
+
+1. On BTCUSD H4, ADX(14) at last closed bar Sunday/Monday open.  
+2. ADX &lt; 20 → SKIP week · ≥ 25 → TRADE · 20–25 caution.  
+
+Replay kill-zone vs A2; log `ADX_H4=__ decision=TRADE/SKIP`.
 
 ### Forecast checklist (updated)
 
