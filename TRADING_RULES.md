@@ -194,7 +194,7 @@ Do **not** re-optimize with ADX on as a separate hunt (that can “no pass” wh
 |---|---|---|---|---|---|---|
 | G1 | Digger | 17–23 Nov → **24–30 Nov** | **−2152 / 4.56%** (5t) | **−1699 / 3.65%** (4t) | **−816 / 1.89%** (2t) | m15 best digger save |
 | G2 | Digger | 1–7 Dec → **8–14 Dec** | **−1788 / 4.09%** (4t) | **0 / 0%** (0t) | **−167 / 3.38%** (3t) | H4 best (full skip); m15 still +1621 vs Control |
-| G3 | Digger | 15–21 Dec → **22–28 Dec** | **−1006 / 4.31%** (6t) | | | Control digger; forward same pick H4 + m15 |
+| G3 | Digger | 15–21 Dec → **22–28 Dec** | **−1006 / 4.31%** (6t) | **0 / 0%** (0t) | | H4 full skip; **m15 next** same pick |
 | G4 | Digger | 12–18 Jan → **19–25 Jan** | | | | |
 | G5 | Digger | 9–15 Feb → **16–22 Feb** | | | | |
 | G6 | Late digger | 1–7 Jun → **8–14 Jun** | | | | |
