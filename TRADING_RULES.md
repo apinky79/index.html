@@ -102,7 +102,8 @@ Risk % this Monday: 0.8% or 0.4%
 
 1. **Test E** — 2–3 consecutive Challenge forwards green/SKIP before buying.  
    - E1 done: scan **13–19 Jul** → forward **20–26 Jul** · ADX off · **+$942 / 1.66%** (6t) — confirmed  
-   - E2: scan 20–26 Jul → forward **27 Jul–2 Aug** (after week closes)  
+   - E1 same pick + ADX **H4**: **+$301 / 1.56%** (2t) — still green (quieter; −$641 vs off)  
+   - E2: scan 20–26 Jul → forward **27 Jul–2 Aug** (after week closes) · ADX off for buy gate  
    - E3 if needed: scan 27 Jul–2 Aug → forward **3–9 Aug**  
    - Keep ADX Momentum **Disabled** on the E path until buy call; then enable **H4** (Test G).
    - Note: G7 matched Control (−263) was a **different TOP PICK** — do not mix with E1 +942.
