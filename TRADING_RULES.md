@@ -73,7 +73,7 @@ You **can** refuse bad odds. Use this gate **after** the scan, **before** you fo
 | Last forward results | Next week |
 |---|---|
 | **Challenge:** last 2–3 forwards green or SKIP | Trade (buy / continue OK) |
-| **Challenge:** digger cluster (multiple reds) | **Do not buy / do not restart** until 2 clean weeks |
+| **Challenge:** digger cluster (multiple reds) | Sit / don’t restart until 2 clean weeks under **ADX H4** |
 | **Funded:** 2 reds already | **Mandatory double-SKIP** (A2) — no forecast override |
 | **Funded:** 1 red | Trade if Step A passes (streak = 1) |
 
@@ -100,19 +100,15 @@ Risk % this Monday: 0.8% or 0.4%
 
 ## 5. Pass and print (operating sequence)
 
-1. **Test E** — 2–3 consecutive Challenge forwards green/SKIP before buying.  
-   - E1 done: scan **13–19 Jul** → forward **20–26 Jul** · ADX off · **+$942 / 1.66%** (6t) — confirmed  
-   - E1 same pick + ADX **H4**: **+$301 / 1.56%** (2t) — still green (quieter)  
-   - E1 same pick + ADX **m15**: **−$427 / 0.91%** (1t) — **fails** (turns E1 green → red)  
-   - E2: scan 20–26 Jul → forward **27 Jul–2 Aug** (after week closes) · ADX off for buy gate  
-   - E3 if needed: scan 27 Jul–2 Aug → forward **3–9 Aug**  
-   - Keep ADX Momentum **Disabled** on the E path until buy call; then enable **H4** only (not m15).
-   - Note: G7 matched Control (−263) was a **different TOP PICK** — do not mix with E1 +942.
-2. **In parallel while waiting on E:** **Test G** ADX Momentum panel (§8) — 8 fixed scans, ADX arm only. Does not block buy decision.
-3. Buy **$50k** Classic only if Test E clean (not $100k first).
-4. Run **Challenge rules** until funded.
-5. Same day as funded: flip to **Funded A2** (0.4% + double-SKIP).
-6. Payout early — equity ≠ money until withdrawn.
+**Test E cancelled.** Buy / Challenge runs under **Test G stack** (ADX H4 on).
+
+1. Buy **$50k** Classic when ready (not $100k first).  
+2. Opt each week **ADX off** → take TOP PICK → forward with **ADX H4 on** (same pick; only flip ADX).  
+3. Challenge: **0.8% Monday equity** + always-on stack (§2) including **ADX H4**.  
+4. Same day as funded: flip to **Funded A2** (0.4% + double-SKIP).  
+5. Payout early — equity ≠ money until withdrawn.
+
+E1 archive (not a buy gate anymore): ADX off +$942 · H4 +$301 · m15 −$427 on 20–26 Jul.
 
 ---
 
@@ -130,6 +126,7 @@ Risk % this Monday: 0.8% or 0.4%
 
 ## 7. Do not
 
+- Run Challenge with ADX **off** or **m15** (locked = **H4 only**)  
 - Sort/trade by Final Score over challenge-safe order  
 - Turn week DD brake OFF to “make more”  
 - Turn VolumeTrend OFF (baseline always had it ON as Condition)  
@@ -207,7 +204,7 @@ Do **not** re-optimize with ADX on as a separate hunt (that can “no pass” wh
 
 **FINAL G1–G7:** Control **−6909** · H4 **−740** · m15 **−1516**  
 → Both beat Control by ~$5–6k. **H4 wins panel** (best digger skips G2/G3/G5). m15 strong; only failed G5.  
-→ **Lock for Challenge after Test E:** ADX Momentum Condition · Trending · 25/20 · Period 14 · **h4**.
+→ **Lock for Challenge:** ADX Momentum Condition · Trending · 25/20 · Period 14 · **h4**. Test E dropped — G stack is live.
 
 If a scan has **no TOP PICK / hard-gate fail** on either arm → log **SKIP** (flat) — still a valid comparison.
 
