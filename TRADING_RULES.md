@@ -187,7 +187,7 @@ Same scan → forward pair for both arms. Use prior Control results where alread
 
 | # | Type | Scan week | Forward week | Control $ / DD | ADX $ / DD | Notes |
 |---|---|---|---|---|---|---|
-| G1 | Digger | 17–23 Nov | **24–30 Nov** | *(paste)* | **−1699 / 3.65%** | ADX arm: 4 trades / 0 wins — did not filter Mon 24 |
+| G1 | Digger | 17–23 Nov | **24–30 Nov** | **−2152 / 4.56%** (5t) | **−1699 / 3.65%** (4t) | ADX blocked Tue short only; Mon 24 identical |
 | G2 | Digger | 1–7 Dec | **8–14 Dec** | | | |
 | G3 | Digger | 15–21 Dec | **22–28 Dec** | | | |
 | G4 | Digger | 12–18 Jan | **19–25 Jan** | | | |
