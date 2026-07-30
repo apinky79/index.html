@@ -103,7 +103,8 @@ Risk % this Monday: 0.8% or 0.4%
 **Test E cancelled.** Buy / Challenge runs under **Test G stack** (ADX H4 on).
 
 1. Buy **$50k** Classic when ready (not $100k first).  
-2. Opt each week **ADX off** → take TOP PICK → forward with **ADX H4 on** (same pick; only flip ADX).  
+2. **Live weekly cycle:** Opt **and** forward with **ADX H4 on** (same settings — you can’t see next week, so opt must match live). If no TOP PICK / hard-gate fail → **SKIP**.  
+   *(Test G A/B used “opt ADX off then flip H4 on” only to measure the filter — not the live method.)* 
 3. Challenge: **0.8% Monday equity** + always-on stack (§2) including **ADX H4**.  
 4. Same day as funded: flip to **Funded A2** (0.4% + double-SKIP).  
 5. Payout early — equity ≠ money until withdrawn.
@@ -188,8 +189,12 @@ Do **not** change Exit ADX / ADX Trend Mode for this first panel.
 
 Same scan → forward pair. Reuse Control; re-run ADX arms as needed.
 
-**Opt protocol (important):** Optimize **once with ADX Momentum Disabled**. Take TOP PICK. Forward that **same pick** three ways (off / H4 / m15) — only flip ADX TF/mode.  
-Do **not** re-optimize with ADX on as a separate hunt (that can “no pass” while Control would have a pick). If Control opt itself no-passes → SKIP all arms for that week.
+**Opt protocol**
+
+| Mode | How |
+|---|---|
+| **Live (now)** | Opt **with ADX H4 on** (Condition · Trending · 25/20 · Period 14). Forward the **same** settings. No pass → SKIP. |
+| **Test G A/B only (done)** | Opt ADX off, then forward-flip arms — was for measuring the filter, not live. |
 
 | # | Type | Scan → Forward | Control | ADX H4 | ADX m15 | Notes |
 |---|---|---|---|---|---|---|
