@@ -168,47 +168,49 @@ Your Strategy Selector already had **regime settings (disabled)** — same idea:
 
 #### Optset flip (only these)
 
-| Param | Control (baseline) | ADX arm |
-|---|---|---|
-| ADX Momentum Mode | **Disabled** | **Condition** |
-| ADX Momentum Condition | — | **Trending** |
-| Trending Threshold | — | **25** |
-| Ranging Threshold | — | **20** |
-| ADX Period | — | **14** |
-| ADX Time Frame | — | **h4** (not m15) |
+| Param | Control | ADX H4 | ADX m15 |
+|---|---|---|---|
+| ADX Momentum Mode | **Disabled** | **Condition** | **Condition** |
+| ADX Momentum Condition | — | **Trending** | **Trending** |
+| Trending Threshold | — | **25** | **25** |
+| Ranging Threshold | — | **20** | **20** |
+| ADX Period | — | **14** | **14** |
+| ADX Time Frame | — | **h4** | **m15** |
 
 Leave alone: VolumeTrend Condition/Rising · Week DD 3.5% · News · SL 0.6–1.0/0.1 · TP 1.8–2.8/0.2 · Entry EMATest · Double EMA Trigger · Challenge **0.8% Monday equity** · hard gates · challenge-safe sort · TOP PICK.
 
 Do **not** change Exit ADX / ADX Trend Mode for this first panel.
 
+**G1 finding:** m15 filtered harder than H4 on the digger → continue panel with **m15 as primary arm**; H4 optional.
+
 #### Fixed scan panel (8 weeks)
 
-Same scan → forward pair for both arms. Use prior Control results where already logged; only re-run the **ADX arm**.
+Same scan → forward pair. Reuse Control; re-run ADX arms as needed.
 
-| # | Type | Scan week | Forward week | Control $ / DD | ADX $ / DD | Notes |
+| # | Type | Scan → Forward | Control | ADX H4 | ADX m15 | Notes |
 |---|---|---|---|---|---|---|
-| G1 | Digger | 17–23 Nov | **24–30 Nov** | **−2152 / 4.56%** (5t) | **−1699 / 3.65%** (4t) | ADX blocked Tue short only; Mon 24 identical |
-| G2 | Digger | 1–7 Dec | **8–14 Dec** | | | |
-| G3 | Digger | 15–21 Dec | **22–28 Dec** | | | |
-| G4 | Digger | 12–18 Jan | **19–25 Jan** | | | |
-| G5 | Digger | 9–15 Feb | **16–22 Feb** | | | |
-| G6 | Late digger | 1–7 Jun | **8–14 Jun** | | | End of kill zone |
-| G7 | Green | 13–19 Jul | **20–26 Jul** | +942 / 1.66% | | E1 — must not wreck greens |
-| G8 | Live | 20–26 Jul | **27 Jul–2 Aug** | (E2) | | Same week as E2; ADX arm optional re-opt |
+| G1 | Digger | 17–23 Nov → **24–30 Nov** | **−2152 / 4.56%** (5t) | **−1699 / 3.65%** (4t) | **−816 / 1.89%** (2t) | m15 blocked Mon longs; best digger save |
+| G2 | Digger | 1–7 Dec → **8–14 Dec** | | | | |
+| G3 | Digger | 15–21 Dec → **22–28 Dec** | | | | |
+| G4 | Digger | 12–18 Jan → **19–25 Jan** | | | | |
+| G5 | Digger | 9–15 Feb → **16–22 Feb** | | | | |
+| G6 | Late digger | 1–7 Jun → **8–14 Jun** | | | | |
+| G7 | Green | 13–19 Jul → **20–26 Jul** | +942 / 1.66% | | | **Critical** — m15 must not wreck |
+| G8 | Live | 20–26 Jul → **27 Jul–2 Aug** | (E2) | | | |
 
-If a scan has **no TOP PICK / hard-gate fail** on either arm → log **SKIP** (flat) for that arm — still a valid comparison.
+If a scan has **no TOP PICK / hard-gate fail** on either arm → log **SKIP** (flat) — still a valid comparison.
 
 #### How to score
 
-| Metric | Pass ADX arm if… |
+| Metric | Pass (esp. **m15**) if… |
 |---|---|
 | Diggers G1–G6 | Sum PnL **better** than Control (less red) **or** more SKIP weeks that would have been diggers |
 | Green G7 | Still green, or SKIP (not a new digger) |
 | G8 | Informational vs E2 |
 | Overall | Sum(G1–G7) ADX ≥ Control, without turning G7 red |
 
-**If ADX helps diggers but kills G7** → fail (don’t enable for live Challenge).  
-**If ADX helps diggers and G7 stays green/SKIP** → consider enabling for Challenge; then decide Funded later.  
+**If m15 helps diggers but kills G7** → fail (don’t enable for live Challenge).  
+**If m15 helps diggers and G7 stays green/SKIP** → consider enabling for Challenge; then decide Funded later.  
 **If no clear delta** → leave Disabled; move on.
 
 Threshold fallback (only if ADX arm is almost always SKIP): retry G1 + G7 with Trending Threshold **20** once — not the full panel.
