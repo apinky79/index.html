@@ -197,7 +197,7 @@ Do **not** re-optimize with ADX on as a separate hunt (that can “no pass” wh
 | G3 | Digger | 15–21 Dec → **22–28 Dec** | **−1006 / 4.31%** (6t) | **0 / 0%** (0t) | **+252 / 2.64%** (3t) | H4 full skip; m15 turns digger → green |
 | G4 | Green | 12–18 Jan → **19–25 Jan** | **+2169 / 2.54%** (5t) | **+2249 / 2.53%** (5t) | **+2000 / 1.25%** (2t) | All green; m15 quieter (−169 vs Control) |
 | G5 | Digger | 9–15 Feb → **16–22 Feb** | **−1939 / 4.28%** (4t) | **0 / 0%** (0t) | **−2021 / 4.45%** (4t) | H4 full skip; **m15 no help** (−82 vs Control) |
-| G6 | Late digger | 1–7 Jun → **8–14 Jun** | **−1930 / 5.69%** (4t) | | | 0 wins; H4 + m15 next |
+| G6 | Late digger | 1–7 Jun → **8–14 Jun** | **−1930 / 5.69%** (4t) | **−1930 / 5.69%** (4t) | | H4 **no delta** (same digger); **m15 next** |
 | G7 | Matched | 13–19 Jul → **20–26 Jul** | **−263 / 3.66%** (9t) | **+640 / 2.00%** (4t) | **+817 / 0.61%** (1t) | m15 best; E1 +942 ≠ this Control |
 | G8 | Live | 20–26 Jul → **27 Jul–2 Aug** | (E2) | | | |
 
