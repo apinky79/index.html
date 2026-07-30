@@ -189,14 +189,16 @@ Same scan → forward pair. Reuse Control; re-run ADX arms as needed.
 
 | # | Type | Scan → Forward | Control | ADX H4 | ADX m15 | Notes |
 |---|---|---|---|---|---|---|
-| G1 | Digger | 17–23 Nov → **24–30 Nov** | **−2152 / 4.56%** (5t) | **−1699 / 3.65%** (4t) | **−816 / 1.89%** (2t) | m15 blocked Mon longs; best digger save |
+| G1 | Digger | 17–23 Nov → **24–30 Nov** | **−2152 / 4.56%** (5t) | **−1699 / 3.65%** (4t) | **−816 / 1.89%** (2t) | m15 best digger save |
 | G2 | Digger | 1–7 Dec → **8–14 Dec** | | | | |
 | G3 | Digger | 15–21 Dec → **22–28 Dec** | | | | |
 | G4 | Digger | 12–18 Jan → **19–25 Jan** | | | | |
 | G5 | Digger | 9–15 Feb → **16–22 Feb** | | | | |
 | G6 | Late digger | 1–7 Jun → **8–14 Jun** | | | | |
-| G7 | Green? | 13–19 Jul → **20–26 Jul** | **−263 / 3.66%** (9t) | **+640 / 2.00%** (4t) | | Matched Control ≠ E1 +942 (diff pick/params). H4 **+903** vs matched |
+| G7 | Matched | 13–19 Jul → **20–26 Jul** | **−263 / 3.66%** (9t) | **+640 / 2.00%** (4t) | **+817 / 0.61%** (1t) | m15 best; E1 +942 ≠ this Control |
 | G8 | Live | 20–26 Jul → **27 Jul–2 Aug** | (E2) | | | |
+
+**G1+G7 sum:** Control **−2415** · H4 **−1059** · m15 **+1** — m15 leads; continue diggers on **m15 primary**.
 
 If a scan has **no TOP PICK / hard-gate fail** on either arm → log **SKIP** (flat) — still a valid comparison.
 
