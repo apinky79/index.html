@@ -120,7 +120,7 @@ Risk % this Monday: 0.8% or 0.4%
 | Full 0.8% through kill zone | Does **not** print — floor risk |
 | Funded A2 (half + skip 2 after 2 reds) | Best survival on digger stretch |
 | Fixed $400 vs % of balance | Near $50k similar; **% better** when up/down |
-| Floating % alone | Does **not** fix diggers without A2 skips |
+| ADX Momentum (Test G) | **Enable H4** — Condition · Trending · 25/20 · Period 14 · TF **h4**. Beat Control by ~$6.2k on panel; leads m15. |
 
 ---
 
