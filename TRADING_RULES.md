@@ -104,7 +104,7 @@ Risk % this Monday: 0.8% or 0.4%
    - E2: scan 20–26 Jul → forward **27 Jul–2 Aug** (after week closes)  
    - E3 if needed: scan 27 Jul–2 Aug → forward **3–9 Aug**  
    - Keep ADX Momentum **Disabled** on the E path.
-2. **In parallel:** **Test F** ADX Momentum panel (§8) — 8 fixed scans, ADX arm only. Does not block buy decision.
+2. **In parallel while waiting on E:** **Test G** ADX Momentum panel (§8) — 8 fixed scans, ADX arm only. Does not block buy decision.
 3. Buy **$50k** Classic only if Test E clean (not $100k first).
 4. Run **Challenge rules** until funded.
 5. Same day as funded: flip to **Funded A2** (0.4% + double-SKIP).
@@ -160,10 +160,11 @@ Your Strategy Selector already had **regime settings (disabled)** — same idea:
 - Neural nets / sign forecasts of next-week return (costs + noise kill edge; research shows weak signals need cost-aware filters)
 - Changing opt window length mid-challenge without a walk-forward study
 
-### Test F — ADX Momentum in-bot (parallel to Test E)
+### Test G — ADX Momentum in-bot (run while waiting on Test E)
 
+**Status:** Active side A/B.  
 **Purpose:** See if ADX Momentum as an entry Condition changes digger vs green weeks.  
-**Does not replace Test E** — keep E on the current stack (ADX Momentum **Disabled**). This is a side A/B only.
+**Does not replace Test E** — keep E on the current stack (ADX Momentum **Disabled**). Buy decision stays on E only.
 
 #### Optset flip (only these)
 
@@ -211,9 +212,9 @@ If a scan has **no TOP PICK / hard-gate fail** on either arm → log **SKIP** (f
 
 Threshold fallback (only if ADX arm is almost always SKIP): retry G1 + G7 with Trending Threshold **20** once — not the full panel.
 
-### Test F2 — Manual Monday H4 ADX week gate (later)
+### Test F — Manual Monday H4 ADX week gate (later)
 
-Separate from in-bot Momentum. After Test E / after F panel if useful:
+Separate from in-bot Momentum (Test G). After Test E / after G panel if useful:
 
 1. On BTCUSD H4, ADX(14) at last closed bar Sunday/Monday open.  
 2. ADX &lt; 20 → SKIP week · ≥ 25 → TRADE · 20–25 caution.  
