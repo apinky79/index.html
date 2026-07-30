@@ -173,6 +173,7 @@ Your Strategy Selector already had **regime settings (disabled)** — same idea:
 | ADX Momentum Mode | **Disabled** | **Condition** |
 | ADX Momentum Condition | — | **Trending** |
 | Trending Threshold | — | **25** |
+| Ranging Threshold | — | **20** |
 | ADX Period | — | **14** |
 | ADX Time Frame | — | **h4** (not m15) |
 
