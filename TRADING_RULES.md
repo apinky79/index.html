@@ -25,7 +25,9 @@ Bot: BTCUSD m15 · Hunt weekly · max hold 1 · Approve off.
 | Week DD brake | **ON** · **3.5%** from week-start equity · **no new entries** (don’t flatten) |
 | News pause | **ON** · entries only · NFP / FOMC / CPI / CorePCE |
 | Hard gates | MC P95 Max DD ≤ **8%** · MC PF ≥ **1.2** · min trades **5** |
-| VolumeTrend | **OFF** |
+| VolumeTrend | **ON as Condition** (always was — do not flip mid-plan) |
+| SL range (opt) | **0.6 → 1.0** · step **0.1** |
+| TP range (opt) | **1.8 → 2.8** · step **0.2** |
 | Sort | Challenge-safe: MC P95 DD → MC PF → MC Win → P95 Min |
 | Pick | **TOP PICK badge** (even if not row 1) |
 | Commission | **10** (match scans) |
@@ -124,6 +126,7 @@ Risk % this Monday: 0.8% or 0.4%
 
 - Sort/trade by Final Score over challenge-safe order  
 - Turn week DD brake OFF to “make more”  
+- Turn VolumeTrend OFF (baseline always had it ON as Condition)  
 - Run Funded at Challenge size  
 - Buy during a digger cluster  
 - Change 3.5% → 3% mid-plan without a dedicated A/B  
