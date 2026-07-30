@@ -201,7 +201,7 @@ Do **not** re-optimize with ADX on as a separate hunt (that can “no pass” wh
 | G7 | Matched | 13–19 Jul → **20–26 Jul** | **−263 / 3.66%** (9t) | **+640 / 2.00%** (4t) | **+817 / 0.61%** (1t) | m15 best; E1 +942 ≠ this Control |
 | G8 | Live | 20–26 Jul → **27 Jul–2 Aug** | (E2) | | | |
 
-**Running G1+G2+G7:** Control **−4203** · H4 **−1059** · m15 **−166** — m15 still ahead overall.
+**Running G1+G2+G3+G7:** Control **−5209** · H4 **−1059** · m15 **+86** — m15 leads (now green sum).
 
 If a scan has **no TOP PICK / hard-gate fail** on either arm → log **SKIP** (flat) — still a valid comparison.
 
