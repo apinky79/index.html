@@ -127,3 +127,70 @@ Risk % this Monday: 0.8% or 0.4%
 - Run Funded at Challenge size  
 - Buy during a digger cluster  
 - Change 3.5% → 3% mid-plan without a dedicated A/B  
+- Deploy ML price prediction as the week gate before a simple HTF regime A/B  
+
+---
+
+## 8. Market forecast / favourability (research → next test)
+
+**Truth:** You cannot reliably forecast next week’s BTC direction from last week’s candles alone.  
+**What works in research + fits this EMA bot:** classify **regime** and only trade when it matches a trend system.
+
+### What the literature / prop practice agrees on
+
+| Filter type | Typical rule | Why it helps an EMA/trend bot |
+|---|---|---|
+| **HTF trend strength** | H4 or D1 **ADX(14) ≥ 25** = trade; **&lt; 20** = chop → SKIP | Stops trend logic in sideways bleed |
+| **HTF direction (optional)** | Price vs EMA50/200 on H4/D1 | Prefer with-trend or block countertrend |
+| **Volatility regime** | ATR(14) percentile; skip **high ATR + low ADX** (violent chop) | Digger weeks are often expansion + no clean trend |
+| **Weekly EMA slope** | e.g. Weekly EMA50 slope over 4 bars; near-zero = FLAT → SKIP | Used on BTC prop EAs to block flat markets |
+| **Hysteresis** | Need 3 bars in new state before flipping; exit chop only below 20 if enter above 25 | Stops flicker SKIP/TRADE every Monday |
+
+Reported effect class (templates / systematic writeups): often **~30–50% less max DD** for **~10–20% less return** — survival trade, not magic alpha.
+
+Your Strategy Selector already had **regime settings (disabled)** — same idea: chop vs trend gate.
+
+### What we will NOT chase first
+- Neural nets / sign forecasts of next-week return (costs + noise kill edge; research shows weak signals need cost-aware filters)
+- Changing opt window length mid-challenge without a walk-forward study
+
+### Test F — Regime gate (do after Test E / in parallel on kill zone)
+
+**Candidate v1 (simplest, test first):**
+
+Every Monday before forward week:
+
+1. On **BTCUSD H4**, read **ADX(14)** at last closed bar Sunday/Monday open.  
+2. If **ADX &lt; 20** → **SKIP** the forward week (no bot).  
+3. If **ADX ≥ 25** → TRADE under normal Challenge/Funded rules.  
+4. If **20–25** → TRADE but Funded only at **0.4%** (already); Challenge optional half-size trial later.
+
+**Candidate v2 (if v1 skips too much or not enough):**
+
+- SKIP when **ADX &lt; 20** **OR** (**ATR(14) H4 &gt; 70th percentile of last 90 days** AND **ADX &lt; 25**)  
+  = block violent chop.
+
+**How to score Test F**
+
+Replay **same kill-zone forwards** as A2 (24 Nov → mid-Jun):
+
+| Arm | Rule |
+|---|---|
+| Control | A2 rules only (no ADX gate) |
+| F1 | A2 + Monday H4 ADX SKIP if &lt; 20 |
+
+**Pass if:** end equity ≥ A2 **and** fewer / softer digger weeks, without skipping most green weeks (E1-type).
+
+Log each Monday: `ADX_H4=__ decision=TRADE/SKIP`.
+
+### Forecast checklist (updated)
+
+```
+Scan week: ____ → Forward: ____
+Gates/TOP PICK: OK?
+Last 2 forwards: ____ / ____
+H4 ADX(14): ____  (≥25 trade / 20–25 caution / <20 SKIP)
+Funded streak: ____
+Decision: TRADE / SKIP
+Risk: 0.8% Challenge or 0.4% Funded
+```
