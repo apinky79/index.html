@@ -102,14 +102,16 @@ Risk % this Monday: 0.8% or 0.4%
 
 **Test E cancelled.** Buy / Challenge runs under **Test G stack** (ADX H4 on).
 
-1. Buy **$50k** Classic when ready (not $100k first).  
-2. **Live weekly cycle:** Opt **and** forward with **ADX H4 on** (same settings — you can’t see next week, so opt must match live). If no TOP PICK / hard-gate fail → **SKIP**.  
-   *(Test G A/B used “opt ADX off then flip H4 on” only to measure the filter — not the live method.)* 
-3. Challenge: **0.8% Monday equity** + always-on stack (§2) including **ADX H4**.  
-4. Same day as funded: flip to **Funded A2** (0.4% + double-SKIP).  
-5. Payout early — equity ≠ money until withdrawn.
+1. Wait for **2 clean forward weeks under G** (green or SKIP) before buying.  
+   - **G-live #1:** scan ~13–19 Jul → forward **20–26 Jul** · ADX H4 · **+$640 / 2.00%** (4t) — green  
+   - **G-live #2:** next — scan **20–26 Jul** → forward **27 Jul–2 Aug** (or clean start scan **27 Jul–2 Aug** → **3–9 Aug**)  
+2. Buy **$50k** Classic when #2 is clean (not $100k first).  
+3. **Live weekly:** Opt **and** forward with **ADX H4 on**. No TOP PICK → SKIP.  
+4. Challenge: **0.8% Monday equity** + always-on stack (§2).  
+5. Same day as funded: **Funded A2** (0.4% + skip 2 after 2 reds) + ADX H4.  
+6. Payout early.
 
-E1 archive (not a buy gate anymore): ADX off +$942 · H4 +$301 · m15 −$427 on 20–26 Jul.
+E1 archive: ADX off +$942 · H4 +$301 · m15 −$427 on 20–26 Jul (different pick / method).
 
 ---
 
