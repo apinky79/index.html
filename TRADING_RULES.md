@@ -26,6 +26,7 @@ Bot: BTCUSD m15 · Hunt weekly · max hold 1 · Approve off.
 | News pause | **ON** · entries only · NFP / FOMC / CPI / CorePCE |
 | Hard gates | MC P95 Max DD ≤ **8%** · MC PF ≥ **1.2** · min trades **5** |
 | VolumeTrend | **ON as Condition** (always was — do not flip mid-plan) |
+| ADX Momentum | **H4** · Condition · Trending · **25** / Ranging **20** · Period **14** (Test G winner — enable after Test E buy call) |
 | SL range (opt) | **0.6 → 1.0** · step **0.1** |
 | TP range (opt) | **1.8 → 2.8** · step **0.2** |
 | Sort | Challenge-safe: MC P95 DD → MC PF → MC Win → P95 Min |
@@ -197,11 +198,13 @@ Do **not** re-optimize with ADX on as a separate hunt (that can “no pass” wh
 | G3 | Digger | 15–21 Dec → **22–28 Dec** | **−1006 / 4.31%** (6t) | **0 / 0%** (0t) | **+252 / 2.64%** (3t) | H4 full skip; m15 turns digger → green |
 | G4 | Green | 12–18 Jan → **19–25 Jan** | **+2169 / 2.54%** (5t) | **+2249 / 2.53%** (5t) | **+2000 / 1.25%** (2t) | All green; m15 quieter (−169 vs Control) |
 | G5 | Digger | 9–15 Feb → **16–22 Feb** | **−1939 / 4.28%** (4t) | **0 / 0%** (0t) | **−2021 / 4.45%** (4t) | H4 full skip; **m15 no help** (−82 vs Control) |
-| G6 | Late digger | 1–7 Jun → **8–14 Jun** | **−1930 / 5.69%** (4t) | **−1930 / 5.69%** (4t) | | H4 **no delta** (same digger); **m15 next** |
+| G6 | Late digger | 1–7 Jun → **8–14 Jun** | **−1930 / 5.69%** (4t) | **−1930 / 5.69%** (4t) | **−1581 / 4.05%** (3t) | H4 no delta; m15 softer (−349) |
 | G7 | Matched | 13–19 Jul → **20–26 Jul** | **−263 / 3.66%** (9t) | **+640 / 2.00%** (4t) | **+817 / 0.61%** (1t) | m15 best; E1 +942 ≠ this Control |
 | G8 | Live | 20–26 Jul → **27 Jul–2 Aug** | (E2) | | | |
 
-**Running G1–G5+G7:** Control **−4979** · H4 **+1190** · m15 **+65** — H4 now leads; m15 still >> Control.
+**FINAL G1–G7:** Control **−6909** · H4 **−740** · m15 **−1516**  
+→ Both beat Control by ~$5–6k. **H4 wins panel** (best digger skips G2/G3/G5). m15 strong; only failed G5.  
+→ **Lock for Challenge after Test E:** ADX Momentum Condition · Trending · 25/20 · Period 14 · **h4**.
 
 If a scan has **no TOP PICK / hard-gate fail** on either arm → log **SKIP** (flat) — still a valid comparison.
 
