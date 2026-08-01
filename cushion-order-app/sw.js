@@ -1,4 +1,4 @@
-const CACHE = "cushion-order-v2";
+const CACHE = "cushion-order-v3";
 const ASSETS = [
   "./",
   "./index.html",
@@ -7,6 +7,7 @@ const ASSETS = [
   "./js/templates.js",
   "./js/storage.js",
   "./js/editor.js",
+  "./js/panels.js",
   "./js/app.js",
   "./manifest.webmanifest",
   "../cushion-order-kit/drawings/svg/chair/seat/t-cushion.svg",
