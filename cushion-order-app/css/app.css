@@ -1,9 +1,9 @@
 :root {
   --ink: #111;
-  --muted: #444;
+  --muted: #333;
   --line: #111;
-  --rule: #ccc;
-  --bg: #f0f0f0;
+  --rule: #bbb;
+  --bg: #ddd;
   --sheet: #fff;
   --font: Helvetica, Arial, sans-serif;
 }
@@ -18,23 +18,23 @@ body {
   background: var(--bg);
   color: var(--ink);
   line-height: 1.35;
-  font-size: 15px;
+  font-size: 14px;
 }
 
-/* --- App chrome (screen only) --- */
+/* --- App chrome --- */
 
 .app-bar {
   position: sticky;
   top: 0;
   z-index: 100;
   background: var(--sheet);
-  border-bottom: 1px solid var(--rule);
+  border-bottom: 2px solid var(--line);
 }
 
 .app-bar-inner {
-  max-width: 920px;
+  max-width: 880px;
   margin: 0 auto;
-  padding: 0.5rem 1rem;
+  padding: 0.45rem 1rem;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -43,9 +43,10 @@ body {
 
 .app-bar-title {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   font-weight: 700;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .app-actions {
@@ -57,8 +58,8 @@ body {
 
 .btn {
   font: inherit;
-  font-size: 0.82rem;
-  padding: 0.35rem 0.65rem;
+  font-size: 0.8rem;
+  padding: 0.35rem 0.7rem;
   border: 1px solid var(--line);
   border-radius: 0;
   background: var(--sheet);
@@ -83,63 +84,65 @@ body {
 /* --- Paper form --- */
 
 .form-sheet {
-  max-width: 920px;
-  margin: 1rem auto 2rem;
-  padding: 1.25rem 1.5rem 1.5rem;
+  max-width: 880px;
+  margin: 0.75rem auto 1.5rem;
+  padding: 1.1rem 1.25rem 1.25rem;
   background: var(--sheet);
-  border: 1px solid var(--rule);
+  border: 2px solid var(--line);
 }
 
 .letterhead {
   display: grid;
   grid-template-columns: 1fr auto;
   grid-template-rows: auto auto;
-  gap: 0.15rem 1.5rem;
-  margin-bottom: 0.85rem;
+  gap: 0.1rem 1.25rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.65rem;
+  border-bottom: 1px solid var(--line);
 }
 
 .brand-name {
   margin: 0;
-  font-size: 1.5rem;
+  font-size: 1.45rem;
   font-weight: 800;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.04em;
 }
 
 .brand-sub,
 .brand-addr {
   margin: 0;
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   color: var(--muted);
 }
 
 .sheet-title {
   grid-column: 1 / -1;
   text-align: center;
-  margin: 0.5rem 0 0;
-  font-size: 1.05rem;
+  margin: 0.45rem 0 0;
+  font-size: 1rem;
   font-weight: 800;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
 }
 
 .order-no {
   grid-column: 2;
   grid-row: 1;
   text-align: right;
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   align-self: start;
 }
 
 .order-no label {
   display: block;
-  margin-bottom: 0.2rem;
+  margin-bottom: 0.15rem;
   font-weight: 700;
 }
 
 .order-no input {
   width: 100%;
-  min-width: 150px;
+  min-width: 145px;
   border: 1px solid var(--line);
-  padding: 0.3rem 0.45rem;
+  padding: 0.25rem 0.4rem;
   font: inherit;
   background: var(--sheet);
 }
@@ -147,131 +150,96 @@ body {
 .sheet-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 1rem 2.5rem;
-  margin-bottom: 0.85rem;
+  gap: 0.75rem 2rem;
+  margin-bottom: 0.75rem;
 }
 
 .meta-field {
   flex: 1;
-  min-width: 180px;
+  min-width: 170px;
   font-weight: 700;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
 }
 
 .meta-field input {
   display: block;
   width: 100%;
-  margin-top: 0.15rem;
+  margin-top: 0.1rem;
   border: none;
   border-bottom: 1px solid var(--line);
-  padding: 0.2rem 0;
+  padding: 0.15rem 0;
   font: inherit;
   font-weight: 400;
   background: transparent;
 }
 
-/* Specifications panel */
-
-.spec-details {
-  margin-bottom: 0.85rem;
-  border: 1px solid var(--line);
-}
-
-.spec-details-summary {
-  padding: 0.45rem 0.65rem;
-  font-weight: 700;
-  font-size: 0.88rem;
-  cursor: pointer;
-  list-style: none;
-  background: var(--sheet);
-}
-
-.spec-details-summary::-webkit-details-marker { display: none; }
-
-.spec-details-summary::before {
-  content: "▸ ";
-  display: inline-block;
-  width: 1em;
-}
-
-.spec-details[open] .spec-details-summary::before {
-  content: "▾ ";
-}
-
-.spec-details[open] .spec-details-summary {
-  border-bottom: 1px solid var(--line);
-}
-
 .spec-box {
   border: 2px solid var(--line);
-  padding: 0.65rem 0.85rem;
+  padding: 0.55rem 0.75rem;
+  margin-bottom: 0.75rem;
 }
 
-.spec-details .spec-box {
-  border: none;
-  padding: 0.65rem 0.85rem 0.75rem;
-}
-
-.spec-row { margin-bottom: 0.65rem; }
+.spec-row { margin-bottom: 0.5rem; }
 .spec-row:last-child { margin-bottom: 0; }
 
 .spec-label {
   display: block;
   font-weight: 700;
-  font-size: 0.88rem;
-  margin-bottom: 0.25rem;
+  font-size: 0.82rem;
+  margin-bottom: 0.15rem;
 }
 
 .spec-input {
   width: 100%;
   border: none;
   border-bottom: 1px solid var(--line);
-  padding: 0.15rem 0;
+  padding: 0.1rem 0;
   font: inherit;
   background: transparent;
 }
 
-.spec-field-qty { max-width: 100px; }
+.spec-field-qty { max-width: 90px; }
 
 .spec-row-split {
   display: flex;
   flex-wrap: wrap;
-  gap: 1.5rem 2rem;
+  gap: 1.25rem 2rem;
 }
 
 .checks {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.35rem 1rem;
-  font-size: 0.88rem;
+  gap: 0.25rem 0.85rem;
+  font-size: 0.82rem;
 }
 
 .checks-col {
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.2rem;
 }
 
 .checks label {
   display: flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.3rem;
   font-weight: 400;
   cursor: pointer;
 }
 
 .checks input {
-  width: 0.95rem;
-  height: 0.95rem;
+  width: 0.9rem;
+  height: 0.9rem;
   accent-color: var(--ink);
 }
 
 textarea {
   width: 100%;
   border: 1px solid var(--rule);
-  padding: 0.4rem 0.5rem;
+  padding: 0.35rem 0.45rem;
   font: inherit;
   resize: vertical;
   border-radius: 0;
+  min-height: 2.2rem;
 }
 
 .print-only { display: none; }
@@ -280,19 +248,19 @@ textarea {
   display: block;
   min-height: 1.2em;
   border-bottom: 1px solid var(--line);
-  padding-bottom: 0.15rem;
-  font-size: 0.9rem;
+  padding-bottom: 0.1rem;
+  font-size: 0.85rem;
 }
 
 /* --- Drawing area --- */
 
 .draw-section {
-  margin-top: 0.25rem;
+  margin-top: 0;
 }
 
 .draw-title {
-  margin: 0 0 0.5rem;
-  font-size: 0.95rem;
+  margin: 0 0 0.4rem;
+  font-size: 0.88rem;
   font-weight: 700;
 }
 
@@ -300,14 +268,14 @@ textarea {
   display: grid;
   grid-template-columns: 1fr 1fr;
   border: 2px solid var(--line);
-  min-height: 520px;
+  min-height: 480px;
 }
 
 .draw-zone {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  padding: 0.5rem 0.6rem 0.6rem;
+  padding: 0.45rem 0.5rem 0.5rem;
 }
 
 .draw-zone-divider {
@@ -319,23 +287,21 @@ textarea {
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
-  margin-bottom: 0.4rem;
-  padding-bottom: 0.35rem;
-  border-bottom: 1px solid var(--rule);
+  margin-bottom: 0.35rem;
 }
 
 .zone-label {
   margin: 0;
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 
 .zone-add {
   font: inherit;
   font-size: 0.72rem;
-  padding: 0.15rem 0.35rem;
+  padding: 0.15rem 0.4rem;
   border: 1px solid var(--line);
   background: var(--sheet);
   cursor: pointer;
@@ -344,7 +310,7 @@ textarea {
 .drawings-stack {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.45rem;
   flex: 1;
 }
 
@@ -355,86 +321,85 @@ textarea {
   min-height: 0;
 }
 
-.drawing-card + .drawing-card {
-  padding-top: 0.5rem;
+.drawing-card-multi {
+  padding-top: 0.45rem;
   border-top: 1px solid var(--rule);
 }
 
-.drawing-card-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 0.25rem;
+.drawing-card-multi:first-child {
+  padding-top: 0;
+  border-top: none;
 }
 
-.drawing-card-title {
-  font-size: 0.72rem;
-  font-weight: 400;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+.panel-toolbar {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.3rem;
+  margin-bottom: 0.35rem;
+  font-size: 0.78rem;
+}
+
+.style-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.style-label {
+  font-weight: 700;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.template-select {
+  width: 100%;
+  font: inherit;
+  font-size: 0.78rem;
+  border: 1px solid var(--line);
+  padding: 0.25rem 0.35rem;
+  background: var(--sheet);
+  min-height: 2rem;
 }
 
 .drawing-remove {
   font: inherit;
   font-size: 0.72rem;
-  padding: 0;
-  border: none;
-  background: none;
-  color: var(--muted);
-  text-decoration: underline;
-  cursor: pointer;
-}
-
-.panel-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.35rem 0.5rem;
-  margin-bottom: 0.35rem;
-  font-size: 0.72rem;
-  color: var(--muted);
-}
-
-.panel-toolbar label {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-}
-
-.panel-toolbar select {
-  font: inherit;
-  font-size: 0.72rem;
+  padding: 0.15rem 0.35rem;
   border: 1px solid var(--rule);
-  padding: 0.1rem 0.2rem;
   background: var(--sheet);
-  max-width: 140px;
+  color: var(--muted);
+  cursor: pointer;
+  white-space: nowrap;
 }
+
+.drawing-remove[hidden] { display: none; }
 
 .draw-tools {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.15rem;
+  gap: 0.2rem;
+  align-items: center;
 }
 
 .draw-tools .tool-btn {
   font: inherit;
   font-size: 0.72rem;
-  padding: 0.15rem 0.35rem;
-  border: 1px solid var(--rule);
+  padding: 0.2rem 0.45rem;
+  border: 1px solid var(--line);
   background: var(--sheet);
   color: var(--ink);
   cursor: pointer;
+  min-height: 1.75rem;
 }
 
 .draw-tools .tool-btn.active {
   background: var(--ink);
   color: #fff;
-  border-color: var(--ink);
 }
 
 .panel-toolbar .tool-clear {
-  margin-left: auto;
+  justify-self: start;
   font: inherit;
   font-size: 0.72rem;
   padding: 0;
@@ -447,16 +412,16 @@ textarea {
 
 .svg-viewport {
   flex: 1;
-  border: 1px solid var(--rule);
+  border: none;
   background: var(--sheet);
   overflow: hidden;
   touch-action: none;
   position: relative;
-  min-height: 300px;
+  min-height: 320px;
 }
 
 .svg-viewport:focus {
-  outline: 1px solid var(--ink);
+  outline: 1px dotted var(--line);
   outline-offset: -1px;
 }
 
@@ -489,7 +454,7 @@ textarea {
 }
 
 .anchor-curve {
-  fill: #666;
+  fill: #555;
   stroke: #fff;
   stroke-width: 2;
   pointer-events: none;
@@ -505,7 +470,7 @@ textarea {
   left: 50%;
   top: 0.35rem;
   transform: translateX(-50%);
-  background: rgba(17, 17, 17, 0.88);
+  background: rgba(17, 17, 17, 0.9);
   color: #fff;
   font-size: 0.72rem;
   padding: 0.3rem 0.55rem;
@@ -526,15 +491,15 @@ textarea {
 
 .app-footer {
   text-align: center;
-  padding: 0.75rem 1rem 1.5rem;
-  font-size: 0.78rem;
+  padding: 0.5rem 1rem 1rem;
+  font-size: 0.75rem;
   color: var(--muted);
 }
 
 .app-footer a { color: var(--ink); }
 
 dialog {
-  border: 1px solid var(--line);
+  border: 2px solid var(--line);
   border-radius: 0;
   padding: 1.25rem;
   max-width: 90vw;
@@ -600,9 +565,7 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.35); }
     border-top: 1px solid var(--line);
   }
 
-  .letterhead {
-    grid-template-columns: 1fr;
-  }
+  .letterhead { grid-template-columns: 1fr; }
 
   .order-no {
     grid-column: 1;
@@ -613,6 +576,14 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.35); }
     margin-left: 0;
     width: 100%;
   }
+
+  .style-row {
+    grid-template-columns: 1fr;
+  }
+
+  .drawing-remove {
+    justify-self: start;
+  }
 }
 
 @media print {
@@ -622,7 +593,6 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.35); }
   .app-bar,
   .app-footer,
   .panel-toolbar,
-  .drawing-card-head,
   .zone-add {
     display: none !important;
   }
@@ -636,7 +606,7 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.35); }
     padding: 0.4cm;
   }
 
-  .spec-details { display: none !important; }
+  .spec-box:not(.spec-box-print-only) { display: none !important; }
 
   .spec-box-print-only {
     display: block !important;
@@ -651,15 +621,12 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.35); }
 
   .draw-zone { padding: 0.2cm; }
 
-  .drawing-card + .drawing-card {
+  .drawing-card-multi {
     border-top: 1px solid #ccc;
     page-break-inside: avoid;
   }
 
-  .svg-viewport {
-    border: none;
-    min-height: 7cm;
-  }
+  .svg-viewport { min-height: 7cm; }
 
   .editor-handles,
   .anchor-handle,
