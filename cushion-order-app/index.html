@@ -16,10 +16,11 @@
     <div class="app-bar-inner">
       <p class="app-bar-title">Cushion Purchase Order</p>
       <div class="app-actions">
-        <button type="button" id="btn-save" class="btn">Save</button>
-        <button type="button" id="btn-load" class="btn">Load</button>
-        <button type="button" id="btn-new" class="btn">New</button>
-        <button type="button" id="btn-export" class="btn btn-primary">Print / PDF</button>
+        <a href="print-blank.html" class="btn" target="_blank" rel="noopener">Blank form</a>
+        <button type="button" id="btn-export" class="btn btn-primary">Print order</button>
+        <button type="button" id="btn-save" class="btn btn-quiet">Save</button>
+        <button type="button" id="btn-load" class="btn btn-quiet">Load</button>
+        <button type="button" id="btn-new" class="btn btn-quiet">New</button>
       </div>
     </div>
   </header>
@@ -117,22 +118,31 @@
 
     <section class="draw-section">
       <h2 class="draw-title">Cushion Drawing below</h2>
-      <p class="draw-hint no-print">Drag the small dots on an edge to curve it — use on the T-cushion corners. Tap a measurement to edit.</p>
+      <p class="workflow-hint no-print">
+        <strong>Fastest:</strong> fill the form, tap a measurement to change it, then <strong>Print order</strong>.
+        For hand drawing, open <strong>Blank form</strong> and print that instead.
+      </p>
+
+      <div class="draw-actions no-print">
+        <button type="button" id="btn-pen" class="btn btn-sm">Draw on form</button>
+        <button type="button" id="btn-curves" class="btn btn-sm">Curve T edges</button>
+        <details class="draw-more" id="draw-more">
+          <summary>Change cushion style / add drawings</summary>
+          <div class="draw-more-actions">
+            <button type="button" class="zone-add" data-action="add-drawing" data-zone="drawings-seat">Add seat drawing</button>
+            <button type="button" class="zone-add" data-action="add-drawing" data-zone="drawings-back">Add back drawing</button>
+          </div>
+        </details>
+      </div>
 
       <div class="draw-zones">
         <div class="draw-zone" data-zone="seat">
-          <div class="zone-head">
-            <h3 class="zone-label">Seat</h3>
-            <button type="button" class="zone-add no-print" data-action="add-drawing" data-zone="drawings-seat">Add seat drawing</button>
-          </div>
+          <h3 class="zone-label">Seat</h3>
           <div class="drawings-stack" id="drawings-seat"></div>
         </div>
 
         <div class="draw-zone draw-zone-divider" data-zone="back">
-          <div class="zone-head">
-            <h3 class="zone-label">Back</h3>
-            <button type="button" class="zone-add no-print" data-action="add-drawing" data-zone="drawings-back">Add back drawing</button>
-          </div>
+          <h3 class="zone-label">Back</h3>
           <div class="drawings-stack" id="drawings-back"></div>
         </div>
       </div>
@@ -140,7 +150,7 @@
   </main>
 
   <footer class="app-footer no-print">
-    <p>Saved on this device only — nothing is uploaded.</p>
+    <p>For quick one-off orders, printing the blank form and drawing by hand is often fastest.</p>
     <a href="privacy.html">Privacy</a>
   </footer>
 

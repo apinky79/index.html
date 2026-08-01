@@ -269,6 +269,7 @@
       const zoneId = btn.dataset.zone;
       DrawingPanels.addDrawing(zoneId);
       wireAllToolButtons();
+      syncDrawModes();
       flash("New drawing added");
     });
   });
@@ -276,6 +277,44 @@
   DrawingPanels.init("drawings-seat", "seat");
   DrawingPanels.init("drawings-back", "back");
   wireAllToolButtons();
+
+  let penMode = false;
+  let curveMode = false;
+  const btnPen = document.getElementById("btn-pen");
+  const btnCurves = document.getElementById("btn-curves");
+  const drawMore = document.getElementById("draw-more");
+
+  function syncDrawModes() {
+    document.body.classList.toggle("mode-pen", penMode);
+    document.body.classList.toggle("mode-curves", curveMode);
+    document.body.classList.toggle("show-draw-tools", drawMore.open);
+    btnPen.classList.toggle("active", penMode);
+    btnCurves.classList.toggle("active", curveMode);
+    DrawingPanels.setAllShowHandles(curveMode);
+    if (penMode) {
+      DrawingPanels.setAllTools("pen");
+    } else {
+      DrawingPanels.setAllTools("select");
+    }
+  }
+
+  btnPen.addEventListener("click", () => {
+    penMode = !penMode;
+    if (penMode) curveMode = false;
+    syncDrawModes();
+    flash(penMode ? "Draw with finger or stylus — like pen on paper" : "Drawing off — tap measurements to edit");
+  });
+
+  btnCurves.addEventListener("click", () => {
+    curveMode = !curveMode;
+    if (curveMode) penMode = false;
+    syncDrawModes();
+    flash(curveMode ? "Drag edge dots to curve T-cushion corners" : "Curve mode off");
+  });
+
+  drawMore.addEventListener("toggle", syncDrawModes);
+
+  syncDrawModes();
 
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("sw.js").catch(() => {});

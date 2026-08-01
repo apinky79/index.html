@@ -278,6 +278,7 @@ const DrawingEditor = (() => {
 
   function isOutlineShape(el) {
     if (!el || el.closest(".editor-handles")) return false;
+    if (el.classList.contains("user-pen")) return false;
     if (el.closest("[id^='dimension']") || el.closest(".user-dimension") || el.closest("#title")) return false;
     if (el.closest("#outline") || el.id === "outline") return true;
     if (el.classList.contains("user-curve")) return true;
@@ -323,6 +324,10 @@ const DrawingEditor = (() => {
   function rebuildHandles(state) {
     if (!state) return;
     stripHandles(state.svg);
+    if (!state.showHandles) {
+      updateCurvePreview(state);
+      return;
+    }
     const layer = svgEl("g", { class: "editor-handles" });
     state.handlesLayer = layer;
     state.svg.appendChild(layer);
@@ -338,6 +343,47 @@ const DrawingEditor = (() => {
     });
 
     updateCurvePreview(state);
+  }
+
+  function penPointsToD(points) {
+    if (!points?.length) return "";
+    let d = `M ${points[0].x} ${points[0].y}`;
+    for (let i = 1; i < points.length; i++) d += ` L ${points[i].x} ${points[i].y}`;
+    return d;
+  }
+
+  function updatePenPreview(state) {
+    state.svg.querySelectorAll(".pen-preview").forEach((n) => n.remove());
+    if (!state.penPoints?.length) return;
+    state.svg.appendChild(svgEl("path", {
+      class: "pen-preview",
+      d: penPointsToD(state.penPoints),
+      fill: "none",
+      stroke: "#111",
+      "stroke-width": 2.5,
+      "stroke-linecap": "round",
+      "stroke-linejoin": "round",
+    }));
+  }
+
+  function commitPenStroke(state) {
+    if (!state.penPoints || state.penPoints.length < 2) {
+      state.penPoints = [];
+      updatePenPreview(state);
+      return;
+    }
+    state.svg.appendChild(svgEl("path", {
+      id: nextCustomId(state.svg, "pen"),
+      d: penPointsToD(state.penPoints),
+      fill: "none",
+      stroke: "#111",
+      "stroke-width": 2.5,
+      "stroke-linecap": "round",
+      "stroke-linejoin": "round",
+      class: "shape-stroke user-pen",
+    }));
+    state.penPoints = [];
+    updatePenPreview(state);
   }
 
   function updateCurvePreview(state) {
@@ -479,10 +525,12 @@ const DrawingEditor = (() => {
       svg,
       viewport,
       tool: "select",
+      showHandles: false,
       selected: null,
       drag: null,
       lineStart: null,
       curvePoints: [],
+      penPoints: [],
       onEditLabel: callbacks.onEditLabel || (() => {}),
       onEditLabelAsync: callbacks.onEditLabelAsync || (() => {}),
       onSelectionChange: callbacks.onSelectionChange || (() => {}),
@@ -513,6 +561,22 @@ const DrawingEditor = (() => {
     }
 
     viewport.addEventListener("pointerdown", (e) => {
+      if (state.tool === "pen" && !hitHandle(e.target)) {
+        const pt = clientToSvg(svg, viewport, e.clientX, e.clientY);
+        state.penPoints = [pt];
+        state.drag = {
+          kind: "pen",
+          pid: e.pointerId,
+          moved: false,
+          sx: e.clientX,
+          sy: e.clientY,
+        };
+        viewport.setPointerCapture(e.pointerId);
+        updatePenPreview(state);
+        e.preventDefault();
+        return;
+      }
+
       if (state.tool === "add-curve" && !hitHandle(e.target)) {
         const pt = clientToSvg(svg, viewport, e.clientX, e.clientY);
         state.curvePoints.push(pt);
@@ -581,6 +645,16 @@ const DrawingEditor = (() => {
     viewport.addEventListener("pointermove", (e) => {
       if (!state.drag || state.drag.pid !== e.pointerId) return;
       if (Math.hypot(e.clientX - state.drag.sx, e.clientY - state.drag.sy) > TAP_MAX_PX) state.drag.moved = true;
+      if (state.drag.kind === "pen") {
+        const pt = clientToSvg(svg, viewport, e.clientX, e.clientY);
+        const last = state.penPoints[state.penPoints.length - 1];
+        if (!last || Math.hypot(pt.x - last.x, pt.y - last.y) > 1.5) {
+          state.penPoints.push(pt);
+          updatePenPreview(state);
+        }
+        e.preventDefault();
+        return;
+      }
       if (state.drag.kind === "anchor") {
         const pt = clientToSvg(svg, viewport, e.clientX, e.clientY);
         updateMetaLive(state.drag.meta, pt.x, pt.y, state.drag.handleG);
@@ -590,6 +664,7 @@ const DrawingEditor = (() => {
 
     function endPointer(e) {
       if (!state.drag || state.drag.pid !== e.pointerId) return;
+      if (state.drag.kind === "pen") commitPenStroke(state);
       if (state.drag.kind === "anchor") rebuildHandles(state);
       if (state.drag.kind === "text-tap" && !state.drag.moved) state.onEditLabel(state.drag.text);
       state.drag = null;
@@ -621,8 +696,15 @@ const DrawingEditor = (() => {
       setTool(tool) {
         state.tool = tool;
         state.lineStart = null;
+        state.penPoints = [];
+        updatePenPreview(state);
         if (tool !== "add-curve") state.curvePoints = [];
         updateCurvePreview(state);
+        viewport.classList.toggle("tool-pen", tool === "pen");
+      },
+      setShowHandles(show) {
+        state.showHandles = !!show;
+        rebuildHandles(state);
       },
       finishCurve: (closed) => finishCurve(state, closed),
       editSelected() {
