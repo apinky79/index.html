@@ -1,0 +1,292 @@
+{
+  "canvas_size_px": 2400,
+  "format": "PNG RGBA",
+  "recommended_import": "Import layer PNGs into Procreate; stack outline \u2192 detail \u2192 label",
+  "layer_key": {
+    "01-outline": "Main cushion shape (black)",
+    "02-detail": "Boxing, channels, welt, seams (blue/red)",
+    "03-label": "Style name and notes"
+  },
+  "templates": {
+    "sofa/seat/box": {
+      "display_name": "Box Cushion Seat",
+      "description": "Boxed edge with welt/boxing strip",
+      "files": {
+        "01-outline": "sofa/seat/box/layers/01-outline.png",
+        "02-detail": "sofa/seat/box/layers/02-detail.png",
+        "03-label": "sofa/seat/box/layers/03-label.png",
+        "composite": "sofa/seat/box/box-composite.png"
+      }
+    },
+    "sofa/seat/knife-edge": {
+      "display_name": "Knife Edge Seat",
+      "description": "Tapered seam, no boxing",
+      "files": {
+        "01-outline": "sofa/seat/knife-edge/layers/01-outline.png",
+        "02-detail": "sofa/seat/knife-edge/layers/02-detail.png",
+        "03-label": "sofa/seat/knife-edge/layers/03-label.png",
+        "composite": "sofa/seat/knife-edge/knife-edge-composite.png"
+      }
+    },
+    "sofa/seat/t-cushion": {
+      "display_name": "T-Cushion Seat",
+      "description": "Wraps around front arm",
+      "files": {
+        "01-outline": "sofa/seat/t-cushion/layers/01-outline.png",
+        "02-detail": "sofa/seat/t-cushion/layers/02-detail.png",
+        "03-label": "sofa/seat/t-cushion/layers/03-label.png",
+        "composite": "sofa/seat/t-cushion/t-cushion-composite.png"
+      }
+    },
+    "sofa/seat/l-cushion": {
+      "display_name": "L-Cushion Seat",
+      "description": "Corner sectional wrap",
+      "files": {
+        "01-outline": "sofa/seat/l-cushion/layers/01-outline.png",
+        "02-detail": "sofa/seat/l-cushion/layers/02-detail.png",
+        "03-label": "sofa/seat/l-cushion/layers/03-label.png",
+        "composite": "sofa/seat/l-cushion/l-cushion-composite.png"
+      }
+    },
+    "sofa/seat/bullnose": {
+      "display_name": "Bullnose Seat",
+      "description": "Rolled front edge",
+      "files": {
+        "01-outline": "sofa/seat/bullnose/layers/01-outline.png",
+        "02-detail": "sofa/seat/bullnose/layers/02-detail.png",
+        "03-label": "sofa/seat/bullnose/layers/03-label.png",
+        "composite": "sofa/seat/bullnose/bullnose-composite.png"
+      }
+    },
+    "sofa/seat/waterfall": {
+      "display_name": "Waterfall Seat",
+      "description": "Continuous front-to-back slope",
+      "files": {
+        "01-outline": "sofa/seat/waterfall/layers/01-outline.png",
+        "02-detail": "sofa/seat/waterfall/layers/02-detail.png",
+        "03-label": "sofa/seat/waterfall/layers/03-label.png",
+        "composite": "sofa/seat/waterfall/waterfall-composite.png"
+      }
+    },
+    "sofa/seat/bench": {
+      "display_name": "Bench Seat",
+      "description": "Single long seat cushion",
+      "files": {
+        "01-outline": "sofa/seat/bench/layers/01-outline.png",
+        "02-detail": "sofa/seat/bench/layers/02-detail.png",
+        "03-label": "sofa/seat/bench/layers/03-label.png",
+        "composite": "sofa/seat/bench/bench-composite.png"
+      }
+    },
+    "sofa/seat/chaise": {
+      "display_name": "Chaise Extension Seat",
+      "description": "Extended leg-rest section",
+      "files": {
+        "01-outline": "sofa/seat/chaise/layers/01-outline.png",
+        "02-detail": "sofa/seat/chaise/layers/02-detail.png",
+        "03-label": "sofa/seat/chaise/layers/03-label.png",
+        "composite": "sofa/seat/chaise/chaise-composite.png"
+      }
+    },
+    "sofa/back/box": {
+      "display_name": "Box Cushion Back",
+      "description": "Boxed back cushion",
+      "files": {
+        "01-outline": "sofa/back/box/layers/01-outline.png",
+        "02-detail": "sofa/back/box/layers/02-detail.png",
+        "03-label": "sofa/back/box/layers/03-label.png",
+        "composite": "sofa/back/box/box-composite.png"
+      }
+    },
+    "sofa/back/knife-edge": {
+      "display_name": "Knife Edge Back",
+      "description": "Tapered back cushion",
+      "files": {
+        "01-outline": "sofa/back/knife-edge/layers/01-outline.png",
+        "02-detail": "sofa/back/knife-edge/layers/02-detail.png",
+        "03-label": "sofa/back/knife-edge/layers/03-label.png",
+        "composite": "sofa/back/knife-edge/knife-edge-composite.png"
+      }
+    },
+    "sofa/back/t-back": {
+      "display_name": "T-Back Cushion",
+      "description": "Wraps around arm at back",
+      "files": {
+        "01-outline": "sofa/back/t-back/layers/01-outline.png",
+        "02-detail": "sofa/back/t-back/layers/02-detail.png",
+        "03-label": "sofa/back/t-back/layers/03-label.png",
+        "composite": "sofa/back/t-back/t-back-composite.png"
+      }
+    },
+    "sofa/back/l-back": {
+      "display_name": "L-Back Cushion",
+      "description": "Corner back wrap",
+      "files": {
+        "01-outline": "sofa/back/l-back/layers/01-outline.png",
+        "02-detail": "sofa/back/l-back/layers/02-detail.png",
+        "03-label": "sofa/back/l-back/layers/03-label.png",
+        "composite": "sofa/back/l-back/l-back-composite.png"
+      }
+    },
+    "sofa/back/bullnose": {
+      "display_name": "Bullnose Back",
+      "description": "Rolled top/front back",
+      "files": {
+        "01-outline": "sofa/back/bullnose/layers/01-outline.png",
+        "02-detail": "sofa/back/bullnose/layers/02-detail.png",
+        "03-label": "sofa/back/bullnose/layers/03-label.png",
+        "composite": "sofa/back/bullnose/bullnose-composite.png"
+      }
+    },
+    "sofa/back/channel-tufted": {
+      "display_name": "Channel / Tufted Back",
+      "description": "Vertical channel lines",
+      "files": {
+        "01-outline": "sofa/back/channel-tufted/layers/01-outline.png",
+        "02-detail": "sofa/back/channel-tufted/layers/02-detail.png",
+        "03-label": "sofa/back/channel-tufted/layers/03-label.png",
+        "composite": "sofa/back/channel-tufted/channel-tufted-composite.png"
+      }
+    },
+    "sofa/back/scatter": {
+      "display_name": "Loose Scatter Back",
+      "description": "Individual throw-back pillow",
+      "files": {
+        "01-outline": "sofa/back/scatter/layers/01-outline.png",
+        "02-detail": "sofa/back/scatter/layers/02-detail.png",
+        "03-label": "sofa/back/scatter/layers/03-label.png",
+        "composite": "sofa/back/scatter/scatter-composite.png"
+      }
+    },
+    "sofa/back/fixed": {
+      "display_name": "Fixed Upholstered Back",
+      "description": "Non-removable back panel",
+      "files": {
+        "01-outline": "sofa/back/fixed/layers/01-outline.png",
+        "02-detail": "sofa/back/fixed/layers/02-detail.png",
+        "03-label": "sofa/back/fixed/layers/03-label.png",
+        "composite": "sofa/back/fixed/fixed-composite.png"
+      }
+    },
+    "sofa/back/bordered": {
+      "display_name": "Bordered / Welted Back",
+      "description": "Back with welt border",
+      "files": {
+        "01-outline": "sofa/back/bordered/layers/01-outline.png",
+        "02-detail": "sofa/back/bordered/layers/02-detail.png",
+        "03-label": "sofa/back/bordered/layers/03-label.png",
+        "composite": "sofa/back/bordered/bordered-composite.png"
+      }
+    },
+    "chair/seat/box": {
+      "display_name": "Box Cushion Seat",
+      "description": "Boxed dining/lounge seat",
+      "files": {
+        "01-outline": "chair/seat/box/layers/01-outline.png",
+        "02-detail": "chair/seat/box/layers/02-detail.png",
+        "03-label": "chair/seat/box/layers/03-label.png",
+        "composite": "chair/seat/box/box-composite.png"
+      }
+    },
+    "chair/seat/knife-edge": {
+      "display_name": "Knife Edge Seat",
+      "description": "Simple tapered seat",
+      "files": {
+        "01-outline": "chair/seat/knife-edge/layers/01-outline.png",
+        "02-detail": "chair/seat/knife-edge/layers/02-detail.png",
+        "03-label": "chair/seat/knife-edge/layers/03-label.png",
+        "composite": "chair/seat/knife-edge/knife-edge-composite.png"
+      }
+    },
+    "chair/seat/round": {
+      "display_name": "Round Seat",
+      "description": "Circular dining seat",
+      "files": {
+        "01-outline": "chair/seat/round/layers/01-outline.png",
+        "02-detail": "chair/seat/round/layers/02-detail.png",
+        "03-label": "chair/seat/round/layers/03-label.png",
+        "composite": "chair/seat/round/round-composite.png"
+      }
+    },
+    "chair/seat/slip": {
+      "display_name": "Slip / Drop-In Seat",
+      "description": "Trapezoid drop-in pad",
+      "files": {
+        "01-outline": "chair/seat/slip/layers/01-outline.png",
+        "02-detail": "chair/seat/slip/layers/02-detail.png",
+        "03-label": "chair/seat/slip/layers/03-label.png",
+        "composite": "chair/seat/slip/slip-composite.png"
+      }
+    },
+    "chair/seat/t-cushion": {
+      "display_name": "T-Cushion Seat",
+      "description": "Armchair T-wrap seat",
+      "files": {
+        "01-outline": "chair/seat/t-cushion/layers/01-outline.png",
+        "02-detail": "chair/seat/t-cushion/layers/02-detail.png",
+        "03-label": "chair/seat/t-cushion/layers/03-label.png",
+        "composite": "chair/seat/t-cushion/t-cushion-composite.png"
+      }
+    },
+    "chair/back/box": {
+      "display_name": "Box Cushion Back",
+      "description": "Boxed chair back",
+      "files": {
+        "01-outline": "chair/back/box/layers/01-outline.png",
+        "02-detail": "chair/back/box/layers/02-detail.png",
+        "03-label": "chair/back/box/layers/03-label.png",
+        "composite": "chair/back/box/box-composite.png"
+      }
+    },
+    "chair/back/knife-edge": {
+      "display_name": "Knife Edge Back",
+      "description": "Tapered chair back",
+      "files": {
+        "01-outline": "chair/back/knife-edge/layers/01-outline.png",
+        "02-detail": "chair/back/knife-edge/layers/02-detail.png",
+        "03-label": "chair/back/knife-edge/layers/03-label.png",
+        "composite": "chair/back/knife-edge/knife-edge-composite.png"
+      }
+    },
+    "chair/back/scatter": {
+      "display_name": "Loose Back Cushion",
+      "description": "Removable back pillow",
+      "files": {
+        "01-outline": "chair/back/scatter/layers/01-outline.png",
+        "02-detail": "chair/back/scatter/layers/02-detail.png",
+        "03-label": "chair/back/scatter/layers/03-label.png",
+        "composite": "chair/back/scatter/scatter-composite.png"
+      }
+    },
+    "chair/back/wing": {
+      "display_name": "Wing Back",
+      "description": "Wing chair silhouette",
+      "files": {
+        "01-outline": "chair/back/wing/layers/01-outline.png",
+        "02-detail": "chair/back/wing/layers/02-detail.png",
+        "03-label": "chair/back/wing/layers/03-label.png",
+        "composite": "chair/back/wing/wing-composite.png"
+      }
+    },
+    "chair/back/round": {
+      "display_name": "Round / Oval Back",
+      "description": "Curved top chair back",
+      "files": {
+        "01-outline": "chair/back/round/layers/01-outline.png",
+        "02-detail": "chair/back/round/layers/02-detail.png",
+        "03-label": "chair/back/round/layers/03-label.png",
+        "composite": "chair/back/round/round-composite.png"
+      }
+    },
+    "chair/back/fixed": {
+      "display_name": "Fixed Upholstered Back",
+      "description": "Fixed chair back panel",
+      "files": {
+        "01-outline": "chair/back/fixed/layers/01-outline.png",
+        "02-detail": "chair/back/fixed/layers/02-detail.png",
+        "03-label": "chair/back/fixed/layers/03-label.png",
+        "composite": "chair/back/fixed/fixed-composite.png"
+      }
+    }
+  }
+}
