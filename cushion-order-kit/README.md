@@ -2,6 +2,18 @@
 
 Editable cushion order templates based on the **Dudgeon purchase order** layout.
 
+## Web app (recommended — free, private, no paywalls)
+
+Open **`cushion-order-app/`** in your browser — a complete order builder with:
+
+- Dudgeon form fields you can type into
+- Moveable dimension lines (drag with finger/mouse)
+- Editable measurements (double-tap)
+- Save drafts on your device
+- Export PDF — nothing sent to any server
+
+See [cushion-order-app/README.md](../cushion-order-app/README.md).
+
 ---
 
 ## Free apps only (iPad) — start here
