@@ -2,69 +2,97 @@
 
 Editable cushion order templates based on the **Dudgeon purchase order** layout.
 
-## The problem with PNG layers in Procreate
+---
 
-PNG images bake lines and text into pixels — you **cannot** move individual dimension lines or edit labels after import. Procreate is a drawing app, not a form/vector editor.
+## Free apps only (iPad) — start here
 
-This kit gives you **three workable approaches** depending on what you need.
+You don't need Procreate, GoodNotes, or Affinity. These are **100% free**:
+
+### Best free setup: Adobe Acrobat Reader + Apple Notes
+
+Both are free. Apple Notes is already on your iPad.
+
+**Step 1 — Fill the form (Acrobat Reader)**
+1. Install **Adobe Acrobat Reader** from the App Store (free).
+2. Copy `form/dudgeon-purchase-order.pdf` to iCloud / Files.
+3. Open it in Acrobat Reader.
+4. Tap form fields to type **To, From, Order No, Design, Qty**, tick filling/border boxes, add notes.
+5. Share → **Save to Files** or **Copy to Notes**.
+
+**Step 2 — Draw the cushion (Apple Notes)**
+1. Open the PDF in **Notes** (share sheet → Notes), or attach it to a new note.
+2. Tap the **Markup** pen icon.
+3. In the big “Cushion Drawing below” box, draw your cushion shape and dimension lines.
+4. Use the **text tool** in Markup (Aa) for inch measurements.
+5. Everything you draw or type can be edited later.
+
+**Step 3 — Duplicate for each order**
+- In Notes: select the note → **Duplicate** for the next job.
 
 ---
 
-## Option A — Best for editable forms + drawings (recommended)
+### Best free for moveable lines + editable measurements
 
-**GoodNotes 6** or **Notability** on iPad:
-
-1. Open `form/dudgeon-purchase-order.pdf` (fillable fields work in PDF Expert / Acrobat too).
-2. Fill **To, From, Order No, Design, Qty** with the keyboard or Apple Pencil.
-3. In the drawing box, **import** an SVG from `drawings/svg/` or draw freehand.
-4. Dimension lines and notes are fully moveable if you draw them with the pen tool.
-
-**Why this works:** PDF keeps the form structure; the drawing app lets you edit everything on top.
-
----
-
-## Option B — Moveable lines + editable text (vector)
-
-**Affinity Designer 2** (iPad) or **Concepts** (iPad):
+**Linearity Curve** (free on iPad — search “Linearity Curve” in App Store):
 
 1. Open `form/dudgeon-purchase-order.svg`.
-2. Open a cushion drawing from `drawings/svg/chair/seat/t-cushion.svg` (etc.).
-3. Each **dimension line is its own group** — tap to move, resize, or delete.
-4. **Double-tap text** to edit inch measurements.
-5. Export as PDF or PNG for sending to the workshop.
+2. Open a cushion file, e.g. `drawings/svg/chair/seat/t-cushion.svg`.
+3. Tap a dimension group → **move, resize, or delete** it.
+4. Double-tap inch text → edit the number.
+5. Export as PDF to email to the workshop.
 
-**Why this works:** SVG is true vector — lines and text stay editable.
-
----
-
-## Option C — Still want Procreate?
-
-Use Procreate for the **sketch only**, not the form fields:
-
-1. New canvas → import `form/dudgeon-purchase-order-background.png` → **lock layer**.
-2. Import cushion **outline** from `drawings/svg/` (Procreate flattens SVG but you can scale/move the whole import).
-3. On **new layers above**, draw dimension lines with the **Monoline** brush (moveable by transforming that layer, or draw each dimension on its own layer).
-4. Add all text (measurements, notes, To/From) with Procreate's **Add Text** tool — this stays editable.
-5. Tick boxes: draw circles by hand or use PNG stamp.
-
-**Honest limit:** Procreate will not give you moveable individual imported dimension lines from SVG. Draw them yourself on separate layers, or use Option A/B.
+The free tier is enough for opening SVGs and editing layers.
 
 ---
 
-## Folder layout
+### Also free: Apple Freeform
+
+Good if you want to **drag things around** on a board:
+
+1. New Freeform board.
+2. Insert `dudgeon-purchase-order-background.png` as the base.
+3. Insert cushion SVGs (or draw with Apple Pencil).
+4. Add text boxes for To / From / measurements — move them anywhere.
+5. Share as PDF when done.
+
+---
+
+## Files in this kit
 
 ```
 cushion-order-kit/
 ├── form/
-│   ├── dudgeon-purchase-order.pdf       ← fillable form fields
-│   ├── dudgeon-purchase-order.svg       ← editable in Affinity/Concepts
-│   └── dudgeon-purchase-order-background.png  ← Procreate locked background
+│   ├── dudgeon-purchase-order.pdf       ← fillable in Acrobat Reader (free)
+│   ├── dudgeon-purchase-order.svg       ← editable in Linearity Curve (free)
+│   └── dudgeon-purchase-order-background.png
 └── drawings/svg/
-    ├── chair/seat/t-cushion.svg         ← groups: outline, dimension-back-width, …
-    └── …
+    └── chair/seat/t-cushion.svg         ← moveable dimension groups
 ```
 
-## SVG group names (each moveable in vector apps)
+---
+
+## The problem with PNG layers in Procreate
+
+PNG images bake lines and text into pixels — you **cannot** move individual dimension lines or edit labels after import. Procreate also costs money. Use the free workflow above instead.
+
+---
+
+## Paid alternatives (if you ever want them)
+
+<details>
+<summary>GoodNotes, Affinity, Procreate</summary>
+
+**GoodNotes / Notability** — PDF + pen drawing (paid/subscription).
+
+**Affinity Designer** — full vector editing (paid once).
+
+**Procreate** — draw on form background; lines must be drawn by hand on separate layers.
+
+</details>
+
+---
+
+## SVG group names (Linearity Curve / vector apps)
 
 | Group ID | Contents |
 |----------|----------|
