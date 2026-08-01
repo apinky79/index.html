@@ -1,7 +1,8 @@
-const CACHE = "cushion-order-v6";
+const CACHE = "cushion-order-v7";
 const ASSETS = [
   "./",
   "./index.html",
+  "./print-blank.html",
   "./privacy.html",
   "./css/app.css",
   "./js/templates.js",

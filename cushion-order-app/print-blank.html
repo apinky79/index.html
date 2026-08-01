@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cushion Purchase Order — Blank</title>
+  <link rel="stylesheet" href="css/app.css">
+  <style>
+    body { background: #fff; }
+    .form-sheet { margin: 0 auto; border: none; max-width: 880px; }
+    .blank-draw-box {
+      border: 2px solid #111;
+      min-height: 14cm;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+    }
+    .blank-draw-half {
+      min-height: 14cm;
+      padding: 0.4cm;
+    }
+    .blank-draw-half + .blank-draw-half { border-left: 1px solid #111; }
+    .blank-draw-label {
+      margin: 0 0 0.3cm;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+    .print-bar {
+      text-align: center;
+      padding: 0.75rem;
+      background: #f5f5f5;
+      border-bottom: 1px solid #ccc;
+    }
+    @media print {
+      .print-bar { display: none !important; }
+      .form-sheet { padding: 0.4cm; }
+    }
+  </style>
+</head>
+<body>
+  <div class="print-bar no-print">
+    <button type="button" class="btn btn-primary" onclick="window.print()">Print blank form</button>
+    <a href="index.html" class="btn" style="margin-left:0.5rem">Back to digital form</a>
+  </div>
+
+  <main class="form-sheet">
+    <header class="letterhead">
+      <div class="brand">
+        <p class="brand-name">DUDGEON</p>
+        <p class="brand-sub">London Sofamakers</p>
+        <p class="brand-addr">Unit 9A, Chiswick Studios, 9 Power Road, London W4 5PY</p>
+      </div>
+      <h1 class="sheet-title">CUSHION PURCHASE ORDER</h1>
+      <div class="order-no">
+        <label>Cushion Order No.</label>
+        <div style="border:1px solid #111; min-height:1.6rem; margin-top:0.15rem;"></div>
+      </div>
+    </header>
+
+    <section class="sheet-meta">
+      <label class="meta-field">To: <span style="display:block;border-bottom:1px solid #111;min-height:1.2rem;margin-top:0.1rem;"></span></label>
+      <label class="meta-field">From: <span style="display:block;border-bottom:1px solid #111;min-height:1.2rem;margin-top:0.1rem;"></span></label>
+    </section>
+
+    <section class="spec-box">
+      <div class="spec-row"><span class="spec-label">Design</span><div style="border-bottom:1px solid #111;min-height:1.2rem;"></div></div>
+      <div class="spec-row spec-row-split">
+        <div class="spec-field">
+          <span class="spec-label">Item</span>
+          <div class="checks">
+            <label><input type="checkbox" disabled> sofa</label>
+            <label><input type="checkbox" disabled> chair</label>
+            <label><input type="checkbox" disabled> other</label>
+          </div>
+        </div>
+        <div class="spec-field spec-field-qty">
+          <span class="spec-label">Qty</span>
+          <div style="border-bottom:1px solid #111;min-height:1.2rem;"></div>
+        </div>
+      </div>
+      <div class="spec-row">
+        <span class="spec-label">Filling</span>
+        <div class="checks checks-wrap">
+          <label><input type="checkbox" disabled> Feather/Down</label>
+          <label><input type="checkbox" disabled> Fibre/Feather</label>
+          <label><input type="checkbox" disabled> Fibre</label>
+          <label><input type="checkbox" disabled> Foam</label>
+          <label><input type="checkbox" disabled> Wrap</label>
+          <label><input type="checkbox" disabled> Other</label>
+        </div>
+      </div>
+      <div class="spec-row">
+        <span class="spec-label">Cushion Border</span>
+        <div class="checks checks-wrap">
+          <label><input type="checkbox" disabled> 2.5"</label>
+          <label><input type="checkbox" disabled> 3.75"</label>
+          <label><input type="checkbox" disabled> 4.25"</label>
+          <label><input type="checkbox" disabled> 5.25"</label>
+          <label><input type="checkbox" disabled> 6.25"</label>
+        </div>
+      </div>
+      <div class="spec-row">
+        <span class="spec-label">Size Type</span>
+        <div class="checks checks-col">
+          <label><input type="checkbox" disabled> Outer case finished size, With barrier</label>
+          <label><input type="checkbox" disabled> Outer case finished size, No barrier</label>
+          <label><input type="checkbox" disabled> Inner case finished size, With barrier</label>
+          <label><input type="checkbox" disabled> Inner case finished size, No barrier</label>
+          <label><input type="checkbox" disabled> Foam size</label>
+        </div>
+      </div>
+      <div class="spec-row">
+        <span class="spec-label">Notes</span>
+        <div style="border:1px solid #bbb; min-height:2rem;"></div>
+      </div>
+    </section>
+
+    <section class="draw-section">
+      <h2 class="draw-title">Cushion Drawing below</h2>
+      <div class="blank-draw-box">
+        <div class="blank-draw-half">
+          <p class="blank-draw-label">Seat</p>
+        </div>
+        <div class="blank-draw-half">
+          <p class="blank-draw-label">Back</p>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

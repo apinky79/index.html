@@ -242,6 +242,20 @@ const DrawingPanels = (() => {
     }
   }
 
+  function forEachEditor(fn) {
+    for (const z of zones.values()) {
+      for (const rec of z.cards.values()) fn(rec.editor);
+    }
+  }
+
+  function setAllTools(tool) {
+    forEachEditor((ed) => ed.setTool(tool));
+  }
+
+  function setAllShowHandles(show) {
+    forEachEditor((ed) => ed.setShowHandles(show));
+  }
+
   return {
     init,
     addDrawing,
@@ -250,6 +264,9 @@ const DrawingPanels = (() => {
     serializeZone,
     loadZone,
     refreshAll,
+    forEachEditor,
+    setAllTools,
+    setAllShowHandles,
     zones,
   };
 })();
