@@ -30,7 +30,7 @@
       <div class="brand">
         <p class="brand-name">DUDGEON</p>
         <p class="brand-sub">London Sofamakers</p>
-        <p class="brand-addr">Bartolozzi Mews, 100 Lillie Road, Fulham, SW6 7SR</p>
+        <p class="brand-addr">Unit 9A, Chiswick Studios, 9 Power Road, London W4 5PY</p>
       </div>
       <h2 class="sheet-title">CUSHION PURCHASE ORDER</h2>
       <div class="order-no">
@@ -107,7 +107,7 @@
 
     <section class="draw-section">
       <h3>Cushion Drawing below</h3>
-      <p class="draw-hint no-print">Tap a drawing to select · drag to move · double-tap a measurement to edit · pinch/zoom with two fingers</p>
+      <p class="draw-hint no-print">Blue dots = anchor points — drag to reshape · Tap a label to edit · Use + Text / + Line to add measurements</p>
 
       <div class="draw-panels">
         <div class="draw-panel" data-panel="seat">
@@ -115,6 +115,12 @@
             <label>Seat template
               <select id="seat-template" aria-label="Seat cushion template"></select>
             </label>
+            <div class="draw-tools" data-panel="seat">
+              <button type="button" class="btn btn-sm" data-tool="add-text">+ Text</button>
+              <button type="button" class="btn btn-sm" data-tool="add-line">+ Line</button>
+              <button type="button" class="btn btn-sm" data-tool="edit-text">Edit</button>
+              <button type="button" class="btn btn-sm" data-tool="delete">Delete</button>
+            </div>
             <button type="button" class="btn btn-sm" data-action="clear" data-panel="seat">Clear</button>
           </div>
           <div class="svg-viewport" id="viewport-seat" tabindex="0" aria-label="Seat cushion drawing">
@@ -127,6 +133,12 @@
             <label>Back template
               <select id="back-template" aria-label="Back cushion template"></select>
             </label>
+            <div class="draw-tools" data-panel="back">
+              <button type="button" class="btn btn-sm" data-tool="add-text">+ Text</button>
+              <button type="button" class="btn btn-sm" data-tool="add-line">+ Line</button>
+              <button type="button" class="btn btn-sm" data-tool="edit-text">Edit</button>
+              <button type="button" class="btn btn-sm" data-tool="delete">Delete</button>
+            </div>
             <button type="button" class="btn btn-sm" data-action="clear" data-panel="back">Clear</button>
           </div>
           <div class="svg-viewport" id="viewport-back" tabindex="0" aria-label="Back cushion drawing">

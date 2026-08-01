@@ -7,10 +7,75 @@
   const backSelect = document.getElementById("back-template");
   const loadDialog = document.getElementById("load-dialog");
   const editDialog = document.getElementById("edit-label-dialog");
+  const editForm = document.getElementById("edit-label-form");
+  const editTitle = editForm.querySelector("h3");
   const editInput = document.getElementById("edit-label-input");
 
   let currentDraftId = Storage.newId();
   let editingTextEl = null;
+  let pendingPlacement = null;
+
+  const seatEditor = DrawingEditor.attach(document.getElementById("viewport-seat"), seatSvg, {
+    onEditLabel: openEditExisting,
+    onEditLabelAsync: promptNewLabel,
+    onToolChange: (tool) => setToolButtonsActive("seat", tool),
+  });
+
+  const backEditor = DrawingEditor.attach(document.getElementById("viewport-back"), backSvg, {
+    onEditLabel: openEditExisting,
+    onEditLabelAsync: promptNewLabel,
+    onToolChange: (tool) => setToolButtonsActive("back", tool),
+  });
+
+  function editorForPanel(panel) {
+    return panel === "seat" ? seatEditor : backEditor;
+  }
+
+  function openEditExisting(textEl) {
+    editingTextEl = textEl;
+    pendingPlacement = null;
+    editTitle.textContent = "Edit measurement or note";
+    editInput.value = textEl.textContent.trim();
+    editDialog.showModal();
+    editInput.focus();
+    editInput.select();
+  }
+
+  function promptNewLabel(x, y, cb) {
+    editTitle.textContent = "New measurement or note";
+    editInput.value = '0"';
+    editDialog.showModal();
+    editInput.focus();
+    editInput.select();
+  }
+
+  editDialog.addEventListener("close", () => {
+    if (editDialog.returnValue !== "ok") {
+      pendingPlacement = null;
+      editingTextEl = null;
+      return;
+    }
+    if (pendingPlacement) {
+      pendingPlacement.cb(editInput.value.trim() || '0"');
+      pendingPlacement = null;
+      seatEditor.refresh();
+      backEditor.refresh();
+      return;
+    }
+    if (editingTextEl) {
+      editingTextEl.textContent = editInput.value.trim() || editingTextEl.textContent;
+      seatEditor.refresh();
+      backEditor.refresh();
+    }
+    editingTextEl = null;
+  });
+
+  function setToolButtonsActive(panel, tool) {
+    document.querySelectorAll(`.draw-tools[data-panel="${panel}"] [data-tool]`).forEach((btn) => {
+      const active = btn.dataset.tool === tool || (tool === "select" && btn.dataset.tool === "select");
+      btn.classList.toggle("active", active);
+    });
+  }
 
   function populateSelects() {
     for (const t of CUSHION_TEMPLATES.seat) {
@@ -38,21 +103,6 @@
       alert("Could not load template. Open the app from the same website folder as cushion-order-kit.");
     }
   }
-
-  function onEditLabel(textEl) {
-    editingTextEl = textEl;
-    editInput.value = textEl.textContent.trim();
-    editDialog.showModal();
-    editInput.focus();
-    editInput.select();
-  }
-
-  editDialog.addEventListener("close", () => {
-    if (editDialog.returnValue === "ok" && editingTextEl) {
-      editingTextEl.textContent = editInput.value.trim() || editingTextEl.textContent;
-    }
-    editingTextEl = null;
-  });
 
   function collectForm() {
     const filling = [...document.querySelectorAll('input[name="filling"]:checked')].map((c) => c.value);
@@ -107,8 +157,7 @@
   }
 
   function saveDraft() {
-    const draft = collectForm();
-    Storage.save(draft);
+    Storage.save(collectForm());
     flash("Draft saved on this device");
   }
 
@@ -129,8 +178,7 @@
     for (const d of drafts) {
       const li = document.createElement("li");
       const label = document.createElement("span");
-      const when = new Date(d.updatedAt).toLocaleString();
-      label.textContent = `${d.orderNo || "No order #"} · ${d.design || "Untitled"} · ${when}`;
+      label.textContent = `${d.orderNo || "No order #"} · ${d.design || "Untitled"} · ${new Date(d.updatedAt).toLocaleString()}`;
       const openBtn = document.createElement("button");
       openBtn.type = "button";
       openBtn.className = "btn btn-sm btn-primary";
@@ -157,7 +205,6 @@
   function newOrder() {
     if (!confirm("Start a new blank order? Unsaved changes will be lost unless you saved a draft.")) return;
     currentDraftId = Storage.newId();
-    document.querySelector("form.sheet-meta")?.reset();
     document.getElementById("order-no").value = "";
     document.getElementById("to").value = "";
     document.getElementById("from").value = "";
@@ -177,7 +224,6 @@
     window.print();
   }
 
-  // Autosave form fields (not SVG every keystroke — save on interval)
   let autosaveTimer;
   function scheduleAutosave() {
     clearTimeout(autosaveTimer);
@@ -200,13 +246,34 @@
       const panel = btn.dataset.panel;
       const svg = panel === "seat" ? seatSvg : backSvg;
       svg.innerHTML = "";
+      editorForPanel(panel).refresh();
       if (panel === "seat") seatSelect.value = "blank";
       else backSelect.value = "blank";
     });
   });
 
-  DrawingEditor.attach(document.getElementById("viewport-seat"), seatSvg, { onEditLabel });
-  DrawingEditor.attach(document.getElementById("viewport-back"), backSvg, { onEditLabel });
+  document.querySelectorAll(".draw-tools").forEach((bar) => {
+    const panel = bar.dataset.panel;
+    const ed = editorForPanel(panel);
+    bar.querySelectorAll("[data-tool]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const tool = btn.dataset.tool;
+        if (tool === "add-text") {
+          ed.setTool("add-text");
+          flash("Tap on the drawing where you want the label");
+          setToolButtonsActive(panel, "add-text");
+        } else if (tool === "add-line") {
+          ed.setTool("add-line");
+          flash("Tap start point, then end point for the dimension line");
+          setToolButtonsActive(panel, "add-line");
+        } else if (tool === "edit-text") {
+          if (!ed.editSelected()) flash("Tap a label first, then Edit");
+        } else if (tool === "delete") {
+          if (!ed.deleteSelected()) flash("Tap a line or label to select, then Delete");
+        }
+      });
+    });
+  });
 
   populateSelects();
   loadPanel("seat", seatSelect.value);

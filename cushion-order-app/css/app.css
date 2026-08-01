@@ -264,10 +264,22 @@ textarea {
   min-height: 280px;
 }
 
+.draw-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.draw-tools .btn.active {
+  background: var(--accent) !important;
+  color: #fff !important;
+  border-color: var(--accent) !important;
+}
+
 .panel-toolbar {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-end;
   gap: 0.5rem;
   margin-bottom: 0.5rem;
   font-size: 0.8rem;
@@ -301,21 +313,61 @@ textarea {
   display: block;
 }
 
-.svg-viewport .draggable {
-  cursor: grab;
+.svg-viewport .shape-stroke {
+  pointer-events: stroke;
+  stroke-linecap: square;
 }
 
-.svg-viewport .draggable.selected {
-  outline: 2px dashed var(--accent);
-  outline-offset: 2px;
+.svg-viewport .editable-label {
+  pointer-events: all;
+  cursor: pointer;
 }
 
-.svg-viewport .draggable.dragging {
-  cursor: grabbing;
+.editor-handles { pointer-events: none; }
+
+.anchor-handle { pointer-events: all; cursor: grab; }
+
+.anchor-handle:active { cursor: grabbing; }
+
+.anchor-dot {
+  fill: #1a4d8c;
+  stroke: #fff;
+  stroke-width: 2;
+  pointer-events: none;
 }
 
-.svg-viewport text.editable-label {
-  cursor: text;
+.anchor-hit {
+  fill: transparent;
+  pointer-events: all;
+}
+
+.viewport-tip {
+  position: absolute;
+  left: 50%;
+  top: 0.35rem;
+  transform: translateX(-50%);
+  background: rgba(26, 77, 140, 0.92);
+  color: #fff;
+  font-size: 0.75rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: 4px;
+  z-index: 5;
+  white-space: nowrap;
+}
+
+.svg-viewport .selected {
+  outline: none;
+}
+
+.svg-viewport .selected.shape-stroke,
+.svg-viewport g.selected polygon,
+.svg-viewport g.selected line {
+  stroke: var(--accent) !important;
+  stroke-width: 3 !important;
+}
+
+@media print {
+  .editor-handles, .anchor-handle, .viewport-tip { display: none !important; }
 }
 
 .app-footer {
@@ -408,5 +460,5 @@ dialog::backdrop { background: rgba(0,0,0,0.4); }
     background: #fff;
     min-height: 260px;
   }
-  .draggable.selected { outline: none !important; }
+  .editor-handles, .anchor-handle, .viewport-tip { display: none !important; }
 }
