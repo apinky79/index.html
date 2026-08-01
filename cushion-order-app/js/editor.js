@@ -3,7 +3,7 @@
  */
 const DrawingEditor = (() => {
   const NS = "http://www.w3.org/2000/svg";
-  const HANDLE_R = 10;
+  const HANDLE_R = 6;
   const TAP_MAX_PX = 12;
 
   const states = new Map();
@@ -276,6 +276,50 @@ const DrawingEditor = (() => {
     return g;
   }
 
+  function isOutlineShape(el) {
+    if (!el || el.closest(".editor-handles")) return false;
+    if (el.closest("[id^='dimension']") || el.closest(".user-dimension") || el.closest("#title")) return false;
+    if (el.closest("#outline") || el.id === "outline") return true;
+    if (el.classList.contains("user-curve")) return true;
+    return el.tagName === "polygon";
+  }
+
+  function applyPathEdgeBulge(path, segIdx, ctrlX, ctrlY) {
+    const segs = getPathSegments(path);
+    const seg = segs[segIdx];
+    if (seg?.t !== "L") return path;
+    segs[segIdx] = { t: "Q", x1: ctrlX, y1: ctrlY, x: seg.x, y: seg.y };
+    syncPath(path);
+    return path;
+  }
+
+  function addPolygonEdgeHandles(state, poly) {
+    const pts = parsePoints(poly.getAttribute("points"));
+    for (let i = 0; i < pts.length; i++) {
+      const mx = (pts[i][0] + pts[(i + 1) % pts.length][0]) / 2;
+      const my = (pts[i][1] + pts[(i + 1) % pts.length][1]) / 2;
+      makeHandle(state, mx, my, { kind: "edge", poly, i }, "anchor-curve");
+    }
+  }
+
+  function addPathCurveHandles(state, path) {
+    const segs = getPathSegments(path);
+    let prev = null;
+    for (let i = 0; i < segs.length; i++) {
+      const s = segs[i];
+      if (s.t === "L" && prev && prev.t !== "Z") {
+        const px = prev.x;
+        const py = prev.y;
+        makeHandle(state, (px + s.x) / 2, (py + s.y) / 2, {
+          kind: "path-edge", path, segIdx: i,
+        }, "anchor-curve");
+      } else if (s.t === "Q") {
+        makeHandle(state, s.x1, s.y1, { kind: "path-q1", path, segIdx: i }, "anchor-curve");
+      }
+      if (s.t === "M" || s.t === "L" || s.t === "Q" || s.t === "C") prev = s;
+    }
+  }
+
   function rebuildHandles(state) {
     if (!state) return;
     stripHandles(state.svg);
@@ -284,41 +328,13 @@ const DrawingEditor = (() => {
     state.svg.appendChild(layer);
 
     state.svg.querySelectorAll("polygon").forEach((poly) => {
-      const pts = parsePoints(poly.getAttribute("points"));
-      pts.forEach(([x, y], idx) => {
-        makeHandle(state, x, y, { kind: "poly", poly, idx }, "anchor-dot");
-      });
-      for (let i = 0; i < pts.length; i++) {
-        const mx = (pts[i][0] + pts[(i + 1) % pts.length][0]) / 2;
-        const my = (pts[i][1] + pts[(i + 1) % pts.length][1]) / 2;
-        makeHandle(state, mx, my, { kind: "edge", poly, i }, "anchor-curve");
-      }
+      if (isOutlineShape(poly)) addPolygonEdgeHandles(state, poly);
     });
 
-    state.svg.querySelectorAll("path.shape-stroke, path#outline, g#outline path").forEach((path) => {
-      if (path.closest(".editor-handles")) return;
-      const segs = getPathSegments(path);
-      segs.forEach((s, idx) => {
-        if (s.t === "M" || s.t === "L") {
-          makeHandle(state, s.x, s.y, { kind: "path-pt", path, segIdx: idx }, "anchor-dot");
-        } else if (s.t === "Q") {
-          makeHandle(state, s.x1, s.y1, { kind: "path-q1", path, segIdx: idx }, "anchor-curve");
-          makeHandle(state, s.x, s.y, { kind: "path-pt", path, segIdx: idx, end: true }, "anchor-dot");
-        } else if (s.t === "C") {
-          makeHandle(state, s.x1, s.y1, { kind: "path-c1", path, segIdx: idx }, "anchor-curve");
-          makeHandle(state, s.x2, s.y2, { kind: "path-c2", path, segIdx: idx }, "anchor-curve");
-          makeHandle(state, s.x, s.y, { kind: "path-pt", path, segIdx: idx, end: true }, "anchor-dot");
-        }
-      });
-    });
-
-    state.svg.querySelectorAll("line").forEach((line) => {
-      makeHandle(state, +line.getAttribute("x1"), +line.getAttribute("y1"), { kind: "line", line, end: 1 }, "anchor-dot");
-      makeHandle(state, +line.getAttribute("x2"), +line.getAttribute("y2"), { kind: "line", line, end: 2 }, "anchor-dot");
-    });
-
-    state.svg.querySelectorAll("text.editable-label").forEach((text) => {
-      makeHandle(state, +(text.getAttribute("x") || 0), +(text.getAttribute("y") || 0) - 4, { kind: "text", text }, "anchor-dot");
+    state.svg.querySelectorAll("path").forEach((path) => {
+      if (!isOutlineShape(path)) return;
+      if (path.closest("polygon")) return;
+      addPathCurveHandles(state, path);
     });
 
     updateCurvePreview(state);
@@ -366,45 +382,21 @@ const DrawingEditor = (() => {
   }
 
   function updateMetaLive(meta, x, y, handleG) {
-    if (meta.kind === "poly") {
-      const pts = parsePoints(meta.poly.getAttribute("points"));
-      pts[meta.idx] = [x, y];
-      meta.poly.setAttribute("points", pointsToStr(pts));
-    } else if (meta.kind === "edge") {
+    if (meta.kind === "edge") {
       meta.poly = applyEdgeBulge(meta.poly, meta.i, x, y);
-    } else if (meta.kind === "line") {
-      if (meta.end === 1) {
-        meta.line.setAttribute("x1", x);
-        meta.line.setAttribute("y1", y);
-      } else {
-        meta.line.setAttribute("x2", x);
-        meta.line.setAttribute("y2", y);
-      }
-    } else if (meta.kind === "text") {
-      meta.text.setAttribute("x", x);
-      meta.text.setAttribute("y", y + 4);
-    } else if (meta.kind.startsWith("path-")) {
+    } else if (meta.kind === "path-edge") {
+      applyPathEdgeBulge(meta.path, meta.segIdx, x, y);
+    } else if (meta.kind === "path-q1") {
       const segs = getPathSegments(meta.path);
       const s = segs[meta.segIdx];
-      if (meta.kind === "path-pt") {
-        s.x = x;
-        s.y = y;
-      } else if (meta.kind === "path-q1") {
-        s.x1 = x;
-        s.y1 = y;
-      } else if (meta.kind === "path-c1") {
-        s.x1 = x;
-        s.y1 = y;
-      } else if (meta.kind === "path-c2") {
-        s.x2 = x;
-        s.y2 = y;
-      }
+      s.x1 = x;
+      s.y1 = y;
       syncPath(meta.path);
     }
     if (handleG) {
       handleG.querySelectorAll("circle").forEach((c) => {
         c.setAttribute("cx", x);
-        c.setAttribute("cy", meta.kind === "text" ? y - 4 : y);
+        c.setAttribute("cy", y);
       });
     }
   }

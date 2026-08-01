@@ -73,8 +73,6 @@ const DrawingPanels = (() => {
     for (const [tool, label] of [
       ["add-text", "Text"],
       ["add-line", "Line"],
-      ["add-curve", "Curve"],
-      ["curve-done", "Done"],
       ["edit-text", "Edit"],
       ["delete", "Delete"],
     ]) {
@@ -83,7 +81,6 @@ const DrawingPanels = (() => {
       b.className = "tool-btn";
       b.dataset.tool = tool;
       b.textContent = label;
-      if (tool === "curve-done") b.hidden = true;
       tools.appendChild(b);
     }
 

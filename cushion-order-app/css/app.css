@@ -254,8 +254,11 @@ textarea {
 
 /* --- Drawing area --- */
 
-.draw-section {
-  margin-top: 0;
+.draw-hint {
+  margin: 0 0 0.4rem;
+  font-size: 0.75rem;
+  color: var(--muted);
+  font-style: italic;
 }
 
 .draw-title {
@@ -446,18 +449,17 @@ textarea {
 .anchor-handle { pointer-events: all; cursor: grab; }
 .anchor-handle:active { cursor: grabbing; }
 
-.anchor-dot {
+.anchor-curve {
   fill: #111;
   stroke: #fff;
-  stroke-width: 2;
+  stroke-width: 1.5;
   pointer-events: none;
+  opacity: 0.55;
 }
 
-.anchor-curve {
-  fill: #555;
-  stroke: #fff;
-  stroke-width: 2;
-  pointer-events: none;
+.svg-viewport:focus-within .anchor-curve,
+.anchor-handle:active .anchor-curve {
+  opacity: 1;
 }
 
 .anchor-hit {
