@@ -4,7 +4,7 @@
 const DrawingPanels = (() => {
   const NS = "http://www.w3.org/2000/svg";
   let drawingCounter = 0;
-  /** @type {Map<string, { zone: string, cards: Map<string, object> }>} */
+  /** @type {Map<string, { zone: string, kind: string, stack: HTMLElement, cards: Map<string, object> }>} */
   const zones = new Map();
 
   function uid() {
@@ -16,38 +16,56 @@ const DrawingPanels = (() => {
     return CUSHION_TEMPLATES[kind] || [];
   }
 
+  async function applyTemplate(record, { force = false } = {}) {
+    const templateId = record.select.value;
+    const path = templateOptions(record.kind).find((t) => t.id === templateId)?.path ?? null;
+    if (!force && record.loadedTemplateId === templateId && record.svg.childElementCount > 0) {
+      return;
+    }
+    record.loadedTemplateId = templateId;
+    try {
+      await DrawingEditor.loadTemplate(record.svg, path);
+      record.editor.refresh();
+    } catch (err) {
+      console.error(err);
+      record.loadedTemplateId = null;
+      if (window.CushionApp?.flash) {
+        window.CushionApp.flash("Could not load that cushion style");
+      }
+    }
+  }
+
   function createCard(zone, kind, { templateId = "blank", svgHtml = null } = {}) {
     const id = uid();
     const card = document.createElement("div");
     card.className = "drawing-card";
     card.dataset.drawingId = id;
 
-    const head = document.createElement("div");
-    head.className = "drawing-card-head no-print";
-    const title = document.createElement("span");
-    title.className = "drawing-card-title";
-    const zoneData = zones.get(zone);
-    title.textContent = `Drawing ${zoneData.cards.size + 1}`;
-    const removeBtn = document.createElement("button");
-    removeBtn.type = "button";
-    removeBtn.className = "drawing-remove";
-    removeBtn.textContent = "Remove";
-    removeBtn.addEventListener("click", () => removeCard(zone, id));
-    head.append(title, removeBtn);
-
     const toolbar = document.createElement("div");
     toolbar.className = "panel-toolbar no-print";
 
-    const tplLabel = document.createElement("label");
-    tplLabel.textContent = "Style";
+    const styleRow = document.createElement("div");
+    styleRow.className = "style-row";
+
+    const tplLabel = document.createElement("span");
+    tplLabel.className = "style-label";
+    tplLabel.textContent = "Cushion style";
+
     const select = document.createElement("select");
     select.className = "template-select";
-    select.setAttribute("aria-label", `${kind} template`);
+    select.setAttribute("aria-label", `${kind} cushion style`);
     for (const t of templateOptions(kind)) {
       select.append(new Option(t.name, t.id));
     }
     select.value = templateId;
-    tplLabel.appendChild(select);
+
+    const removeBtn = document.createElement("button");
+    removeBtn.type = "button";
+    removeBtn.className = "drawing-remove";
+    removeBtn.textContent = "Remove drawing";
+    removeBtn.addEventListener("click", () => removeCard(zone, id));
+
+    styleRow.append(tplLabel, select, removeBtn);
 
     const tools = document.createElement("div");
     tools.className = "draw-tools";
@@ -72,14 +90,14 @@ const DrawingPanels = (() => {
     const clearBtn = document.createElement("button");
     clearBtn.type = "button";
     clearBtn.className = "tool-clear";
-    clearBtn.textContent = "Clear";
-    clearBtn.addEventListener("click", () => {
-      svg.innerHTML = "";
-      editor.refresh();
+    clearBtn.textContent = "Clear drawing";
+    clearBtn.addEventListener("click", async () => {
       select.value = "blank";
+      record.loadedTemplateId = null;
+      await applyTemplate(record, { force: true });
     });
 
-    toolbar.append(tplLabel, tools, clearBtn);
+    toolbar.append(styleRow, tools, clearBtn);
 
     const viewport = document.createElement("div");
     viewport.className = "svg-viewport";
@@ -89,7 +107,7 @@ const DrawingPanels = (() => {
     svg.setAttribute("viewBox", "0 0 520 420");
     viewport.appendChild(svg);
 
-    card.append(head, toolbar, viewport);
+    card.append(toolbar, viewport);
 
     const editor = DrawingEditor.attach(viewport, svg, {
       onEditLabel: (textEl) => window.CushionApp.openEditExisting(textEl),
@@ -97,42 +115,46 @@ const DrawingPanels = (() => {
       onToolChange: (tool) => window.CushionApp.setToolButtonsActive(id, tool),
     });
 
-    select.addEventListener("change", async () => {
-      const path = templateOptions(kind).find((t) => t.id === select.value)?.path;
-      try {
-        await DrawingEditor.loadTemplate(svg, path);
-      } catch (e) {
-        console.error(e);
-      }
-    });
+    const onStylePick = () => applyTemplate(record, { force: true });
+    select.addEventListener("change", onStylePick);
+    select.addEventListener("input", onStylePick);
 
-    const record = { id, card, svg, viewport, editor, select, tools, kind };
+    const record = {
+      id,
+      card,
+      svg,
+      viewport,
+      editor,
+      select,
+      tools,
+      kind,
+      loadedTemplateId: null,
+    };
+
+    const zoneData = zones.get(zone);
     zoneData.cards.set(id, record);
     zoneData.stack.appendChild(card);
-    renumberCards(zone);
+    updateRemoveButtons(zone);
 
     (async () => {
       if (svgHtml) {
         DrawingEditor.loadInline(svg, svgHtml);
-      } else if (templateId !== "blank") {
-        const path = templateOptions(kind).find((t) => t.id === templateId)?.path;
-        try {
-          await DrawingEditor.loadTemplate(svg, path);
-        } catch (e) {
-          console.error(e);
-        }
+        record.loadedTemplateId = templateId;
+        record.editor.refresh();
+      } else {
+        await applyTemplate(record, { force: true });
       }
     })();
 
     return record;
   }
 
-  function renumberCards(zone) {
+  function updateRemoveButtons(zone) {
     const zoneData = zones.get(zone);
-    let i = 1;
-    zoneData.stack.querySelectorAll(".drawing-card").forEach((card) => {
-      const t = card.querySelector(".drawing-card-title");
-      if (t) t.textContent = `Drawing ${i++}`;
+    const showRemove = zoneData.cards.size > 1;
+    zoneData.cards.forEach((rec) => {
+      rec.card.classList.toggle("drawing-card-multi", showRemove);
+      rec.card.querySelector(".drawing-remove").hidden = !showRemove;
     });
   }
 
@@ -140,15 +162,18 @@ const DrawingPanels = (() => {
     const zoneData = zones.get(zone);
     const record = zoneData.cards.get(id);
     if (!record) return;
+
     if (zoneData.cards.size <= 1) {
-      record.svg.innerHTML = "";
-      record.editor.refresh();
       record.select.value = "blank";
+      record.loadedTemplateId = null;
+      applyTemplate(record, { force: true });
       return;
     }
+
+    DrawingEditor.detach(record.svg);
     record.card.remove();
     zoneData.cards.delete(id);
-    renumberCards(zone);
+    updateRemoveButtons(zone);
   }
 
   function init(zoneId, kind) {
@@ -178,8 +203,8 @@ const DrawingPanels = (() => {
   function serializeZone(zoneId) {
     const zoneData = zones.get(zoneId);
     const out = [];
-    zoneData.stack.querySelectorAll(".drawing-card").forEach((card) => {
-      const id = card.dataset.drawingId;
+    zoneData.stack.querySelectorAll(".drawing-card").forEach((cardEl) => {
+      const id = cardEl.dataset.drawingId;
       const rec = zoneData.cards.get(id);
       if (!rec) return;
       out.push({
@@ -193,6 +218,9 @@ const DrawingPanels = (() => {
 
   function loadZone(zoneId, kind, drawings, legacySingleSvg) {
     const zoneData = zones.get(zoneId);
+    for (const rec of zoneData.cards.values()) {
+      DrawingEditor.detach(rec.svg);
+    }
     zoneData.stack.innerHTML = "";
     zoneData.cards.clear();
 

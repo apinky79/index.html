@@ -265,6 +265,7 @@
     openEditExisting,
     promptNewLabel,
     setToolButtonsActive,
+    flash,
   };
 
   document.getElementById("print-area").addEventListener("input", scheduleAutosave);

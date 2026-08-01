@@ -1,4 +1,4 @@
-const CACHE = "cushion-order-v4";
+const CACHE = "cushion-order-v5";
 const ASSETS = [
   "./",
   "./index.html",

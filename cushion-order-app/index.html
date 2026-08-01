@@ -43,66 +43,63 @@
       <label class="meta-field">From: <input type="text" id="from" name="from" autocomplete="off"></label>
     </section>
 
-    <details class="spec-details no-print" id="form-details">
-      <summary class="spec-details-summary">Specifications</summary>
-      <section class="spec-box">
-        <div class="spec-grid">
-          <div class="spec-row">
-            <span class="spec-label">Design</span>
-            <input type="text" id="design" class="spec-input" placeholder="">
-          </div>
-          <div class="spec-row spec-row-split">
-            <div class="spec-field">
-              <span class="spec-label">Item</span>
-              <div class="checks" role="group" aria-label="Item type">
-                <label><input type="radio" name="item" value="sofa"> sofa</label>
-                <label><input type="radio" name="item" value="chair" checked> chair</label>
-                <label><input type="radio" name="item" value="other"> other</label>
-              </div>
-            </div>
-            <div class="spec-field spec-field-qty">
-              <span class="spec-label">Qty</span>
-              <input type="text" id="qty" class="spec-input" inputmode="numeric">
+    <section class="spec-box">
+      <div class="spec-grid">
+        <div class="spec-row">
+          <span class="spec-label">Design</span>
+          <input type="text" id="design" class="spec-input" placeholder="">
+        </div>
+        <div class="spec-row spec-row-split">
+          <div class="spec-field">
+            <span class="spec-label">Item</span>
+            <div class="checks" role="group" aria-label="Item type">
+              <label><input type="radio" name="item" value="sofa"> sofa</label>
+              <label><input type="radio" name="item" value="chair" checked> chair</label>
+              <label><input type="radio" name="item" value="other"> other</label>
             </div>
           </div>
-          <div class="spec-row">
-            <span class="spec-label">Filling</span>
-            <div class="checks checks-wrap" role="group" aria-label="Filling">
-              <label><input type="checkbox" name="filling" value="Feather/Down"> Feather/Down</label>
-              <label><input type="checkbox" name="filling" value="Fibre/Feather"> Fibre/Feather</label>
-              <label><input type="checkbox" name="filling" value="Fibre"> Fibre</label>
-              <label><input type="checkbox" name="filling" value="Foam"> Foam</label>
-              <label><input type="checkbox" name="filling" value="Wrap"> Wrap</label>
-              <label><input type="checkbox" name="filling" value="Other"> Other</label>
-            </div>
-          </div>
-          <div class="spec-row">
-            <span class="spec-label">Cushion Border</span>
-            <div class="checks checks-wrap" role="group" aria-label="Cushion border">
-              <label><input type="checkbox" name="border" value='2.5"'> 2.5"</label>
-              <label><input type="checkbox" name="border" value='3.75"'> 3.75"</label>
-              <label><input type="checkbox" name="border" value='4.25"'> 4.25"</label>
-              <label><input type="checkbox" name="border" value='5.25"'> 5.25"</label>
-              <label><input type="checkbox" name="border" value='6.25"'> 6.25"</label>
-            </div>
-          </div>
-          <div class="spec-row">
-            <span class="spec-label">Size Type</span>
-            <div class="checks checks-col" role="group" aria-label="Size type">
-              <label><input type="radio" name="sizeType" value="outer-barrier" checked> Outer case finished size, With barrier</label>
-              <label><input type="radio" name="sizeType" value="outer-no-barrier"> Outer case finished size, No barrier</label>
-              <label><input type="radio" name="sizeType" value="inner-barrier"> Inner case finished size, With barrier</label>
-              <label><input type="radio" name="sizeType" value="inner-no-barrier"> Inner case finished size, No barrier</label>
-              <label><input type="radio" name="sizeType" value="foam"> Foam size</label>
-            </div>
-          </div>
-          <div class="spec-row">
-            <span class="spec-label">Notes</span>
-            <textarea id="notes" rows="2" placeholder=""></textarea>
+          <div class="spec-field spec-field-qty">
+            <span class="spec-label">Qty</span>
+            <input type="text" id="qty" class="spec-input" inputmode="numeric">
           </div>
         </div>
-      </section>
-    </details>
+        <div class="spec-row">
+          <span class="spec-label">Filling</span>
+          <div class="checks checks-wrap" role="group" aria-label="Filling">
+            <label><input type="checkbox" name="filling" value="Feather/Down"> Feather/Down</label>
+            <label><input type="checkbox" name="filling" value="Fibre/Feather"> Fibre/Feather</label>
+            <label><input type="checkbox" name="filling" value="Fibre"> Fibre</label>
+            <label><input type="checkbox" name="filling" value="Foam"> Foam</label>
+            <label><input type="checkbox" name="filling" value="Wrap"> Wrap</label>
+            <label><input type="checkbox" name="filling" value="Other"> Other</label>
+          </div>
+        </div>
+        <div class="spec-row">
+          <span class="spec-label">Cushion Border</span>
+          <div class="checks checks-wrap" role="group" aria-label="Cushion border">
+            <label><input type="checkbox" name="border" value='2.5"'> 2.5"</label>
+            <label><input type="checkbox" name="border" value='3.75"'> 3.75"</label>
+            <label><input type="checkbox" name="border" value='4.25"'> 4.25"</label>
+            <label><input type="checkbox" name="border" value='5.25"'> 5.25"</label>
+            <label><input type="checkbox" name="border" value='6.25"'> 6.25"</label>
+          </div>
+        </div>
+        <div class="spec-row">
+          <span class="spec-label">Size Type</span>
+          <div class="checks checks-col" role="group" aria-label="Size type">
+            <label><input type="radio" name="sizeType" value="outer-barrier" checked> Outer case finished size, With barrier</label>
+            <label><input type="radio" name="sizeType" value="outer-no-barrier"> Outer case finished size, No barrier</label>
+            <label><input type="radio" name="sizeType" value="inner-barrier"> Inner case finished size, With barrier</label>
+            <label><input type="radio" name="sizeType" value="inner-no-barrier"> Inner case finished size, No barrier</label>
+            <label><input type="radio" name="sizeType" value="foam"> Foam size</label>
+          </div>
+        </div>
+        <div class="spec-row">
+          <span class="spec-label">Notes</span>
+          <textarea id="notes" rows="2" placeholder=""></textarea>
+        </div>
+      </div>
+    </section>
 
     <section class="spec-box spec-box-print-only print-only" aria-hidden="true">
       <div class="spec-grid">
@@ -125,7 +122,7 @@
         <div class="draw-zone" data-zone="seat">
           <div class="zone-head">
             <h3 class="zone-label">Seat</h3>
-            <button type="button" class="zone-add no-print" data-action="add-drawing" data-zone="drawings-seat">+ Add drawing</button>
+            <button type="button" class="zone-add no-print" data-action="add-drawing" data-zone="drawings-seat">Add seat drawing</button>
           </div>
           <div class="drawings-stack" id="drawings-seat"></div>
         </div>
@@ -133,7 +130,7 @@
         <div class="draw-zone draw-zone-divider" data-zone="back">
           <div class="zone-head">
             <h3 class="zone-label">Back</h3>
-            <button type="button" class="zone-add no-print" data-action="add-drawing" data-zone="drawings-back">+ Add drawing</button>
+            <button type="button" class="zone-add no-print" data-action="add-drawing" data-zone="drawings-back">Add back drawing</button>
           </div>
           <div class="drawings-stack" id="drawings-back"></div>
         </div>

@@ -662,5 +662,11 @@ const DrawingEditor = (() => {
     tip._t = setTimeout(() => tip.remove(), 2800);
   }
 
-  return { attach, loadTemplate, loadInline, serializeSvg };
+  function detach(svg) {
+    if (!svg) return;
+    stripHandles(svg);
+    states.delete(svg);
+  }
+
+  return { attach, detach, loadTemplate, loadInline, serializeSvg };
 })();
