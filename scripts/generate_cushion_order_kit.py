@@ -31,7 +31,7 @@ FORM_W, FORM_H = 2480, 3508  # A4 @ 300dpi
 
 COMPANY = "DUDGEON"
 SUBTITLE = "London Sofamakers"
-ADDRESS = "Bartolozzi Mews, 100 Lillie Road, Fulham, SW6 7SR"
+ADDRESS = "Unit 9A, Chiswick Studios, 9 Power Road, London W4 5PY"
 TITLE = "CUSHION PURCHASE ORDER"
 
 FILLING_OPTIONS = ["Feather/Down", "Fibre/Feather", "Fibre", "Foam", "Wrap", "Other"]
