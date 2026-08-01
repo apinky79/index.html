@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="description" content="Private cushion purchase order builder — works offline, data stays on your device.">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' blob: data:; connect-src 'self'; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';">
+  <meta name="referrer" content="no-referrer">
+  <meta name="theme-color" content="#1a1a1a">
+  <title>Cushion Purchase Order</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <header class="app-bar">
+    <div class="app-bar-inner">
+      <h1>Cushion Order</h1>
+      <span class="badge">Private · Offline · Free</span>
+      <div class="app-actions">
+        <button type="button" id="btn-save" class="btn">Save draft</button>
+        <button type="button" id="btn-load" class="btn">Load draft</button>
+        <button type="button" id="btn-new" class="btn btn-ghost">New</button>
+        <button type="button" id="btn-export" class="btn btn-primary">Export PDF</button>
+      </div>
+    </div>
+  </header>
+
+  <main id="print-area" class="form-sheet">
+    <section class="sheet-header">
+      <div class="brand">
+        <p class="brand-name">DUDGEON</p>
+        <p class="brand-sub">London Sofamakers</p>
+        <p class="brand-addr">Bartolozzi Mews, 100 Lillie Road, Fulham, SW6 7SR</p>
+      </div>
+      <h2 class="sheet-title">CUSHION PURCHASE ORDER</h2>
+      <div class="order-no">
+        <label for="order-no">Cushion Order No.</label>
+        <input type="text" id="order-no" name="orderNo" autocomplete="off" spellcheck="false">
+      </div>
+    </section>
+
+    <section class="sheet-meta">
+      <label>To: <input type="text" id="to" name="to" autocomplete="off"></label>
+      <label>From: <input type="text" id="from" name="from" autocomplete="off"></label>
+    </section>
+
+    <section class="spec-box">
+      <div class="spec-row">
+        <span class="spec-label">Design</span>
+        <input type="text" id="design" class="spec-input" placeholder="e.g. Corn Style">
+      </div>
+
+      <div class="spec-row spec-row-split">
+        <div>
+          <span class="spec-label">Item</span>
+          <div class="checks" role="group" aria-label="Item type">
+            <label><input type="radio" name="item" value="sofa"> sofa</label>
+            <label><input type="radio" name="item" value="chair" checked> chair</label>
+            <label><input type="radio" name="item" value="other"> other</label>
+          </div>
+        </div>
+        <div>
+          <span class="spec-label">Qty</span>
+          <input type="text" id="qty" class="spec-input spec-qty" inputmode="numeric">
+        </div>
+      </div>
+
+      <div class="spec-row">
+        <span class="spec-label">Filling</span>
+        <div class="checks checks-wrap" role="group" aria-label="Filling">
+          <label><input type="checkbox" name="filling" value="Feather/Down"> Feather/Down</label>
+          <label><input type="checkbox" name="filling" value="Fibre/Feather"> Fibre/Feather</label>
+          <label><input type="checkbox" name="filling" value="Fibre"> Fibre</label>
+          <label><input type="checkbox" name="filling" value="Foam"> Foam</label>
+          <label><input type="checkbox" name="filling" value="Wrap"> Wrap</label>
+          <label><input type="checkbox" name="filling" value="Other"> Other</label>
+        </div>
+      </div>
+
+      <div class="spec-row">
+        <span class="spec-label">Cushion Border</span>
+        <div class="checks checks-wrap" role="group" aria-label="Cushion border">
+          <label><input type="checkbox" name="border" value='2.5"'> 2.5"</label>
+          <label><input type="checkbox" name="border" value='3.75"'> 3.75"</label>
+          <label><input type="checkbox" name="border" value='4.25"'> 4.25"</label>
+          <label><input type="checkbox" name="border" value='5.25"'> 5.25"</label>
+          <label><input type="checkbox" name="border" value='6.25"'> 6.25"</label>
+        </div>
+      </div>
+
+      <div class="spec-row">
+        <span class="spec-label">Size Type</span>
+        <div class="checks checks-col" role="group" aria-label="Size type">
+          <label><input type="radio" name="sizeType" value="outer-barrier" checked> Outer case finished size, With barrier</label>
+          <label><input type="radio" name="sizeType" value="outer-no-barrier"> Outer case finished size, No barrier</label>
+          <label><input type="radio" name="sizeType" value="inner-barrier"> Inner case finished size, With barrier</label>
+          <label><input type="radio" name="sizeType" value="inner-no-barrier"> Inner case finished size, No barrier</label>
+          <label><input type="radio" name="sizeType" value="foam"> Foam size</label>
+        </div>
+      </div>
+
+      <div class="spec-row">
+        <span class="spec-label">Notes</span>
+        <textarea id="notes" rows="2" placeholder="Fabric, piping, special instructions…"></textarea>
+      </div>
+    </section>
+
+    <section class="draw-section">
+      <h3>Cushion Drawing below</h3>
+      <p class="draw-hint no-print">Tap a drawing to select · drag to move · double-tap a measurement to edit · pinch/zoom with two fingers</p>
+
+      <div class="draw-panels">
+        <div class="draw-panel" data-panel="seat">
+          <div class="panel-toolbar no-print">
+            <label>Seat template
+              <select id="seat-template" aria-label="Seat cushion template"></select>
+            </label>
+            <button type="button" class="btn btn-sm" data-action="clear" data-panel="seat">Clear</button>
+          </div>
+          <div class="svg-viewport" id="viewport-seat" tabindex="0" aria-label="Seat cushion drawing">
+            <svg id="svg-seat" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 420"></svg>
+          </div>
+        </div>
+
+        <div class="draw-panel" data-panel="back">
+          <div class="panel-toolbar no-print">
+            <label>Back template
+              <select id="back-template" aria-label="Back cushion template"></select>
+            </label>
+            <button type="button" class="btn btn-sm" data-action="clear" data-panel="back">Clear</button>
+          </div>
+          <div class="svg-viewport" id="viewport-back" tabindex="0" aria-label="Back cushion drawing">
+            <svg id="svg-back" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 420"></svg>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="app-footer no-print">
+    <p>Your orders are saved only on this device. Nothing is sent to any server.</p>
+    <a href="privacy.html">Privacy &amp; security</a>
+  </footer>
+
+  <dialog id="load-dialog">
+    <form method="dialog">
+      <h3>Load saved draft</h3>
+      <ul id="draft-list"></ul>
+      <p id="no-drafts" hidden>No saved drafts yet.</p>
+      <button type="submit" value="cancel" class="btn">Close</button>
+    </form>
+  </dialog>
+
+  <dialog id="edit-label-dialog">
+    <form method="dialog" id="edit-label-form">
+      <h3>Edit measurement</h3>
+      <input type="text" id="edit-label-input" autocomplete="off" inputmode="decimal">
+      <div class="dialog-actions">
+        <button type="submit" value="ok" class="btn btn-primary">OK</button>
+        <button type="submit" value="cancel" class="btn btn-ghost">Cancel</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="js/templates.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/editor.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
