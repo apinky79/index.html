@@ -6,70 +6,68 @@
   <meta name="description" content="Private cushion purchase order builder — works offline, data stays on your device.">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' blob: data:; connect-src 'self'; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';">
   <meta name="referrer" content="no-referrer">
-  <meta name="theme-color" content="#1a1a1a">
+  <meta name="theme-color" content="#ffffff">
   <title>Cushion Purchase Order</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="css/app.css">
 </head>
 <body>
-  <header class="app-bar">
+  <header class="app-bar no-print">
     <div class="app-bar-inner">
-      <h1>Cushion Order</h1>
-      <span class="badge">Private · Offline · Free</span>
+      <p class="app-bar-title">Cushion Purchase Order</p>
       <div class="app-actions">
-        <button type="button" id="btn-save" class="btn">Save draft</button>
-        <button type="button" id="btn-load" class="btn">Load draft</button>
-        <button type="button" id="btn-new" class="btn btn-ghost">New</button>
-        <button type="button" id="btn-export" class="btn btn-primary">Export PDF</button>
+        <button type="button" id="btn-save" class="btn">Save</button>
+        <button type="button" id="btn-load" class="btn">Load</button>
+        <button type="button" id="btn-new" class="btn">New</button>
+        <button type="button" id="btn-export" class="btn btn-primary">Print / PDF</button>
       </div>
     </div>
   </header>
 
   <main id="print-area" class="form-sheet">
-    <details class="form-details" id="form-details">
-      <summary class="form-details-summary">Order details (tap to expand / collapse)</summary>
+    <header class="letterhead">
+      <div class="brand">
+        <p class="brand-name">DUDGEON</p>
+        <p class="brand-sub">London Sofamakers</p>
+        <p class="brand-addr">Unit 9A, Chiswick Studios, 9 Power Road, London W4 5PY</p>
+      </div>
+      <h1 class="sheet-title">CUSHION PURCHASE ORDER</h1>
+      <div class="order-no">
+        <label for="order-no">Cushion Order No.</label>
+        <input type="text" id="order-no" name="orderNo" autocomplete="off" spellcheck="false">
+      </div>
+    </header>
 
-      <section class="sheet-header sheet-header-compact">
-        <div class="brand">
-          <p class="brand-name">DUDGEON</p>
-          <p class="brand-sub">London Sofamakers</p>
-          <p class="brand-addr">Unit 9A, Chiswick Studios, 9 Power Road, London W4 5PY</p>
-        </div>
-        <h2 class="sheet-title">CUSHION PURCHASE ORDER</h2>
-        <div class="order-no">
-          <label for="order-no">Cushion Order No.</label>
-          <input type="text" id="order-no" name="orderNo" autocomplete="off" spellcheck="false">
-        </div>
-      </section>
+    <section class="sheet-meta">
+      <label class="meta-field">To: <input type="text" id="to" name="to" autocomplete="off"></label>
+      <label class="meta-field">From: <input type="text" id="from" name="from" autocomplete="off"></label>
+    </section>
 
-      <section class="sheet-meta sheet-meta-compact">
-        <label>To: <input type="text" id="to" name="to" autocomplete="off"></label>
-        <label>From: <input type="text" id="from" name="from" autocomplete="off"></label>
-      </section>
-
-      <section class="spec-box spec-box-compact">
+    <details class="spec-details no-print" id="form-details">
+      <summary class="spec-details-summary">Specifications</summary>
+      <section class="spec-box">
         <div class="spec-grid">
           <div class="spec-row">
             <span class="spec-label">Design</span>
-            <input type="text" id="design" class="spec-input" placeholder="e.g. Corn Style">
+            <input type="text" id="design" class="spec-input" placeholder="">
           </div>
-          <div class="spec-row spec-row-inline">
-            <div>
+          <div class="spec-row spec-row-split">
+            <div class="spec-field">
               <span class="spec-label">Item</span>
-              <div class="checks checks-inline" role="group" aria-label="Item type">
+              <div class="checks" role="group" aria-label="Item type">
                 <label><input type="radio" name="item" value="sofa"> sofa</label>
                 <label><input type="radio" name="item" value="chair" checked> chair</label>
                 <label><input type="radio" name="item" value="other"> other</label>
               </div>
             </div>
-            <div>
+            <div class="spec-field spec-field-qty">
               <span class="spec-label">Qty</span>
-              <input type="text" id="qty" class="spec-input spec-qty" inputmode="numeric">
+              <input type="text" id="qty" class="spec-input" inputmode="numeric">
             </div>
           </div>
           <div class="spec-row">
             <span class="spec-label">Filling</span>
-            <div class="checks checks-wrap checks-compact" role="group" aria-label="Filling">
+            <div class="checks checks-wrap" role="group" aria-label="Filling">
               <label><input type="checkbox" name="filling" value="Feather/Down"> Feather/Down</label>
               <label><input type="checkbox" name="filling" value="Fibre/Feather"> Fibre/Feather</label>
               <label><input type="checkbox" name="filling" value="Fibre"> Fibre</label>
@@ -80,7 +78,7 @@
           </div>
           <div class="spec-row">
             <span class="spec-label">Cushion Border</span>
-            <div class="checks checks-wrap checks-compact" role="group" aria-label="Cushion border">
+            <div class="checks checks-wrap" role="group" aria-label="Cushion border">
               <label><input type="checkbox" name="border" value='2.5"'> 2.5"</label>
               <label><input type="checkbox" name="border" value='3.75"'> 3.75"</label>
               <label><input type="checkbox" name="border" value='4.25"'> 4.25"</label>
@@ -90,7 +88,7 @@
           </div>
           <div class="spec-row">
             <span class="spec-label">Size Type</span>
-            <div class="checks checks-col checks-compact" role="group" aria-label="Size type">
+            <div class="checks checks-col" role="group" aria-label="Size type">
               <label><input type="radio" name="sizeType" value="outer-barrier" checked> Outer case finished size, With barrier</label>
               <label><input type="radio" name="sizeType" value="outer-no-barrier"> Outer case finished size, No barrier</label>
               <label><input type="radio" name="sizeType" value="inner-barrier"> Inner case finished size, With barrier</label>
@@ -100,32 +98,42 @@
           </div>
           <div class="spec-row">
             <span class="spec-label">Notes</span>
-            <textarea id="notes" rows="1" placeholder="Fabric, piping…"></textarea>
+            <textarea id="notes" rows="2" placeholder=""></textarea>
           </div>
         </div>
       </section>
     </details>
 
-    <section class="draw-section draw-section-large">
-      <h3>Cushion Drawing below</h3>
-      <p class="draw-hint no-print">
-        <strong>Blue dots</strong> = corner anchors · <strong>Orange dots</strong> = drag edge to curve ·
-        <strong>+ Curve</strong> = tap points then Finish curve · Tap label to edit
-      </p>
+    <section class="spec-box spec-box-print-only print-only" aria-hidden="true">
+      <div class="spec-grid">
+        <div class="spec-row"><span class="spec-label">Design</span><span class="print-value" data-print="design"></span></div>
+        <div class="spec-row spec-row-split">
+          <div class="spec-field"><span class="spec-label">Item</span><span class="print-value" data-print="item"></span></div>
+          <div class="spec-field spec-field-qty"><span class="spec-label">Qty</span><span class="print-value" data-print="qty"></span></div>
+        </div>
+        <div class="spec-row"><span class="spec-label">Filling</span><span class="print-value" data-print="filling"></span></div>
+        <div class="spec-row"><span class="spec-label">Cushion Border</span><span class="print-value" data-print="border"></span></div>
+        <div class="spec-row"><span class="spec-label">Size Type</span><span class="print-value" data-print="sizeType"></span></div>
+        <div class="spec-row"><span class="spec-label">Notes</span><span class="print-value" data-print="notes"></span></div>
+      </div>
+    </section>
+
+    <section class="draw-section">
+      <h2 class="draw-title">Cushion Drawing below</h2>
 
       <div class="draw-zones">
         <div class="draw-zone" data-zone="seat">
-          <div class="zone-head no-print">
-            <h4>Seat section</h4>
-            <button type="button" class="btn btn-sm btn-primary" data-action="add-drawing" data-zone="drawings-seat">+ Add seat drawing</button>
+          <div class="zone-head">
+            <h3 class="zone-label">Seat</h3>
+            <button type="button" class="zone-add no-print" data-action="add-drawing" data-zone="drawings-seat">+ Add drawing</button>
           </div>
           <div class="drawings-stack" id="drawings-seat"></div>
         </div>
 
-        <div class="draw-zone" data-zone="back">
-          <div class="zone-head no-print">
-            <h4>Back section</h4>
-            <button type="button" class="btn btn-sm btn-primary" data-action="add-drawing" data-zone="drawings-back">+ Add back drawing</button>
+        <div class="draw-zone draw-zone-divider" data-zone="back">
+          <div class="zone-head">
+            <h3 class="zone-label">Back</h3>
+            <button type="button" class="zone-add no-print" data-action="add-drawing" data-zone="drawings-back">+ Add drawing</button>
           </div>
           <div class="drawings-stack" id="drawings-back"></div>
         </div>
@@ -134,8 +142,8 @@
   </main>
 
   <footer class="app-footer no-print">
-    <p>Your orders are saved only on this device. Nothing is sent to any server.</p>
-    <a href="privacy.html">Privacy &amp; security</a>
+    <p>Saved on this device only — nothing is uploaded.</p>
+    <a href="privacy.html">Privacy</a>
   </footer>
 
   <dialog id="load-dialog">
@@ -153,7 +161,7 @@
       <input type="text" id="edit-label-input" autocomplete="off" inputmode="decimal">
       <div class="dialog-actions">
         <button type="submit" value="ok" class="btn btn-primary">OK</button>
-        <button type="submit" value="cancel" class="btn btn-ghost">Cancel</button>
+        <button type="submit" value="cancel" class="btn">Cancel</button>
       </div>
     </form>
   </dialog>

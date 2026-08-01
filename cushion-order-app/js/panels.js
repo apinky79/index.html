@@ -30,7 +30,7 @@ const DrawingPanels = (() => {
     title.textContent = `Drawing ${zoneData.cards.size + 1}`;
     const removeBtn = document.createElement("button");
     removeBtn.type = "button";
-    removeBtn.className = "btn btn-sm btn-ghost drawing-remove";
+    removeBtn.className = "drawing-remove";
     removeBtn.textContent = "Remove";
     removeBtn.addEventListener("click", () => removeCard(zone, id));
     head.append(title, removeBtn);
@@ -39,7 +39,7 @@ const DrawingPanels = (() => {
     toolbar.className = "panel-toolbar no-print";
 
     const tplLabel = document.createElement("label");
-    tplLabel.textContent = "Template ";
+    tplLabel.textContent = "Style";
     const select = document.createElement("select");
     select.className = "template-select";
     select.setAttribute("aria-label", `${kind} template`);
@@ -53,16 +53,16 @@ const DrawingPanels = (() => {
     tools.className = "draw-tools";
     tools.dataset.drawingId = id;
     for (const [tool, label] of [
-      ["add-text", "+ Text"],
-      ["add-line", "+ Line"],
-      ["add-curve", "+ Curve"],
-      ["curve-done", "Finish curve"],
+      ["add-text", "Text"],
+      ["add-line", "Line"],
+      ["add-curve", "Curve"],
+      ["curve-done", "Done"],
       ["edit-text", "Edit"],
       ["delete", "Delete"],
     ]) {
       const b = document.createElement("button");
       b.type = "button";
-      b.className = "btn btn-sm";
+      b.className = "tool-btn";
       b.dataset.tool = tool;
       b.textContent = label;
       if (tool === "curve-done") b.hidden = true;
@@ -71,7 +71,7 @@ const DrawingPanels = (() => {
 
     const clearBtn = document.createElement("button");
     clearBtn.type = "button";
-    clearBtn.className = "btn btn-sm";
+    clearBtn.className = "tool-clear";
     clearBtn.textContent = "Clear";
     clearBtn.addEventListener("click", () => {
       svg.innerHTML = "";
