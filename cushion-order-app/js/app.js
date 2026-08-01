@@ -79,7 +79,7 @@
           setToolButtonsActive(drawingId, "add-line");
         } else if (tool === "add-curve") {
           editor.setTool("add-curve");
-          flash("Tap points along the curve, then Finish curve");
+          flash("Tap points, then tap Done");
           setToolButtonsActive(drawingId, "add-curve");
         } else if (tool === "curve-done") {
           editor.finishCurve(false);
@@ -224,7 +224,34 @@
     wireAllToolButtons();
   }
 
+  function syncPrintFields() {
+    const item = document.querySelector('input[name="item"]:checked');
+    const sizeType = document.querySelector('input[name="sizeType"]:checked');
+    const filling = [...document.querySelectorAll('input[name="filling"]:checked')].map((c) => c.value);
+    const border = [...document.querySelectorAll('input[name="border"]:checked')].map((c) => c.value);
+    const sizeLabels = {
+      "outer-barrier": "Outer case finished size, With barrier",
+      "outer-no-barrier": "Outer case finished size, No barrier",
+      "inner-barrier": "Inner case finished size, With barrier",
+      "inner-no-barrier": "Inner case finished size, No barrier",
+      foam: "Foam size",
+    };
+    const map = {
+      design: document.getElementById("design").value,
+      item: item ? item.value : "",
+      qty: document.getElementById("qty").value,
+      filling: filling.join(", "),
+      border: border.join(", "),
+      sizeType: sizeType ? sizeLabels[sizeType.value] || sizeType.value : "",
+      notes: document.getElementById("notes").value,
+    };
+    document.querySelectorAll("[data-print]").forEach((el) => {
+      el.textContent = map[el.dataset.print] || "";
+    });
+  }
+
   function exportPdf() {
+    syncPrintFields();
     window.print();
   }
 
