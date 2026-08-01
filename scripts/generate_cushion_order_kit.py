@@ -202,24 +202,57 @@ def arrow_marker(parent: Element, mid: str):
 def build_cushion_svg(style: CushionStyle, scale: float = 14.0) -> str:
     w, h = 520, 420
     cx, cy = w / 2, h / 2 + 10
-    svg = svg_el("svg", xmlns="http://www.w3.org/2000/svg", width=w, height=h, viewBox=f"0 0 {w} {h}")
+    pts = style.points_fn()
+
+    xs: list[float] = []
+    ys: list[float] = []
+
+    def add_xy(x: float, y: float) -> None:
+        xs.append(x)
+        ys.append(y)
+
+    for x, y in pts:
+        add_xy(cx + x * scale, cy + y * scale)
+
+    dim_groups: list[tuple[Element, DimSpec]] = []
+    for d in style.dims:
+        x1, y1 = cx + d.x1 * scale, cy + d.y1 * scale
+        x2, y2 = cx + d.x2 * scale, cy + d.y2 * scale
+        add_xy(x1, y1)
+        add_xy(x2, y2)
+        add_xy(cx + d.lx * scale, cy + d.ly * scale)
+        if d.ext1:
+            add_xy(cx + d.ext1[0] * scale, cy + d.ext1[1] * scale)
+        if d.ext2:
+            add_xy(cx + d.ext2[0] * scale, cy + d.ext2[1] * scale)
+
+    pad = 24
+    min_x, max_x = min(xs) - pad, max(xs) + pad
+    min_y, max_y = min(ys) - pad, max(ys) + pad
+    vb_w, vb_h = max_x - min_x, max_y - min_y
+
+    svg = svg_el(
+        "svg",
+        xmlns="http://www.w3.org/2000/svg",
+        width=w,
+        height=h,
+        viewBox=f"{min_x} {min_y} {vb_w} {vb_h}",
+    )
     defs = SubElement(svg, "defs")
     arrow_marker(defs, "arrow")
     SubElement(defs, "style").text = (
         "text{font-family:Helvetica,Arial,sans-serif;font-size:14px;fill:#111;"
-        "font-weight:bold}.label{font-size:11px;font-weight:normal;fill:#444}"
+        "font-weight:bold}"
     )
 
-    g_title = SubElement(svg, "g", id="title")
-    svg_text(g_title, 8, 22, style.name, **{"font-size": 16, "font-weight": "bold"})
-    svg_text(g_title, 8, 38, f"{style.category} · {style.part} · plan view", **{"class": "label"})
-
-    pts = style.points_fn()
     g_outline = SubElement(svg, "g", id="outline")
     SubElement(
-        g_outline, "polygon",
+        g_outline,
+        "polygon",
         points=pts_str(pts, scale, cx, cy),
-        fill="none", stroke="#111", **{"stroke-width": "2.5"},
+        fill="none",
+        stroke="#111",
+        **{"stroke-width": "2.5"},
     )
 
     for d in style.dims:
@@ -233,7 +266,13 @@ def build_cushion_svg(style: CushionStyle, scale: float = 14.0) -> str:
             ex2, ey2 = cx + d.ext2[0] * scale, cy + d.ext2[1] * scale
             svg_line(g, ex2, ey2, x2, y2, stroke="#111", **{"stroke-width": 1})
         svg_line(
-            g, x1, y1, x2, y2, stroke="#111", **{"stroke-width": 1, "marker-start": "url(#arrow)", "marker-end": "url(#arrow)"},
+            g,
+            x1,
+            y1,
+            x2,
+            y2,
+            stroke="#111",
+            **{"stroke-width": 1, "marker-start": "url(#arrow)", "marker-end": "url(#arrow)"},
         )
         tx, ty = cx + d.lx * scale, cy + d.ly * scale
         svg_text(g, tx, ty, d.label, **{"text-anchor": "middle"})

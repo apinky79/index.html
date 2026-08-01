@@ -1,11 +1,12 @@
 :root {
   --ink: #111;
-  --muted: #333;
+  --muted: #444;
   --line: #111;
-  --rule: #bbb;
-  --bg: #ddd;
+  --rule: #999;
+  --bg: #b8b8b8;
   --sheet: #fff;
   --font: Helvetica, Arial, sans-serif;
+  --sheet-w: min(794px, 100% - 1rem);
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -17,55 +18,94 @@ body {
   font-family: var(--font);
   background: var(--bg);
   color: var(--ink);
-  line-height: 1.35;
-  font-size: 14px;
+  line-height: 1.4;
+  font-size: 15px;
 }
 
-/* --- App chrome --- */
+/* --- Minimal top bar --- */
 
 .app-bar {
   position: sticky;
   top: 0;
   z-index: 100;
   background: var(--sheet);
-  border-bottom: 2px solid var(--line);
+  border-bottom: 1px solid var(--rule);
 }
 
 .app-bar-inner {
-  max-width: 880px;
+  max-width: var(--sheet-w);
   margin: 0 auto;
-  padding: 0.45rem 1rem;
+  padding: 0.4rem 0.75rem;
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem 1rem;
+  gap: 0.4rem;
 }
 
-.app-bar-title {
-  margin: 0;
-  font-size: 0.85rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.app-actions {
+.app-menu {
   margin-left: auto;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
+  position: relative;
 }
+
+.app-menu summary {
+  list-style: none;
+}
+
+.app-menu summary::-webkit-details-marker { display: none; }
+
+.btn-menu {
+  min-width: 2.25rem;
+  text-align: center;
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 0.35rem 0.5rem;
+}
+
+.app-menu-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  min-width: 200px;
+  background: var(--sheet);
+  border: 1px solid var(--line);
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  z-index: 200;
+}
+
+.app-menu-panel hr {
+  border: none;
+  border-top: 1px solid var(--rule);
+  margin: 0.15rem 0;
+}
+
+.app-menu-panel .draw-more {
+  font-size: 0.82rem;
+}
+
+.app-menu-panel .draw-more summary {
+  cursor: pointer;
+  font-weight: 700;
+  padding: 0.2rem 0;
+}
+
+.app-menu:not([open]) .app-menu-panel { display: none; }
 
 .btn {
   font: inherit;
-  font-size: 0.8rem;
-  padding: 0.35rem 0.7rem;
+  font-size: 0.85rem;
+  padding: 0.4rem 0.75rem;
   border: 1px solid var(--line);
   border-radius: 0;
   background: var(--sheet);
   color: var(--ink);
   cursor: pointer;
   touch-action: manipulation;
+  text-decoration: none;
+  display: inline-block;
+  text-align: center;
 }
 
 .btn-primary {
@@ -75,99 +115,99 @@ body {
 }
 
 .btn-sm {
-  font-size: 0.75rem;
-  padding: 0.2rem 0.45rem;
+  font-size: 0.78rem;
+  padding: 0.25rem 0.5rem;
 }
 
-.btn:active { opacity: 0.85; }
+.btn.active {
+  background: var(--ink);
+  color: #fff;
+}
 
-/* --- Paper form --- */
+.btn:active { opacity: 0.88; }
+
+/* --- The form (A4 paper) --- */
 
 .form-sheet {
-  max-width: 880px;
-  margin: 0.75rem auto 1.5rem;
-  padding: 1.1rem 1.25rem 1.25rem;
+  width: var(--sheet-w);
+  margin: 0.75rem auto 2rem;
+  padding: 1.35rem 1.5rem 1.5rem;
   background: var(--sheet);
-  border: 2px solid var(--line);
+  border: 1px solid #888;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12), 0 12px 40px rgba(0, 0, 0, 0.08);
 }
 
 .letterhead {
   display: grid;
   grid-template-columns: 1fr auto;
-  grid-template-rows: auto auto;
-  gap: 0.1rem 1.25rem;
-  margin-bottom: 0.75rem;
-  padding-bottom: 0.65rem;
-  border-bottom: 1px solid var(--line);
+  gap: 0.15rem 2rem;
+  margin-bottom: 0.85rem;
 }
 
 .brand-name {
   margin: 0;
-  font-size: 1.45rem;
+  font-size: 1.55rem;
   font-weight: 800;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
 }
 
 .brand-sub,
 .brand-addr {
   margin: 0;
-  font-size: 0.78rem;
+  font-size: 0.8rem;
   color: var(--muted);
 }
 
 .sheet-title {
   grid-column: 1 / -1;
   text-align: center;
-  margin: 0.45rem 0 0;
-  font-size: 1rem;
+  margin: 0.55rem 0 0;
+  font-size: 1.05rem;
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
 }
 
 .order-no {
   grid-column: 2;
-  grid-row: 1;
-  text-align: right;
-  font-size: 0.78rem;
+  grid-row: 1 / span 2;
   align-self: start;
+  text-align: right;
+  font-size: 0.8rem;
 }
 
 .order-no label {
   display: block;
-  margin-bottom: 0.15rem;
+  margin-bottom: 0.2rem;
   font-weight: 700;
 }
 
 .order-no input {
   width: 100%;
-  min-width: 145px;
+  min-width: 155px;
   border: 1px solid var(--line);
-  padding: 0.25rem 0.4rem;
+  padding: 0.35rem 0.5rem;
   font: inherit;
-  background: var(--sheet);
 }
 
 .sheet-meta {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem 2rem;
-  margin-bottom: 0.75rem;
+  gap: 2rem;
+  margin-bottom: 0.85rem;
 }
 
 .meta-field {
   flex: 1;
-  min-width: 170px;
   font-weight: 700;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
 }
 
 .meta-field input {
   display: block;
   width: 100%;
-  margin-top: 0.1rem;
+  margin-top: 0.15rem;
   border: none;
   border-bottom: 1px solid var(--line);
-  padding: 0.15rem 0;
+  padding: 0.25rem 0;
   font: inherit;
   font-weight: 400;
   background: transparent;
@@ -175,71 +215,70 @@ body {
 
 .spec-box {
   border: 2px solid var(--line);
-  padding: 0.55rem 0.75rem;
-  margin-bottom: 0.75rem;
+  padding: 0.65rem 0.85rem;
+  margin-bottom: 0.65rem;
 }
 
-.spec-row { margin-bottom: 0.5rem; }
+.spec-row { margin-bottom: 0.55rem; }
 .spec-row:last-child { margin-bottom: 0; }
 
 .spec-label {
   display: block;
   font-weight: 700;
-  font-size: 0.82rem;
-  margin-bottom: 0.15rem;
+  font-size: 0.85rem;
+  margin-bottom: 0.2rem;
 }
 
 .spec-input {
   width: 100%;
   border: none;
   border-bottom: 1px solid var(--line);
-  padding: 0.1rem 0;
+  padding: 0.15rem 0;
   font: inherit;
   background: transparent;
 }
 
-.spec-field-qty { max-width: 90px; }
+.spec-field-qty { max-width: 100px; }
 
 .spec-row-split {
   display: flex;
   flex-wrap: wrap;
-  gap: 1.25rem 2rem;
+  gap: 1.5rem 2.5rem;
 }
 
 .checks {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.25rem 0.85rem;
-  font-size: 0.82rem;
+  gap: 0.35rem 1rem;
+  font-size: 0.85rem;
 }
 
 .checks-col {
   flex-direction: column;
-  gap: 0.2rem;
+  gap: 0.25rem;
 }
 
 .checks label {
   display: flex;
   align-items: center;
-  gap: 0.3rem;
+  gap: 0.4rem;
   font-weight: 400;
   cursor: pointer;
 }
 
 .checks input {
-  width: 0.9rem;
-  height: 0.9rem;
+  width: 1rem;
+  height: 1rem;
   accent-color: var(--ink);
 }
 
 textarea {
   width: 100%;
   border: 1px solid var(--rule);
-  padding: 0.35rem 0.45rem;
+  padding: 0.4rem 0.5rem;
   font: inherit;
   resize: vertical;
-  border-radius: 0;
-  min-height: 2.2rem;
+  min-height: 2.4rem;
 }
 
 .print-only { display: none; }
@@ -249,21 +288,17 @@ textarea {
   min-height: 1.2em;
   border-bottom: 1px solid var(--line);
   padding-bottom: 0.1rem;
-  font-size: 0.85rem;
 }
 
-/* --- Drawing area --- */
+/* --- Drawing area (one box, seat | back) --- */
 
-.draw-hint {
-  margin: 0 0 0.4rem;
-  font-size: 0.75rem;
-  color: var(--muted);
-  font-style: italic;
+.draw-section {
+  margin-top: 0;
 }
 
 .draw-title {
-  margin: 0 0 0.4rem;
-  font-size: 0.88rem;
+  margin: 0 0 0.45rem;
+  font-size: 0.9rem;
   font-weight: 700;
 }
 
@@ -271,42 +306,25 @@ textarea {
   display: grid;
   grid-template-columns: 1fr 1fr;
   border: 2px solid var(--line);
-  min-height: 480px;
+  min-height: 420px;
 }
 
 .draw-zone {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  padding: 0.45rem 0.5rem 0.5rem;
+  padding: 0.35rem;
 }
 
 .draw-zone-divider {
   border-left: 1px solid var(--line);
 }
 
-.zone-label {
-  margin: 0 0 0.35rem;
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
-.zone-add {
-  font: inherit;
-  font-size: 0.72rem;
-  padding: 0.15rem 0.4rem;
-  border: 1px solid var(--line);
-  background: var(--sheet);
-  cursor: pointer;
-}
-
 .drawings-stack {
   display: flex;
   flex-direction: column;
-  gap: 0.45rem;
   flex: 1;
+  min-height: 0;
 }
 
 .drawing-card {
@@ -317,21 +335,21 @@ textarea {
 }
 
 .drawing-card-multi {
-  padding-top: 0.45rem;
+  padding-top: 0.5rem;
+  margin-top: 0.5rem;
   border-top: 1px solid var(--rule);
 }
 
-.drawing-card-multi:first-child {
-  padding-top: 0;
-  border-top: none;
-}
-
 .panel-toolbar {
-  display: grid;
+  display: none;
   grid-template-columns: 1fr;
   gap: 0.3rem;
   margin-bottom: 0.35rem;
   font-size: 0.78rem;
+}
+
+body.show-draw-tools .panel-toolbar {
+  display: grid;
 }
 
 .style-row {
@@ -344,7 +362,6 @@ textarea {
 .style-label {
   font-weight: 700;
   font-size: 0.78rem;
-  white-space: nowrap;
 }
 
 .template-select {
@@ -353,8 +370,6 @@ textarea {
   font-size: 0.78rem;
   border: 1px solid var(--line);
   padding: 0.25rem 0.35rem;
-  background: var(--sheet);
-  min-height: 2rem;
 }
 
 .drawing-remove {
@@ -363,9 +378,7 @@ textarea {
   padding: 0.15rem 0.35rem;
   border: 1px solid var(--rule);
   background: var(--sheet);
-  color: var(--muted);
   cursor: pointer;
-  white-space: nowrap;
 }
 
 .drawing-remove[hidden] { display: none; }
@@ -374,7 +387,6 @@ textarea {
   display: flex;
   flex-wrap: wrap;
   gap: 0.2rem;
-  align-items: center;
 }
 
 .draw-tools .tool-btn {
@@ -383,9 +395,7 @@ textarea {
   padding: 0.2rem 0.45rem;
   border: 1px solid var(--line);
   background: var(--sheet);
-  color: var(--ink);
   cursor: pointer;
-  min-height: 1.75rem;
 }
 
 .draw-tools .tool-btn.active {
@@ -393,31 +403,28 @@ textarea {
   color: #fff;
 }
 
-.panel-toolbar .tool-clear {
-  justify-self: start;
+.tool-clear {
   font: inherit;
   font-size: 0.72rem;
-  padding: 0;
   border: none;
   background: none;
   color: var(--muted);
   text-decoration: underline;
   cursor: pointer;
+  padding: 0;
 }
 
 .svg-viewport {
   flex: 1;
-  border: none;
   background: var(--sheet);
   overflow: hidden;
   touch-action: none;
   position: relative;
-  min-height: 320px;
+  min-height: 380px;
 }
 
-.svg-viewport:focus {
-  outline: 1px dotted var(--line);
-  outline-offset: -1px;
+.svg-viewport.tool-pen {
+  cursor: crosshair;
 }
 
 .svg-viewport svg {
@@ -426,38 +433,30 @@ textarea {
   display: block;
 }
 
-.svg-viewport .shape-stroke {
-  pointer-events: stroke;
-  stroke-linecap: square;
-}
-
 .svg-viewport .editable-label {
   pointer-events: all;
   cursor: pointer;
 }
 
 .editor-handles { pointer-events: none; }
-
 .anchor-handle { pointer-events: all; cursor: grab; }
-.anchor-handle:active { cursor: grabbing; }
 
 .anchor-curve {
   fill: #111;
   stroke: #fff;
   stroke-width: 1.5;
   pointer-events: none;
-  opacity: 0.55;
+  opacity: 0.45;
 }
 
-.svg-viewport:focus-within .anchor-curve,
+.mode-curves .anchor-curve,
 .anchor-handle:active .anchor-curve {
   opacity: 1;
 }
 
-.anchor-hit {
-  fill: transparent;
-  pointer-events: all;
-}
+.anchor-hit { fill: transparent; pointer-events: all; }
+
+.pen-preview { pointer-events: none; }
 
 .viewport-tip {
   position: absolute;
@@ -469,38 +468,27 @@ textarea {
   font-size: 0.72rem;
   padding: 0.3rem 0.55rem;
   z-index: 5;
-  white-space: nowrap;
 }
-
-.svg-viewport .selected { outline: none; }
-
-.svg-viewport .selected.shape-stroke,
-.svg-viewport g.selected polygon,
-.svg-viewport g.selected line {
-  stroke: #111 !important;
-  stroke-width: 3 !important;
-}
-
-/* --- Footer & dialogs --- */
-
-.app-footer {
-  text-align: center;
-  padding: 0.5rem 1rem 1rem;
-  font-size: 0.75rem;
-  color: var(--muted);
-}
-
-.app-footer a { color: var(--ink); }
 
 dialog {
   border: 2px solid var(--line);
-  border-radius: 0;
   padding: 1.25rem;
   max-width: 90vw;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
 }
 
-dialog::backdrop { background: rgba(0, 0, 0, 0.35); }
+#edit-label-input {
+  width: 100%;
+  font-size: 1.25rem;
+  padding: 0.5rem;
+  margin: 0.75rem 0;
+  border: 1px solid var(--line);
+}
+
+.dialog-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
 
 #draft-list {
   list-style: none;
@@ -516,23 +504,6 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.35); }
   gap: 0.5rem;
   padding: 0.5rem 0;
   border-bottom: 1px solid var(--rule);
-}
-
-#draft-list button { margin-left: auto; }
-
-#edit-label-input {
-  width: 100%;
-  font-size: 1.1rem;
-  padding: 0.45rem;
-  margin: 0.75rem 0;
-  border: 1px solid var(--line);
-  border-radius: 0;
-}
-
-.dialog-actions {
-  display: flex;
-  gap: 0.5rem;
-  justify-content: flex-end;
 }
 
 .toast {
@@ -563,21 +534,11 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.35); }
 
   .order-no {
     grid-column: 1;
+    grid-row: auto;
     text-align: left;
   }
 
-  .app-actions {
-    margin-left: 0;
-    width: 100%;
-  }
-
-  .style-row {
-    grid-template-columns: 1fr;
-  }
-
-  .drawing-remove {
-    justify-self: start;
-  }
+  .sheet-meta { flex-direction: column; gap: 0.75rem; }
 }
 
 @media print {
@@ -585,18 +546,17 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.35); }
 
   .no-print,
   .app-bar,
-  .app-footer,
-  .panel-toolbar,
-  .zone-add {
+  .panel-toolbar {
     display: none !important;
   }
 
   .print-only { display: block !important; }
 
   .form-sheet {
+    width: 100%;
     margin: 0;
     border: none;
-    max-width: none;
+    box-shadow: none;
     padding: 0.4cm;
   }
 
@@ -604,27 +564,21 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.35); }
 
   .spec-box-print-only {
     display: block !important;
-    margin-bottom: 0.5cm;
+    margin-bottom: 0.4cm;
   }
 
   .draw-zones {
     min-height: auto;
     border-width: 1px;
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .draw-zone { padding: 0.2cm; }
-
-  .drawing-card-multi {
-    border-top: 1px solid #ccc;
     page-break-inside: avoid;
   }
 
-  .svg-viewport { min-height: 7cm; }
+  .svg-viewport { min-height: 8cm; }
 
   .editor-handles,
   .anchor-handle,
-  .viewport-tip {
+  .viewport-tip,
+  .pen-preview {
     display: none !important;
   }
 }

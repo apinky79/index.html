@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="description" content="Private cushion purchase order builder — works offline, data stays on your device.">
+  <meta name="description" content="Dudgeon cushion purchase order — fill, edit measurements, print.">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' blob: data:; connect-src 'self'; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';">
   <meta name="referrer" content="no-referrer">
   <meta name="theme-color" content="#ffffff">
@@ -14,14 +14,27 @@
 <body>
   <header class="app-bar no-print">
     <div class="app-bar-inner">
-      <p class="app-bar-title">Cushion Purchase Order</p>
-      <div class="app-actions">
-        <a href="print-blank.html" class="btn" target="_blank" rel="noopener">Blank form</a>
-        <button type="button" id="btn-export" class="btn btn-primary">Print order</button>
-        <button type="button" id="btn-save" class="btn btn-quiet">Save</button>
-        <button type="button" id="btn-load" class="btn btn-quiet">Load</button>
-        <button type="button" id="btn-new" class="btn btn-quiet">New</button>
-      </div>
+      <button type="button" id="btn-export" class="btn btn-primary">Print</button>
+      <a href="../cushion-order-kit/form/dudgeon-purchase-order.pdf" class="btn" target="_blank" rel="noopener">PDF form</a>
+      <a href="print-blank.html" class="btn" target="_blank" rel="noopener">Blank sheet</a>
+      <details class="app-menu">
+        <summary class="btn btn-menu" aria-label="More options">⋯</summary>
+        <div class="app-menu-panel">
+          <button type="button" id="btn-save" class="btn">Save draft</button>
+          <button type="button" id="btn-load" class="btn">Load draft</button>
+          <button type="button" id="btn-new" class="btn">New order</button>
+          <hr>
+          <button type="button" id="btn-pen" class="btn">Draw on form</button>
+          <button type="button" id="btn-curves" class="btn">Curve T edges</button>
+          <details class="draw-more" id="draw-more">
+            <summary>Change style / add drawing</summary>
+            <div class="draw-more-actions">
+              <button type="button" class="zone-add" data-action="add-drawing" data-zone="drawings-seat">Add seat</button>
+              <button type="button" class="zone-add" data-action="add-drawing" data-zone="drawings-back">Add back</button>
+            </div>
+          </details>
+        </div>
+      </details>
     </div>
   </header>
 
@@ -48,7 +61,7 @@
       <div class="spec-grid">
         <div class="spec-row">
           <span class="spec-label">Design</span>
-          <input type="text" id="design" class="spec-input" placeholder="">
+          <input type="text" id="design" class="spec-input">
         </div>
         <div class="spec-row spec-row-split">
           <div class="spec-field">
@@ -97,7 +110,7 @@
         </div>
         <div class="spec-row">
           <span class="spec-label">Notes</span>
-          <textarea id="notes" rows="2" placeholder=""></textarea>
+          <textarea id="notes" rows="2"></textarea>
         </div>
       </div>
     </section>
@@ -118,41 +131,16 @@
 
     <section class="draw-section">
       <h2 class="draw-title">Cushion Drawing below</h2>
-      <p class="workflow-hint no-print">
-        <strong>Fastest:</strong> fill the form, tap a measurement to change it, then <strong>Print order</strong>.
-        For hand drawing, open <strong>Blank form</strong> and print that instead.
-      </p>
-
-      <div class="draw-actions no-print">
-        <button type="button" id="btn-pen" class="btn btn-sm">Draw on form</button>
-        <button type="button" id="btn-curves" class="btn btn-sm">Curve T edges</button>
-        <details class="draw-more" id="draw-more">
-          <summary>Change cushion style / add drawings</summary>
-          <div class="draw-more-actions">
-            <button type="button" class="zone-add" data-action="add-drawing" data-zone="drawings-seat">Add seat drawing</button>
-            <button type="button" class="zone-add" data-action="add-drawing" data-zone="drawings-back">Add back drawing</button>
-          </div>
-        </details>
-      </div>
-
       <div class="draw-zones">
         <div class="draw-zone" data-zone="seat">
-          <h3 class="zone-label">Seat</h3>
           <div class="drawings-stack" id="drawings-seat"></div>
         </div>
-
         <div class="draw-zone draw-zone-divider" data-zone="back">
-          <h3 class="zone-label">Back</h3>
           <div class="drawings-stack" id="drawings-back"></div>
         </div>
       </div>
     </section>
   </main>
-
-  <footer class="app-footer no-print">
-    <p>For quick one-off orders, printing the blank form and drawing by hand is often fastest.</p>
-    <a href="privacy.html">Privacy</a>
-  </footer>
 
   <dialog id="load-dialog">
     <form method="dialog">
@@ -165,7 +153,7 @@
 
   <dialog id="edit-label-dialog">
     <form method="dialog" id="edit-label-form">
-      <h3>Edit measurement</h3>
+      <h3>Measurement</h3>
       <input type="text" id="edit-label-input" autocomplete="off" inputmode="decimal">
       <div class="dialog-actions">
         <button type="submit" value="ok" class="btn btn-primary">OK</button>
