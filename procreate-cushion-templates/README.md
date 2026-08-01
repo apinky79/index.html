@@ -1,61 +1,47 @@
-# Procreate Cushion Templates
+# Cushion Order Drawings (Procreate)
 
-Labeled layer templates for **sofa and chair cushion seats and backs**, ready to import into Procreate for client orders and workshop specs.
+Dudgeon-style **plan-view cushion drawings** with dimension lines and inch callouts — for filling out workshop purchase orders in Procreate.
 
 ## What's included
 
-| Category | Part | Styles |
-|----------|------|--------|
-| **Sofa** | Seat | box, knife-edge, t-cushion, l-cushion, bullnose, waterfall, bench, chaise |
-| **Sofa** | Back | box, knife-edge, t-back, l-back, bullnose, channel-tufted, scatter, fixed, bordered |
-| **Chair** | Seat | box, knife-edge, round, slip, t-cushion |
-| **Chair** | Back | box, knife-edge, scatter, wing, round, fixed |
+Each style is a technical sketch like a cushion order form:
 
-Each style folder contains:
+- **Black outline** — cushion shape (plan view, looking down)
+- **Dimension lines** — arrows and inch measurements (edit these for each order)
+- **Title** — style name and category
+
+### Sofa
+- **Seats:** t-cushion, box, knife-edge, l-cushion, bullnose, waterfall, bench, chaise
+- **Backs:** t-back, box, knife-edge, l-back, scatter, channel, fixed
+
+### Chair
+- **Seats:** t-cushion, box, knife-edge, round, slip
+- **Backs:** t-back, box, knife-edge, scatter, wing, fixed
+
+The **chair t-cushion seat** and **t-back** match the Dudgeon order-form layout (20"/32"/28"/6.5" seat and 28"/20"/13"/23" back).
+
+## Folder layout
 
 ```
-{category}/{part}/{style-id}/
+chair/seat/t-cushion/
 ├── layers/
-│   ├── 01-outline.png   ← main shape
-│   ├── 02-detail.png    ← boxing, welt, channels, notes
-│   └── 03-label.png     ← style name label
-└── {style-id}-composite.png   ← all layers merged (quick import)
+│   ├── 01-outline.png
+│   ├── 02-dimensions.png
+│   └── 03-title.png
+└── t-cushion.png          ← full drawing on white (like order form)
 ```
 
 ## Procreate workflow
 
-1. **Sync this folder to your cloud** (iCloud, Dropbox, Google Drive, etc.).
-2. In Procreate: **Actions → Add → Insert a file** (or drag from Files app).
-3. For full control, import the three files from `layers/` as separate layers (bottom to top: outline → detail → label).
-4. For speed, import the `-composite.png` as a single reference layer.
-5. **Transform → Freeform** to scale the template to your measured width/depth.
-6. Draw fabric/piping notes on new layers above the template.
-7. Export or save the canvas to your order folder.
+1. Save this folder to **iCloud Drive** (see repo instructions).
+2. New canvas (A4 or 2000×1600).
+3. Import layers: **01-outline → 02-dimensions → 03-title** (or import the single `.png` drawing).
+4. Use the **Transform** tool to scale the whole group to fit your page.
+5. **Erase and rewrite** the dimension numbers, or add text layers with your measurements.
+6. Draw any extra notes (filling, border, fabric) on new layers above.
 
-## Layer colour key
-
-| Colour | Meaning |
-|--------|---------|
-| Dark grey | Cut outline / main shape |
-| Blue | Construction detail (boxing, channels, arm wrap) |
-| Red dashed | Welt / piping line |
-| Light grey fill | Cushion face (20% opacity) |
-
-## Canvas
-
-All templates are **2400 × 2400 px** with transparent backgrounds — high enough resolution for iPad Procreate without bloating file size.
-
-## Regenerating
+## Regenerate
 
 ```bash
 python3 scripts/generate_cushion_templates.py
 ```
-
-## File naming for orders
-
-Suggested Procreate layer names when saving:
-
-`{client}-{piece}-sofa-seat-box`  
-`{client}-{piece}-chair-back-wing`
-
-Keep the style id from the folder name for consistency with your supplier vocabulary.
