@@ -1,634 +1,531 @@
 #!/usr/bin/env python3
 """
-Generate Procreate-ready cushion template PNG layers for sofa and chair
-seat/back styles used in upholstery ordering workflows.
+Generate Dudgeon-style cushion order drawings for Procreate.
 
-Each style produces:
-  - outline layer (main shape)
-  - detail layer (boxing, channels, welt, seams)
-  - label layer (style name + part type)
-  - composite (all layers merged for quick import)
+Plan-view technical sketches with dimension leader lines and inch callouts,
+matching workshop purchase-order layout. Each style exports separate layers.
 """
 
 from __future__ import annotations
 
 import json
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable
 
 from PIL import Image, ImageDraw, ImageFont
 
 ROOT = Path(__file__).resolve().parent.parent / "procreate-cushion-templates"
-CANVAS = 2400
-MARGIN = 180
-STROKE = 6
-DETAIL_STROKE = 4
+W, H = 2000, 1600
+MARGIN = 120
+INK = (20, 20, 20, 255)
+DIM = (20, 20, 20, 255)
+TITLE = (20, 20, 20, 255)
+WHITE = (255, 255, 255, 255)
 
-COLORS = {
-    "outline": (43, 43, 43, 255),
-    "detail": (0, 102, 204, 255),
-    "welt": (204, 51, 0, 255),
-    "fill": (245, 245, 245, 60),
-    "label_bg": (255, 255, 255, 220),
-    "label_text": (30, 30, 30, 255),
-    "guide": (180, 180, 180, 180),
-}
+OUTLINE_W = 5
+DIM_W = 2
 
 
-def load_font(size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
-    candidates = [
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-        "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-    ]
-    for path in candidates:
-        if Path(path).exists():
-            return ImageFont.truetype(path, size)
+def load_font(size: int, bold: bool = False) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
+    names = (
+        ["DejaVuSans-Bold.ttf", "LiberationSans-Bold.ttf"]
+        if bold
+        else ["DejaVuSans.ttf", "LiberationSans.ttf"]
+    )
+    for name in names:
+        path = Path("/usr/share/fonts/truetype/dejavu") / name
+        if not path.exists():
+            path = Path("/usr/share/fonts/truetype/liberation") / name
+        if path.exists():
+            return ImageFont.truetype(str(path), size)
     return ImageFont.load_default()
 
 
-FONT_TITLE = load_font(52)
-FONT_SUB = load_font(34)
-FONT_SMALL = load_font(28)
+FONT_DIM = load_font(36)
+FONT_TITLE = load_font(44, bold=True)
+FONT_SUB = load_font(28)
+
+
+@dataclass
+class DimSpec:
+    """Dimension annotation: line from (x1,y1)-(x2,y2) with label at offset."""
+    x1: float
+    y1: float
+    x2: float
+    y2: float
+    label: str
+    ox: float = 0  # label offset
+    oy: float = 0
+    ext1: tuple[float, float] | None = None  # extension line from shape
+    ext2: tuple[float, float] | None = None
 
 
 @dataclass
 class TemplateSpec:
-    category: str  # sofa | chair
-    part: str  # seat | back
+    category: str
+    part: str
     style_id: str
-    display_name: str
-    description: str
-    draw_outline: Callable[[ImageDraw.ImageDraw, tuple[int, int, int, int]], list[tuple]]
-    draw_details: Callable[[ImageDraw.ImageDraw, tuple[int, int, int, int]], None]
+    title: str
+    subtitle: str
+    draw_shape: Callable[[ImageDraw.ImageDraw, float, float, float], list[tuple[float, float]]]
+    dims: list[DimSpec] = field(default_factory=list)
 
 
-def bounds() -> tuple[int, int, int, int]:
-    return (MARGIN, MARGIN + 120, CANVAS - MARGIN, CANVAS - MARGIN - 80)
+class Ctx:
+    """Maps inch coordinates to canvas pixels, centred in drawing area."""
+
+    def __init__(self, draw: ImageDraw.ImageDraw, cx: float, cy: float, scale: float):
+        self.draw = draw
+        self.cx = cx
+        self.cy = cy
+        self.scale = scale
+
+    def pt(self, x: float, y: float) -> tuple[float, float]:
+        return (self.cx + x * self.scale, self.cy + y * self.scale)
+
+    def poly(self, points: list[tuple[float, float]], close: bool = True):
+        px = [self.pt(x, y) for x, y in points]
+        if close:
+            self.draw.line(px + [px[0]], fill=INK, width=OUTLINE_W, joint="curve")
+        else:
+            self.draw.line(px, fill=INK, width=OUTLINE_W, joint="curve")
 
 
-def rect(w: float, h: float, cx: float, cy: float) -> tuple[int, int, int, int]:
-    return (
-        int(cx - w / 2),
-        int(cy - h / 2),
-        int(cx + w / 2),
-        int(cy + h / 2),
-    )
+def arrow_head(draw, tip, angle, size=12):
+    x, y = tip
+    a1 = angle + math.pi * 0.82
+    a2 = angle - math.pi * 0.82
+    p1 = (x + size * math.cos(a1), y + size * math.sin(a1))
+    p2 = (x + size * math.cos(a2), y + size * math.sin(a2))
+    draw.polygon([tip, p1, p2], fill=DIM)
 
 
-def draw_rounded_rect(draw: ImageDraw.ImageDraw, box: tuple, radius: int, **kwargs):
-    draw.rounded_rectangle(box, radius=radius, **kwargs)
+def draw_dimension(draw: ImageDraw.ImageDraw, d: DimSpec, scale: float, cx: float, cy: float):
+    def p(x, y):
+        return (cx + x * scale, cy + y * scale)
+
+    x1, y1 = p(d.x1, d.y1)
+    x2, y2 = p(d.x2, d.y2)
+    horizontal = abs(y2 - y1) < abs(x2 - x1) * 0.15
+
+    if d.ext1:
+        draw.line([p(*d.ext1), (x1, y1)], fill=DIM, width=DIM_W)
+    if d.ext2:
+        draw.line([p(*d.ext2), (x2, y2)], fill=DIM, width=DIM_W)
+
+    draw.line([(x1, y1), (x2, y2)], fill=DIM, width=DIM_W)
+
+    if horizontal:
+        arrow_head(draw, (x1, y1), 0)
+        arrow_head(draw, (x2, y2), math.pi)
+    else:
+        arrow_head(draw, (x1, y1), math.pi / 2)
+        arrow_head(draw, (x2, y2), -math.pi / 2)
+
+    mx = (x1 + x2) / 2 + d.ox
+    my = (y1 + y2) / 2 + d.oy
+    tw = draw.textlength(d.label, font=FONT_DIM)
+    draw.text((mx - tw / 2, my - 18), d.label, fill=DIM, font=FONT_DIM)
 
 
-def dashed_line(draw, p1, p2, color, width=3, dash=18):
-    x1, y1 = p1
-    x2, y2 = p2
-    length = math.hypot(x2 - x1, y2 - y1)
-    if length == 0:
-        return
-    dx, dy = (x2 - x1) / length, (y2 - y1) / length
-    pos = 0.0
-    draw_on = True
-    while pos < length:
-        seg = min(dash, length - pos)
-        if draw_on:
-            sx, sy = x1 + dx * pos, y1 + dy * pos
-            ex, ey = x1 + dx * (pos + seg), y1 + dy * (pos + seg)
-            draw.line([(sx, sy), (ex, ey)], fill=color, width=width)
-        pos += dash
-        draw_on = not draw_on
+# --- Shape builders (coordinates in inches, origin at shape centre) ---
 
-
-def box_cushion_outline(draw, b):
-    x0, y0, x1, y1 = b
-    w, h = x1 - x0, y1 - y0
-    cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
-    inset = min(w, h) * 0.08
-    outer = rect(w, h, cx, cy)
-    inner = rect(w - inset * 2, h - inset * 2, cx, cy)
-    draw.rectangle(outer, fill=COLORS["fill"], outline=COLORS["outline"], width=STROKE)
-    draw.rectangle(inner, outline=COLORS["outline"], width=STROKE)
-    return [outer, inner]
-
-
-def box_cushion_details(draw, b):
-    x0, y0, x1, y1 = b
-    w, h = x1 - x0, y1 - y0
-    cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
-    inset = min(w, h) * 0.08
-    inner = rect(w - inset * 2, h - inset * 2, cx, cy)
-    ix0, iy0, ix1, iy1 = inner
-    # boxing strip corners
-    for pt in [(ix0, iy0), (ix1, iy0), (ix1, iy1), (ix0, iy1)]:
-        draw.ellipse([pt[0] - 8, pt[1] - 8, pt[0] + 8, pt[1] + 8], fill=COLORS["detail"])
-    dashed_line(draw, (ix0, iy0), (ix1, iy0), COLORS["welt"], DETAIL_STROKE)
-    dashed_line(draw, (ix0, iy1), (ix1, iy1), COLORS["welt"], DETAIL_STROKE)
-
-
-def knife_edge_outline(draw, b):
-    x0, y0, x1, y1 = b
-    w, h = x1 - x0, y1 - y0
-    cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
-    taper = min(w, h) * 0.06
-    pts = [
-        (x0 + taper, y0),
-        (x1 - taper, y0),
-        (x1, y1),
-        (x0, y1),
+def t_cushion_seat_shape(_draw, _cx, _cy, _s) -> list[tuple[float, float]]:
+    # Matches Dudgeon order form: back 20, front 32, depth 28, front wrap 6.5
+    hw_back, hw_front, depth, wrap = 10, 16, 28, 6.5
+    y0 = -depth / 2
+    y_wrap = y0 + wrap
+    y1 = depth / 2
+    return [
+        (-hw_back, y0),
+        (hw_back, y0),
+        (hw_back, y_wrap),
+        (hw_front, y_wrap),
+        (hw_front, y1),
+        (-hw_front, y1),
+        (-hw_front, y_wrap),
+        (-hw_back, y_wrap),
     ]
-    draw.polygon(pts, fill=COLORS["fill"], outline=COLORS["outline"])
-    draw.line(pts + [pts[0]], fill=COLORS["outline"], width=STROKE)
-    return [pts]
 
 
-def knife_edge_details(draw, b):
-    x0, y0, x1, y1 = b
-    mid_y = (y0 + y1) / 2
-    draw.line([(x0, mid_y), (x1, mid_y)], fill=COLORS["guide"], width=2)
-    draw.text((x0 + 20, mid_y + 10), "knife edge seam", fill=COLORS["detail"], font=FONT_SMALL)
+T_SEAT_DIMS = [
+    DimSpec(-10, -18, 10, -18, '20"', oy=-28, ext1=(-10, -14), ext2=(10, -14)),
+    DimSpec(-16, 16, 16, 16, '32"', oy=28, ext1=(-16, 14), ext2=(16, 14)),
+    DimSpec(20, -14, 20, 14, '28"', ox=36, ext1=(16, -14), ext2=(16, 14)),
+    DimSpec(-22, -14, -22, -1.5, '6.5"', ox=-42, ext1=(-16, -14), ext2=(-16, -1.5)),
+]
 
 
-def t_cushion_outline(draw, b):
-    x0, y0, x1, y1 = b
-    w, h = x1 - x0, y1 - y0
-    arm_w = w * 0.22
-    arm_h = h * 0.35
-    body_w = w - arm_w
-    body = rect(body_w, h, x0 + body_w / 2, (y0 + y1) / 2)
-    arm = rect(arm_w, arm_h, x1 - arm_w / 2, y0 + arm_h / 2)
-    draw.rectangle(body, fill=COLORS["fill"], outline=COLORS["outline"], width=STROKE)
-    draw.rectangle(arm, fill=COLORS["fill"], outline=COLORS["outline"], width=STROKE)
-    return [body, arm]
-
-
-def t_cushion_details(draw, b):
-    x0, y0, x1, y1 = b
-    w, h = x1 - x0, y1 - y0
-    arm_w = w * 0.22
-    arm_h = h * 0.35
-    join_x = x1 - arm_w
-    draw.line([(join_x, y0), (join_x, y0 + arm_h)], fill=COLORS["detail"], width=DETAIL_STROKE)
-    draw.text((join_x + 12, y0 + arm_h + 8), "arm wrap", fill=COLORS["detail"], font=FONT_SMALL)
-
-
-def l_cushion_outline(draw, b):
-    x0, y0, x1, y1 = b
-    w, h = x1 - x0, y1 - y0
-    leg = w * 0.28
-    main = rect(w - leg, h - leg, x0 + (w - leg) / 2, y0 + (h - leg) / 2 + leg / 2)
-    ext = rect(leg, h, x1 - leg / 2, (y0 + y1) / 2)
-    draw.rectangle(main, fill=COLORS["fill"], outline=COLORS["outline"], width=STROKE)
-    draw.rectangle(ext, fill=COLORS["fill"], outline=COLORS["outline"], width=STROKE)
-    return [main, ext]
-
-
-def l_cushion_details(draw, b):
-    x0, y0, x1, y1 = b
-    w, h = x1 - x0, y1 - y0
-    leg = w * 0.28
-    jx = x1 - leg
-    jy = y0 + leg
-    draw.line([(jx, y0), (jx, jy)], fill=COLORS["detail"], width=DETAIL_STROKE)
-    draw.line([(x0, jy), (jx, jy)], fill=COLORS["detail"], width=DETAIL_STROKE)
-
-
-def bullnose_outline(draw, b):
-    x0, y0, x1, y1 = b
-    w, h = x1 - x0, y1 - y0
-    cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
-    body = rect(w, h * 0.88, cx, y0 + (h * 0.88) / 2 + h * 0.04)
-    bx0, by0, bx1, by1 = body
-    draw.rectangle(body, fill=COLORS["fill"], outline=COLORS["outline"], width=STROKE)
-    r = w * 0.45
-    draw.arc([cx - r, by1 - r * 0.3, cx + r, by1 + r * 0.7], 0, 180, fill=COLORS["outline"], width=STROKE)
-    return [body]
-
-
-def bullnose_details(draw, b):
-    x0, y0, x1, y1 = b
-    cx = (x0 + x1) / 2
-    w = x1 - x0
-    h = y1 - y0
-    front_y = y0 + h * 0.92
-    draw.text((cx - 120, front_y - 60), "rolled front", fill=COLORS["detail"], font=FONT_SMALL)
-    dashed_line(draw, (x0 + 40, front_y), (x1 - 40, front_y), COLORS["welt"], DETAIL_STROKE)
-
-
-def waterfall_outline(draw, b):
-    x0, y0, x1, y1 = b
-    pts = [
-        (x0, y0 + (y1 - y0) * 0.08),
-        (x1, y0),
-        (x1, y1),
-        (x0, y1),
+def t_back_shape(_d, _cx, _cy, _s) -> list[tuple[float, float]]:
+    # Dudgeon back: top 28, bottom 20, wing 13, total 23
+    hw_top, hw_bot, total_h, wing_h = 14, 10, 23, 13
+    y0 = -total_h / 2
+    y_wing = y0 + wing_h
+    y1 = total_h / 2
+    return [
+        (-hw_top, y0),
+        (hw_top, y0),
+        (hw_top, y_wing),
+        (hw_bot, y_wing),
+        (hw_bot, y1),
+        (-hw_bot, y1),
+        (-hw_bot, y_wing),
+        (-hw_top, y_wing),
     ]
-    draw.polygon(pts, fill=COLORS["fill"], outline=COLORS["outline"])
-    draw.line(pts + [pts[0]], fill=COLORS["outline"], width=STROKE)
-    return [pts]
 
 
-def waterfall_details(draw, b):
-    x0, y0, x1, y1 = b
-    draw.line([(x0, y0), (x1, y0 + (y1 - y0) * 0.08)], fill=COLORS["detail"], width=DETAIL_STROKE)
-    draw.text((x0 + 30, y0 + 20), "continuous slope", fill=COLORS["detail"], font=FONT_SMALL)
+T_BACK_DIMS = [
+    DimSpec(-14, -14, 14, -14, '28"', oy=-28, ext1=(-14, -11.5), ext2=(14, -11.5)),
+    DimSpec(-10, 13, 10, 13, '20"', oy=28, ext1=(-10, 11.5), ext2=(10, 11.5)),
+    DimSpec(16, -11.5, 16, 0, '13"', ox=38, ext1=(14, -11.5), ext2=(10, 0)),
+    DimSpec(-20, -11.5, -20, 11.5, '23"', ox=-44, ext1=(-14, -11.5), ext2=(-10, 11.5)),
+]
 
 
-def bench_seat_outline(draw, b):
-    x0, y0, x1, y1 = b
-    w, h = x1 - x0, y1 - y0
-    cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
-    bench = rect(w * 0.95, h * 0.55, cx, cy + h * 0.05)
-    draw.rectangle(bench, fill=COLORS["fill"], outline=COLORS["outline"], width=STROKE)
-    return [bench]
+def box_shape(_d, _cx, _cy, _s) -> list[tuple[float, float]]:
+    w, h = 24, 22
+    return [(-w / 2, -h / 2), (w / 2, -h / 2), (w / 2, h / 2), (-w / 2, h / 2)]
 
 
-def bench_seat_details(draw, b):
-    x0, y0, x1, y1 = b
-    w = x1 - x0
-    cx = (x0 + x1) / 2
-    cy = (y0 + y1) / 2 + (y1 - y0) * 0.05
-    third = w * 0.95 / 3
-    left = cx - w * 0.95 / 2
-    for i in range(1, 3):
-        x = left + third * i
-        draw.line([(x, cy - (y1 - y0) * 0.275), (x, cy + (y1 - y0) * 0.275)], fill=COLORS["guide"], width=2)
-    draw.text((x0 + 20, y0 + 10), "3-seat bench (adjust sections)", fill=COLORS["detail"], font=FONT_SMALL)
+BOX_DIMS = [
+    DimSpec(-12, -14, 12, -14, '24"', oy=-28, ext1=(-12, -11), ext2=(12, -11)),
+    DimSpec(16, -11, 16, 11, '22"', ox=38, ext1=(12, -11), ext2=(12, 11)),
+]
 
 
-def chaise_outline(draw, b):
-    x0, y0, x1, y1 = b
-    w, h = x1 - x0, y1 - y0
-    main = rect(w * 0.62, h * 0.7, x0 + w * 0.31, y0 + h * 0.55)
-    ext = rect(w * 0.55, h * 0.35, x0 + w * 0.75, y0 + h * 0.22)
-    draw.rectangle(main, fill=COLORS["fill"], outline=COLORS["outline"], width=STROKE)
-    draw.rectangle(ext, fill=COLORS["fill"], outline=COLORS["outline"], width=STROKE)
-    return [main, ext]
-
-
-def chaise_details(draw, b):
-    x0, y0, x1, y1 = b
-    w, h = x1 - x0, y1 - y0
-    jx = x0 + w * 0.62
-    draw.line([(jx, y0 + h * 0.2), (jx, y0 + h * 0.7)], fill=COLORS["detail"], width=DETAIL_STROKE)
-
-
-def channel_back_outline(draw, b):
-    x0, y0, x1, y1 = b
-    w, h = x1 - x0, y1 - y0
-    cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
-    outer = rect(w, h, cx, cy)
-    draw.rectangle(outer, fill=COLORS["fill"], outline=COLORS["outline"], width=STROKE)
-    return [outer]
-
-
-def channel_back_details(draw, b):
-    x0, y0, x1, y1 = b
-    channels = 5
-    step = (x1 - x0) / (channels + 1)
-    for i in range(1, channels + 1):
-        x = x0 + step * i
-        draw.line([(x, y0 + 20), (x, y1 - 20)], fill=COLORS["detail"], width=DETAIL_STROKE)
-    draw.text((x0 + 20, y1 - 70), "channel / tufted", fill=COLORS["detail"], font=FONT_SMALL)
-
-
-def scatter_back_outline(draw, b):
-    x0, y0, x1, y1 = b
-    w, h = x1 - x0, y1 - y0
-    cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
-    pad = rect(w * 0.55, h * 0.45, cx - w * 0.12, cy - h * 0.05)
-    draw.rounded_rectangle(pad, radius=40, fill=COLORS["fill"], outline=COLORS["outline"], width=STROKE)
-    return [pad]
-
-
-def scatter_back_details(draw, b):
-    x0, y0, x1, y1 = b
-    w, h = x1 - x0, y1 - y0
-    cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
-    pad = rect(w * 0.55, h * 0.45, cx - w * 0.12, cy - h * 0.05)
-    ix0, iy0, ix1, iy1 = pad
-    inset = 30
-    draw.rounded_rectangle((ix0 + inset, iy0 + inset, ix1 - inset, iy1 - inset), radius=25, outline=COLORS["welt"], width=DETAIL_STROKE)
-    draw.text((ix0 + 20, iy0 - 50), "loose scatter", fill=COLORS["detail"], font=FONT_SMALL)
-
-
-def fixed_back_outline(draw, b):
-    x0, y0, x1, y1 = b
-    w, h = x1 - x0, y1 - y0
-    cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
-    panel = rect(w * 0.92, h, cx, cy)
-    draw.rectangle(panel, fill=COLORS["fill"], outline=COLORS["outline"], width=STROKE)
-    return [panel]
-
-
-def fixed_back_details(draw, b):
-    x0, y0, x1, y1 = b
-    w, h = x1 - x0, y1 - y0
-    cx = (x0 + x1) / 2
-    draw.line([(cx - w * 0.3, y0 + h * 0.15), (cx + w * 0.3, y0 + h * 0.15)], fill=COLORS["guide"], width=2)
-    draw.text((x0 + 30, y0 + 20), "fixed upholstered panel", fill=COLORS["detail"], font=FONT_SMALL)
-
-
-def round_seat_outline(draw, b):
-    x0, y0, x1, y1 = b
-    cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
-    r = min(x1 - x0, y1 - y0) * 0.42
-    draw.ellipse([cx - r, cy - r, cx + r, cy + r], fill=COLORS["fill"], outline=COLORS["outline"], width=STROKE)
-    return [(cx - r, cy - r, cx + r, cy + r)]
-
-
-def round_seat_details(draw, b):
-    x0, y0, x1, y1 = b
-    cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
-    r = min(x1 - x0, y1 - y0) * 0.42
-    draw.ellipse([cx - r * 0.85, cy - r * 0.85, cx + r * 0.85, cy + r * 0.85], outline=COLORS["welt"], width=DETAIL_STROKE)
-
-
-def slip_seat_outline(draw, b):
-    x0, y0, x1, y1 = b
-    w, h = x1 - x0, y1 - y0
-    cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
-    top_w = w * 0.75
-    bot_w = w * 0.95
-    top_y = cy - h * 0.22
-    bot_y = cy + h * 0.22
-    pts = [
-        (cx - top_w / 2, top_y),
-        (cx + top_w / 2, top_y),
-        (cx + bot_w / 2, bot_y),
-        (cx - bot_w / 2, bot_y),
+def knife_edge_shape(_d, _cx, _cy, _s) -> list[tuple[float, float]]:
+    w, h, taper = 24, 22, 2
+    return [
+        (-w / 2 + taper, -h / 2),
+        (w / 2 - taper, -h / 2),
+        (w / 2, h / 2),
+        (-w / 2, h / 2),
     ]
-    draw.polygon(pts, fill=COLORS["fill"], outline=COLORS["outline"])
-    draw.line(pts + [pts[0]], fill=COLORS["outline"], width=STROKE)
-    return [pts]
 
 
-def slip_seat_details(draw, b):
-    x0, y0, x1, y1 = b
-    cx = (x0 + x1) / 2
-    cy = (y0 + y1) / 2
-    draw.text((cx - 100, cy + (y1 - y0) * 0.28), "drop-in slip seat", fill=COLORS["detail"], font=FONT_SMALL)
+KNIFE_DIMS = BOX_DIMS  # same bounding dims
 
 
-def wing_back_outline(draw, b):
-    x0, y0, x1, y1 = b
-    w, h = x1 - x0, y1 - y0
-    cx = (x0 + x1) / 2
-    body = rect(w * 0.55, h * 0.85, cx, y0 + h * 0.52)
-    bx0, by0, bx1, by1 = body
-    draw.rectangle(body, fill=COLORS["fill"], outline=COLORS["outline"], width=STROKE)
-    # wings
-    left_wing = [(bx0 - w * 0.18, by0 + h * 0.1), (bx0, by0), (bx0, by0 + h * 0.35)]
-    right_wing = [(bx1, by0), (bx1 + w * 0.18, by0 + h * 0.1), (bx1, by0 + h * 0.35)]
-    for wing in (left_wing, right_wing):
-        draw.polygon(wing, fill=COLORS["fill"], outline=COLORS["outline"])
-        draw.line(wing + [wing[0]], fill=COLORS["outline"], width=STROKE)
-    return [body]
+def l_cushion_seat_shape(_d, _cx, _cy, _s) -> list[tuple[float, float]]:
+    # Corner sectional: main 22 deep x 18 wide + leg 14 x 14
+    return [
+        (-9, -11),
+        (9, -11),
+        (9, 0),
+        (16, 0),
+        (16, 11),
+        (-9, 11),
+    ]
 
 
-def wing_back_details(draw, b):
-    x0, y0, x1, y1 = b
-    w = x1 - x0
-    cx = (x0 + x1) / 2
-    draw.text((cx - 50, y0 + 10), "wing back", fill=COLORS["detail"], font=FONT_SMALL)
-    draw.line([(cx - w * 0.1, y0 + (y1 - y0) * 0.2), (cx + w * 0.1, y0 + (y1 - y0) * 0.2)], fill=COLORS["guide"], width=2)
+L_SEAT_DIMS = [
+    DimSpec(-9, -15, 9, -15, '18"', oy=-28, ext1=(-9, -11), ext2=(9, -11)),
+    DimSpec(-13, -11, -13, 11, '22"', ox=-44, ext1=(-9, -11), ext2=(-9, 11)),
+    DimSpec(9, 15, 16, 15, '14"', oy=28, ext1=(9, 11), ext2=(16, 11)),
+    DimSpec(20, 0, 20, 11, '14"', ox=36, ext1=(16, 0), ext2=(16, 11)),
+]
 
 
-def round_back_outline(draw, b):
-    x0, y0, x1, y1 = b
-    cx, cy = (x0 + x1) / 2, (y0 + y1) / 2 + (y1 - y0) * 0.05
-    rw = (x1 - x0) * 0.42
-    rh = (y1 - y0) * 0.48
-    draw.rounded_rectangle([cx - rw, cy - rh, cx + rw, cy + rh], radius=80, fill=COLORS["fill"], outline=COLORS["outline"], width=STROKE)
-    return [(cx - rw, cy - rh, cx + rw, cy + rh)]
+def bullnose_seat_shape(_d, _cx, _cy, _s) -> list[tuple[float, float]]:
+    w, h = 24, 20
+    pts: list[tuple[float, float]] = [
+        (-w / 2, -h / 2),
+        (w / 2, -h / 2),
+        (w / 2, h / 2 - 3),
+    ]
+    steps = 12
+    for i in range(steps + 1):
+        t = i / steps
+        ang = t * math.pi
+        pts.append((w / 2 * math.cos(ang), h / 2 - 3 + 3 * math.sin(ang)))
+    pts.append((-w / 2, h / 2 - 3))
+    return pts
 
 
-def round_back_details(draw, b):
-    x0, y0, x1, y1 = b
-    cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
-    draw.text((cx - 90, cy + (y1 - y0) * 0.3), "round / oval back", fill=COLORS["detail"], font=FONT_SMALL)
+BULLNOSE_DIMS = [
+    DimSpec(-12, -14, 12, -14, '24"', oy=-28, ext1=(-12, -10), ext2=(12, -10)),
+    DimSpec(17, -10, 17, 10, '20"', ox=40, ext1=(12, -10), ext2=(12, 10)),
+    DimSpec(-18, 8, 18, 8, 'roll', oy=30),
+]
 
 
-def bordered_back_details(draw, b):
-    x0, y0, x1, y1 = b
-    w, h = x1 - x0, y1 - y0
-    cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
-    outer = rect(w * 0.88, h * 0.92, cx, cy)
-    ix0, iy0, ix1, iy1 = outer
-    inset = 35
-    draw.rectangle((ix0 + inset, iy0 + inset, ix1 - inset, iy1 - inset), outline=COLORS["welt"], width=DETAIL_STROKE)
-    draw.text((ix0 + 20, iy0 - 50), "bordered / welted edge", fill=COLORS["detail"], font=FONT_SMALL)
+def waterfall_seat_shape(_d, _cx, _cy, _s) -> list[tuple[float, float]]:
+    return [(-12, -9), (12, -11), (12, 11), (-12, 11)]
+
+
+WATERFALL_DIMS = [
+    DimSpec(-12, -15, 12, -15, '24"', oy=-28, ext1=(-12, -11), ext2=(12, -11)),
+    DimSpec(16, -11, 16, 11, '22"', ox=38, ext1=(12, -11), ext2=(12, 11)),
+]
+
+
+def bench_seat_shape(_d, _cx, _cy, _s) -> list[tuple[float, float]]:
+    return [(-28, -8), (28, -8), (28, 8), (-28, 8)]
+
+
+BENCH_DIMS = [
+    DimSpec(-28, -12, 28, -12, '56"', oy=-28, ext1=(-28, -8), ext2=(28, -8)),
+    DimSpec(32, -8, 32, 8, '16"', ox=44, ext1=(28, -8), ext2=(28, 8)),
+]
+
+
+def chaise_seat_shape(_d, _cx, _cy, _s) -> list[tuple[float, float]]:
+    return [(-10, -8), (10, -8), (10, 8), (22, 8), (22, 18), (-10, 18)]
+
+
+CHAISE_DIMS = [
+    DimSpec(-10, -12, 10, -12, '20"', oy=-28, ext1=(-10, -8), ext2=(10, -8)),
+    DimSpec(-14, -8, -14, 18, '26"', ox=-44, ext1=(-10, -8), ext2=(-10, 18)),
+    DimSpec(10, 22, 22, 22, '12"', oy=28, ext1=(10, 18), ext2=(22, 18)),
+]
+
+
+def round_seat_shape(_d, _cx, _cy, s) -> list[tuple[float, float]]:
+    r = 11
+    return [(r * math.cos(2 * math.pi * i / 48), r * math.sin(2 * math.pi * i / 48)) for i in range(48)]
+
+
+ROUND_DIMS = [
+    DimSpec(-11, 15, 11, 15, 'Ø 22"', oy=28),
+    DimSpec(0, -11, 0, 11, '22"', ox=36),
+]
+
+
+def slip_seat_shape(_d, _cx, _cy, _s) -> list[tuple[float, float]]:
+    return [(-9, -8), (9, -8), (11, 8), (-11, 8)]
+
+
+SLIP_DIMS = [
+    DimSpec(-9, -12, 9, -12, '18"', oy=-28, ext1=(-9, -8), ext2=(9, -8)),
+    DimSpec(-12, 12, 12, 12, '22"', oy=28, ext1=(-11, 8), ext2=(11, 8)),
+]
+
+
+def scatter_back_shape(_d, _cx, _cy, _s) -> list[tuple[float, float]]:
+    return [(-10, -8), (10, -8), (10, 8), (-10, 8)]
+
+
+SCATTER_DIMS = [
+    DimSpec(-10, -12, 10, -12, '20"', oy=-28, ext1=(-10, -8), ext2=(10, -8)),
+    DimSpec(14, -8, 14, 8, '16"', ox=36, ext1=(10, -8), ext2=(10, 8)),
+]
+
+
+def wing_back_shape(_d, _cx, _cy, _s) -> list[tuple[float, float]]:
+    return [
+        (-6, -12),
+        (6, -12),
+        (6, 4),
+        (14, -4),
+        (14, 8),
+        (-14, 8),
+        (-14, -4),
+        (-6, 4),
+    ]
+
+
+WING_DIMS = [
+    DimSpec(-6, -16, 6, -16, '12"', oy=-28, ext1=(-6, -12), ext2=(6, -12)),
+    DimSpec(-16, 12, 16, 12, '28"', oy=28, ext1=(-14, 8), ext2=(14, 8)),
+    DimSpec(18, -4, 18, 8, '12"', ox=40, ext1=(14, -4), ext2=(14, 8)),
+]
+
+
+def channel_back_shape(_d, _cx, _cy, _s) -> list[tuple[float, float]]:
+    return [(-12, -11), (12, -11), (12, 11), (-12, 11)]
+
+
+def channel_details(draw: ImageDraw.ImageDraw, cx: float, cy: float, scale: float):
+    for i in range(-4, 5):
+        x = cx + i * (24 / 8) * scale
+        draw.line([(x, cy - 11 * scale), (x, cy + 11 * scale)], fill=DIM, width=2)
+
+
+CHANNEL_DIMS = BOX_DIMS
+
+
+def fixed_back_shape(_d, _cx, _cy, _s) -> list[tuple[float, float]]:
+    return [(-14, -12), (14, -12), (14, 12), (-14, 12)]
+
+
+FIXED_DIMS = [
+    DimSpec(-14, -16, 14, -16, '28"', oy=-28, ext1=(-14, -12), ext2=(14, -12)),
+    DimSpec(18, -12, 18, 12, '24"', ox=40, ext1=(14, -12), ext2=(14, 12)),
+]
 
 
 TEMPLATES: list[TemplateSpec] = [
     # SOFA SEATS
-    TemplateSpec("sofa", "seat", "box", "Box Cushion Seat", "Boxed edge with welt/boxing strip", box_cushion_outline, box_cushion_details),
-    TemplateSpec("sofa", "seat", "knife-edge", "Knife Edge Seat", "Tapered seam, no boxing", knife_edge_outline, knife_edge_details),
-    TemplateSpec("sofa", "seat", "t-cushion", "T-Cushion Seat", "Wraps around front arm", t_cushion_outline, t_cushion_details),
-    TemplateSpec("sofa", "seat", "l-cushion", "L-Cushion Seat", "Corner sectional wrap", l_cushion_outline, l_cushion_details),
-    TemplateSpec("sofa", "seat", "bullnose", "Bullnose Seat", "Rolled front edge", bullnose_outline, bullnose_details),
-    TemplateSpec("sofa", "seat", "waterfall", "Waterfall Seat", "Continuous front-to-back slope", waterfall_outline, waterfall_details),
-    TemplateSpec("sofa", "seat", "bench", "Bench Seat", "Single long seat cushion", bench_seat_outline, bench_seat_details),
-    TemplateSpec("sofa", "seat", "chaise", "Chaise Extension Seat", "Extended leg-rest section", chaise_outline, chaise_details),
+    TemplateSpec("sofa", "seat", "t-cushion", "T-Cushion Seat", "Sofa · Seat", t_cushion_seat_shape, T_SEAT_DIMS),
+    TemplateSpec("sofa", "seat", "box", "Box Cushion Seat", "Sofa · Seat", box_shape, BOX_DIMS),
+    TemplateSpec("sofa", "seat", "knife-edge", "Knife Edge Seat", "Sofa · Seat", knife_edge_shape, KNIFE_DIMS),
+    TemplateSpec("sofa", "seat", "l-cushion", "L-Cushion Seat", "Sofa · Seat · Corner", l_cushion_seat_shape, L_SEAT_DIMS),
+    TemplateSpec("sofa", "seat", "bullnose", "Bullnose Seat", "Sofa · Seat", bullnose_seat_shape, BULLNOSE_DIMS),
+    TemplateSpec("sofa", "seat", "waterfall", "Waterfall Seat", "Sofa · Seat", waterfall_seat_shape, WATERFALL_DIMS),
+    TemplateSpec("sofa", "seat", "bench", "Bench Seat", "Sofa · Seat", bench_seat_shape, BENCH_DIMS),
+    TemplateSpec("sofa", "seat", "chaise", "Chaise Seat", "Sofa · Seat", chaise_seat_shape, CHAISE_DIMS),
     # SOFA BACKS
-    TemplateSpec("sofa", "back", "box", "Box Cushion Back", "Boxed back cushion", box_cushion_outline, box_cushion_details),
-    TemplateSpec("sofa", "back", "knife-edge", "Knife Edge Back", "Tapered back cushion", knife_edge_outline, knife_edge_details),
-    TemplateSpec("sofa", "back", "t-back", "T-Back Cushion", "Wraps around arm at back", t_cushion_outline, t_cushion_details),
-    TemplateSpec("sofa", "back", "l-back", "L-Back Cushion", "Corner back wrap", l_cushion_outline, l_cushion_details),
-    TemplateSpec("sofa", "back", "bullnose", "Bullnose Back", "Rolled top/front back", bullnose_outline, bullnose_details),
-    TemplateSpec("sofa", "back", "channel-tufted", "Channel / Tufted Back", "Vertical channel lines", channel_back_outline, channel_back_details),
-    TemplateSpec("sofa", "back", "scatter", "Loose Scatter Back", "Individual throw-back pillow", scatter_back_outline, scatter_back_details),
-    TemplateSpec("sofa", "back", "fixed", "Fixed Upholstered Back", "Non-removable back panel", fixed_back_outline, fixed_back_details),
-    TemplateSpec("sofa", "back", "bordered", "Bordered / Welted Back", "Back with welt border", box_cushion_outline, bordered_back_details),
-    # CHAIR SEATS
-    TemplateSpec("chair", "seat", "box", "Box Cushion Seat", "Boxed dining/lounge seat", box_cushion_outline, box_cushion_details),
-    TemplateSpec("chair", "seat", "knife-edge", "Knife Edge Seat", "Simple tapered seat", knife_edge_outline, knife_edge_details),
-    TemplateSpec("chair", "seat", "round", "Round Seat", "Circular dining seat", round_seat_outline, round_seat_details),
-    TemplateSpec("chair", "seat", "slip", "Slip / Drop-In Seat", "Trapezoid drop-in pad", slip_seat_outline, slip_seat_details),
-    TemplateSpec("chair", "seat", "t-cushion", "T-Cushion Seat", "Armchair T-wrap seat", t_cushion_outline, t_cushion_details),
-    # CHAIR BACKS
-    TemplateSpec("chair", "back", "box", "Box Cushion Back", "Boxed chair back", box_cushion_outline, box_cushion_details),
-    TemplateSpec("chair", "back", "knife-edge", "Knife Edge Back", "Tapered chair back", knife_edge_outline, knife_edge_details),
-    TemplateSpec("chair", "back", "scatter", "Loose Back Cushion", "Removable back pillow", scatter_back_outline, scatter_back_details),
-    TemplateSpec("chair", "back", "wing", "Wing Back", "Wing chair silhouette", wing_back_outline, wing_back_details),
-    TemplateSpec("chair", "back", "round", "Round / Oval Back", "Curved top chair back", round_back_outline, round_back_details),
-    TemplateSpec("chair", "back", "fixed", "Fixed Upholstered Back", "Fixed chair back panel", fixed_back_outline, fixed_back_details),
+    TemplateSpec("sofa", "back", "t-back", "T-Back Cushion", "Sofa · Back", t_back_shape, T_BACK_DIMS),
+    TemplateSpec("sofa", "back", "box", "Box Cushion Back", "Sofa · Back", box_shape, BOX_DIMS),
+    TemplateSpec("sofa", "back", "knife-edge", "Knife Edge Back", "Sofa · Back", knife_edge_shape, KNIFE_DIMS),
+    TemplateSpec("sofa", "back", "l-back", "L-Back Cushion", "Sofa · Back · Corner", l_cushion_seat_shape, L_SEAT_DIMS),
+    TemplateSpec("sofa", "back", "scatter", "Loose Scatter Back", "Sofa · Back", scatter_back_shape, SCATTER_DIMS),
+    TemplateSpec("sofa", "back", "channel", "Channel Back", "Sofa · Back", channel_back_shape, CHANNEL_DIMS),
+    TemplateSpec("sofa", "back", "fixed", "Fixed Back Panel", "Sofa · Back", fixed_back_shape, FIXED_DIMS),
+    # CHAIR SEATS — t-cushion matches Dudgeon reference
+    TemplateSpec("chair", "seat", "t-cushion", "T-Cushion Seat", "Chair · Seat", t_cushion_seat_shape, T_SEAT_DIMS),
+    TemplateSpec("chair", "seat", "box", "Box Cushion Seat", "Chair · Seat", box_shape, BOX_DIMS),
+    TemplateSpec("chair", "seat", "knife-edge", "Knife Edge Seat", "Chair · Seat", knife_edge_shape, KNIFE_DIMS),
+    TemplateSpec("chair", "seat", "round", "Round Seat", "Chair · Seat", round_seat_shape, ROUND_DIMS),
+    TemplateSpec("chair", "seat", "slip", "Slip Seat", "Chair · Seat · Drop-in", slip_seat_shape, SLIP_DIMS),
+    # CHAIR BACKS — t-back matches Dudgeon reference
+    TemplateSpec("chair", "back", "t-back", "T-Back Cushion", "Chair · Back", t_back_shape, T_BACK_DIMS),
+    TemplateSpec("chair", "back", "box", "Box Cushion Back", "Chair · Back", box_shape, BOX_DIMS),
+    TemplateSpec("chair", "back", "knife-edge", "Knife Edge Back", "Chair · Back", knife_edge_shape, KNIFE_DIMS),
+    TemplateSpec("chair", "back", "scatter", "Loose Back Cushion", "Chair · Back", scatter_back_shape, SCATTER_DIMS),
+    TemplateSpec("chair", "back", "wing", "Wing Back", "Chair · Back", wing_back_shape, WING_DIMS),
+    TemplateSpec("chair", "back", "fixed", "Fixed Back Panel", "Chair · Back", fixed_back_shape, FIXED_DIMS),
 ]
 
 
-def render_layer(spec: TemplateSpec, layer: str) -> Image.Image:
-    img = Image.new("RGBA", (CANVAS, CANVAS), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(img)
-    b = bounds()
+def auto_scale(spec: TemplateSpec) -> float:
+    pts = spec.draw_shape(None, 0, 0, 1)  # type: ignore
+    xs = [p[0] for p in pts]
+    ys = [p[1] for p in pts]
+    bw = max(xs) - min(xs)
+    bh = max(ys) - min(ys)
+    avail_w = W - 2 * MARGIN - 160
+    avail_h = H - 2 * MARGIN - 200
+    return min(avail_w / bw, avail_h / bh)
 
-    if layer == "outline":
-        spec.draw_outline(draw, b)
-    elif layer == "detail":
-        spec.draw_details(draw, b)
-    elif layer == "label":
-        title = f"{spec.display_name}"
-        subtitle = f"{spec.category.title()} · {spec.part.title()} · {spec.style_id}"
-        desc = spec.description
-        pad = 24
-        tw = max(
-            draw.textlength(title, font=FONT_TITLE),
-            draw.textlength(subtitle, font=FONT_SUB),
-            draw.textlength(desc, font=FONT_SMALL),
-        )
-        box_h = 170
-        draw.rounded_rectangle(
-            [MARGIN, 30, MARGIN + tw + pad * 2, 30 + box_h],
-            radius=16,
-            fill=COLORS["label_bg"],
-            outline=COLORS["outline"],
-            width=2,
-        )
-        draw.text((MARGIN + pad, 48), title, fill=COLORS["label_text"], font=FONT_TITLE)
-        draw.text((MARGIN + pad, 108), subtitle, fill=COLORS["detail"], font=FONT_SUB)
-        draw.text((MARGIN + pad, 152), desc, fill=COLORS["label_text"], font=FONT_SMALL)
-        # bottom scale note
-        note = "Template layer — scale to your measurements in Procreate"
-        nw = draw.textlength(note, font=FONT_SMALL)
-        draw.rounded_rectangle(
-            [CANVAS // 2 - nw // 2 - 16, CANVAS - 70, CANVAS // 2 + nw // 2 + 16, CANVAS - 24],
-            radius=10,
-            fill=COLORS["label_bg"],
-        )
-        draw.text((CANVAS // 2 - nw // 2, CANVAS - 62), note, fill=COLORS["label_text"], font=FONT_SMALL)
+
+def render_outline(spec: TemplateSpec) -> Image.Image:
+    img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    scale = auto_scale(spec)
+    cx, cy = W / 2, H / 2 + 40
+    ctx = Ctx(draw, cx, cy, scale)
+    pts = spec.draw_shape(draw, cx, cy, scale)
+    ctx.poly(pts)
     return img
 
 
-def composite_layers(*layers: Image.Image) -> Image.Image:
-    base = Image.new("RGBA", (CANVAS, CANVAS), (0, 0, 0, 0))
+def render_dimensions(spec: TemplateSpec) -> Image.Image:
+    img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    scale = auto_scale(spec)
+    cx, cy = W / 2, H / 2 + 40
+    if spec.style_id == "channel" and spec.part == "back":
+        channel_details(draw, cx, cy, scale)
+    for d in spec.dims:
+        draw_dimension(draw, d, scale, cx, cy)
+    return img
+
+
+def render_title(spec: TemplateSpec) -> Image.Image:
+    img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    draw.text((MARGIN, 36), spec.title, fill=TITLE, font=FONT_TITLE)
+    draw.text((MARGIN, 88), spec.subtitle, fill=TITLE, font=FONT_SUB)
+    note = "Replace dimensions with your measurements"
+    tw = draw.textlength(note, font=FONT_SUB)
+    draw.text((W - MARGIN - tw, 36), note, fill=(100, 100, 100, 255), font=FONT_SUB)
+    draw.text((MARGIN, H - 56), "Cushion drawing — plan view", fill=(100, 100, 100, 255), font=FONT_SUB)
+    return img
+
+
+def composite(*layers: Image.Image, white_bg: bool = True) -> Image.Image:
+    base = Image.new("RGBA", (W, H), WHITE if white_bg else (0, 0, 0, 0))
     for layer in layers:
         base = Image.alpha_composite(base, layer)
     return base
 
 
 def save_template(spec: TemplateSpec) -> dict:
-    base_dir = ROOT / spec.category / spec.part / spec.style_id
-    layers_dir = base_dir / "layers"
+    out = ROOT / spec.category / spec.part / spec.style_id
+    layers_dir = out / "layers"
     layers_dir.mkdir(parents=True, exist_ok=True)
 
-    outline = render_layer(spec, "outline")
-    detail = render_layer(spec, "detail")
-    label = render_layer(spec, "label")
-    composite = composite_layers(outline, detail, label)
+    outline = render_outline(spec)
+    dimensions = render_dimensions(spec)
+    title = render_title(spec)
+    comp = composite(title, outline, dimensions)
 
-    layer_files = {
-        "01-outline": outline,
-        "02-detail": detail,
-        "03-label": label,
-    }
-    paths = {}
-    for name, img in layer_files.items():
+    files = {}
+    for name, img in [("01-outline", outline), ("02-dimensions", dimensions), ("03-title", title)]:
         p = layers_dir / f"{name}.png"
         img.save(p, "PNG")
-        paths[name] = str(p.relative_to(ROOT))
+        files[name] = str(p.relative_to(ROOT))
 
-    comp_path = base_dir / f"{spec.style_id}-composite.png"
-    composite.save(comp_path, "PNG")
-    paths["composite"] = str(comp_path.relative_to(ROOT))
-    return paths
-
-
-def write_manifest(all_paths: dict) -> None:
-    manifest = {
-        "canvas_size_px": CANVAS,
-        "format": "PNG RGBA",
-        "recommended_import": "Import layer PNGs into Procreate; stack outline → detail → label",
-        "layer_key": {
-            "01-outline": "Main cushion shape (black)",
-            "02-detail": "Boxing, channels, welt, seams (blue/red)",
-            "03-label": "Style name and notes",
-        },
-        "templates": all_paths,
-    }
-    (ROOT / "manifest.json").write_text(json.dumps(manifest, indent=2))
+    cp = out / f"{spec.style_id}.png"
+    comp.save(cp, "PNG")
+    files["drawing"] = str(cp.relative_to(ROOT))
+    return files
 
 
-def write_readme() -> None:
-    readme = """# Procreate Cushion Templates
+def write_readme():
+    (ROOT / "README.md").write_text("""# Cushion Order Drawings (Procreate)
 
-Labeled layer templates for **sofa and chair cushion seats and backs**, ready to import into Procreate for client orders and workshop specs.
+Dudgeon-style **plan-view cushion drawings** with dimension lines and inch callouts — for filling out workshop purchase orders in Procreate.
 
 ## What's included
 
-| Category | Part | Styles |
-|----------|------|--------|
-| **Sofa** | Seat | box, knife-edge, t-cushion, l-cushion, bullnose, waterfall, bench, chaise |
-| **Sofa** | Back | box, knife-edge, t-back, l-back, bullnose, channel-tufted, scatter, fixed, bordered |
-| **Chair** | Seat | box, knife-edge, round, slip, t-cushion |
-| **Chair** | Back | box, knife-edge, scatter, wing, round, fixed |
+Each style is a technical sketch like a cushion order form:
 
-Each style folder contains:
+- **Black outline** — cushion shape (plan view, looking down)
+- **Dimension lines** — arrows and inch measurements (edit these for each order)
+- **Title** — style name and category
+
+### Sofa
+- **Seats:** t-cushion, box, knife-edge, l-cushion, bullnose, waterfall, bench, chaise
+- **Backs:** t-back, box, knife-edge, l-back, scatter, channel, fixed
+
+### Chair
+- **Seats:** t-cushion, box, knife-edge, round, slip
+- **Backs:** t-back, box, knife-edge, scatter, wing, fixed
+
+The **chair t-cushion seat** and **t-back** match the Dudgeon order-form layout (20"/32"/28"/6.5" seat and 28"/20"/13"/23" back).
+
+## Folder layout
 
 ```
-{category}/{part}/{style-id}/
+chair/seat/t-cushion/
 ├── layers/
-│   ├── 01-outline.png   ← main shape
-│   ├── 02-detail.png    ← boxing, welt, channels, notes
-│   └── 03-label.png     ← style name label
-└── {style-id}-composite.png   ← all layers merged (quick import)
+│   ├── 01-outline.png
+│   ├── 02-dimensions.png
+│   └── 03-title.png
+└── t-cushion.png          ← full drawing on white (like order form)
 ```
 
 ## Procreate workflow
 
-1. **Sync this folder to your cloud** (iCloud, Dropbox, Google Drive, etc.).
-2. In Procreate: **Actions → Add → Insert a file** (or drag from Files app).
-3. For full control, import the three files from `layers/` as separate layers (bottom to top: outline → detail → label).
-4. For speed, import the `-composite.png` as a single reference layer.
-5. **Transform → Freeform** to scale the template to your measured width/depth.
-6. Draw fabric/piping notes on new layers above the template.
-7. Export or save the canvas to your order folder.
+1. Save this folder to **iCloud Drive** (see repo instructions).
+2. New canvas (A4 or 2000×1600).
+3. Import layers: **01-outline → 02-dimensions → 03-title** (or import the single `.png` drawing).
+4. Use the **Transform** tool to scale the whole group to fit your page.
+5. **Erase and rewrite** the dimension numbers, or add text layers with your measurements.
+6. Draw any extra notes (filling, border, fabric) on new layers above.
 
-## Layer colour key
-
-| Colour | Meaning |
-|--------|---------|
-| Dark grey | Cut outline / main shape |
-| Blue | Construction detail (boxing, channels, arm wrap) |
-| Red dashed | Welt / piping line |
-| Light grey fill | Cushion face (20% opacity) |
-
-## Canvas
-
-All templates are **2400 × 2400 px** with transparent backgrounds — high enough resolution for iPad Procreate without bloating file size.
-
-## Regenerating
+## Regenerate
 
 ```bash
 python3 scripts/generate_cushion_templates.py
 ```
-
-## File naming for orders
-
-Suggested Procreate layer names when saving:
-
-`{client}-{piece}-sofa-seat-box`  
-`{client}-{piece}-chair-back-wing`
-
-Keep the style id from the folder name for consistency with your supplier vocabulary.
-"""
-    (ROOT / "README.md").write_text(readme)
+""")
 
 
 def main():
     ROOT.mkdir(parents=True, exist_ok=True)
-    all_paths = {}
+    manifest = {"templates": {}, "format": "Dudgeon-style plan view", "size": [W, H]}
     for spec in TEMPLATES:
         key = f"{spec.category}/{spec.part}/{spec.style_id}"
-        all_paths[key] = {
-            "display_name": spec.display_name,
-            "description": spec.description,
-            "files": save_template(spec),
-        }
-        print(f"Generated {key}")
-
-    write_manifest(all_paths)
+        manifest["templates"][key] = {"title": spec.title, "files": save_template(spec)}
+        print(key)
+    (ROOT / "manifest.json").write_text(json.dumps(manifest, indent=2))
     write_readme()
-    print(f"\nDone — {len(TEMPLATES)} styles → {ROOT}")
+    print(f"\n{len(TEMPLATES)} drawings → {ROOT}")
 
 
 if __name__ == "__main__":
