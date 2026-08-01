@@ -53,12 +53,8 @@
   function setToolButtonsActive(drawingId, tool) {
     const bar = document.querySelector(`.draw-tools[data-drawing-id="${drawingId}"]`);
     if (!bar) return;
-    const curveDone = bar.querySelector('[data-tool="curve-done"]');
-    if (curveDone) curveDone.hidden = tool !== "add-curve";
     bar.querySelectorAll("[data-tool]").forEach((btn) => {
-      const active = btn.dataset.tool === tool
-        || (tool === "select" && btn.dataset.tool === "select");
-      btn.classList.toggle("active", active);
+      btn.classList.toggle("active", btn.dataset.tool === tool);
     });
   }
 
@@ -77,14 +73,6 @@
           editor.setTool("add-line");
           flash("Tap start point, then end point for the dimension line");
           setToolButtonsActive(drawingId, "add-line");
-        } else if (tool === "add-curve") {
-          editor.setTool("add-curve");
-          flash("Tap points, then tap Done");
-          setToolButtonsActive(drawingId, "add-curve");
-        } else if (tool === "curve-done") {
-          editor.finishCurve(false);
-          flash("Curve added");
-          setToolButtonsActive(drawingId, "select");
         } else if (tool === "edit-text") {
           if (!editor.editSelected()) flash("Tap a label first, then Edit");
         } else if (tool === "delete") {
