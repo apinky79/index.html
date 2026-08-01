@@ -1,10 +1,6 @@
 (function () {
   "use strict";
 
-  const seatSvg = document.getElementById("svg-seat");
-  const backSvg = document.getElementById("svg-back");
-  const seatSelect = document.getElementById("seat-template");
-  const backSelect = document.getElementById("back-template");
   const loadDialog = document.getElementById("load-dialog");
   const editDialog = document.getElementById("edit-label-dialog");
   const editForm = document.getElementById("edit-label-form");
@@ -14,22 +10,6 @@
   let currentDraftId = Storage.newId();
   let editingTextEl = null;
   let pendingPlacement = null;
-
-  const seatEditor = DrawingEditor.attach(document.getElementById("viewport-seat"), seatSvg, {
-    onEditLabel: openEditExisting,
-    onEditLabelAsync: promptNewLabel,
-    onToolChange: (tool) => setToolButtonsActive("seat", tool),
-  });
-
-  const backEditor = DrawingEditor.attach(document.getElementById("viewport-back"), backSvg, {
-    onEditLabel: openEditExisting,
-    onEditLabelAsync: promptNewLabel,
-    onToolChange: (tool) => setToolButtonsActive("back", tool),
-  });
-
-  function editorForPanel(panel) {
-    return panel === "seat" ? seatEditor : backEditor;
-  }
 
   function openEditExisting(textEl) {
     editingTextEl = textEl;
@@ -42,6 +22,8 @@
   }
 
   function promptNewLabel(x, y, cb) {
+    pendingPlacement = { x, y, cb };
+    editingTextEl = null;
     editTitle.textContent = "New measurement or note";
     editInput.value = '0"';
     editDialog.showModal();
@@ -58,50 +40,58 @@
     if (pendingPlacement) {
       pendingPlacement.cb(editInput.value.trim() || '0"');
       pendingPlacement = null;
-      seatEditor.refresh();
-      backEditor.refresh();
+      DrawingPanels.refreshAll();
       return;
     }
     if (editingTextEl) {
       editingTextEl.textContent = editInput.value.trim() || editingTextEl.textContent;
-      seatEditor.refresh();
-      backEditor.refresh();
+      DrawingPanels.refreshAll();
     }
     editingTextEl = null;
   });
 
-  function setToolButtonsActive(panel, tool) {
-    document.querySelectorAll(`.draw-tools[data-panel="${panel}"] [data-tool]`).forEach((btn) => {
-      const active = btn.dataset.tool === tool || (tool === "select" && btn.dataset.tool === "select");
+  function setToolButtonsActive(drawingId, tool) {
+    const bar = document.querySelector(`.draw-tools[data-drawing-id="${drawingId}"]`);
+    if (!bar) return;
+    const curveDone = bar.querySelector('[data-tool="curve-done"]');
+    if (curveDone) curveDone.hidden = tool !== "add-curve";
+    bar.querySelectorAll("[data-tool]").forEach((btn) => {
+      const active = btn.dataset.tool === tool
+        || (tool === "select" && btn.dataset.tool === "select");
       btn.classList.toggle("active", active);
     });
   }
 
-  function populateSelects() {
-    for (const t of CUSHION_TEMPLATES.seat) {
-      seatSelect.append(new Option(t.name, t.id));
-    }
-    for (const t of CUSHION_TEMPLATES.back) {
-      backSelect.append(new Option(t.name, t.id));
-    }
-    seatSelect.value = "chair/t-cushion";
-    backSelect.value = "chair/t-back";
-  }
-
-  function templatePath(kind, id) {
-    const list = CUSHION_TEMPLATES[kind];
-    return (list.find((t) => t.id === id) || list[0]).path;
-  }
-
-  async function loadPanel(kind, id) {
-    const svg = kind === "seat" ? seatSvg : backSvg;
-    const path = templatePath(kind, id);
-    try {
-      await DrawingEditor.loadTemplate(svg, path);
-    } catch (err) {
-      console.error(err);
-      alert("Could not load template. Open the app from the same website folder as cushion-order-kit.");
-    }
+  function wireToolButtons(toolsEl) {
+    const drawingId = toolsEl.dataset.drawingId;
+    toolsEl.querySelectorAll("[data-tool]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const editor = DrawingPanels.findEditorForTool(drawingId);
+        if (!editor) return;
+        const tool = btn.dataset.tool;
+        if (tool === "add-text") {
+          editor.setTool("add-text");
+          flash("Tap on the drawing where you want the label");
+          setToolButtonsActive(drawingId, "add-text");
+        } else if (tool === "add-line") {
+          editor.setTool("add-line");
+          flash("Tap start point, then end point for the dimension line");
+          setToolButtonsActive(drawingId, "add-line");
+        } else if (tool === "add-curve") {
+          editor.setTool("add-curve");
+          flash("Tap points along the curve, then Finish curve");
+          setToolButtonsActive(drawingId, "add-curve");
+        } else if (tool === "curve-done") {
+          editor.finishCurve(false);
+          flash("Curve added");
+          setToolButtonsActive(drawingId, "select");
+        } else if (tool === "edit-text") {
+          if (!editor.editSelected()) flash("Tap a label first, then Edit");
+        } else if (tool === "delete") {
+          if (!editor.deleteSelected()) flash("Tap a line or label to select, then Delete");
+        }
+      });
+    });
   }
 
   function collectForm() {
@@ -121,10 +111,8 @@
       filling,
       border,
       notes: document.getElementById("notes").value,
-      seatTemplate: seatSelect.value,
-      backTemplate: backSelect.value,
-      seatSvg: DrawingEditor.serializeSvg(seatSvg),
-      backSvg: DrawingEditor.serializeSvg(backSvg),
+      seatDrawings: DrawingPanels.serializeZone("drawings-seat"),
+      backDrawings: DrawingPanels.serializeZone("drawings-back"),
     };
   }
 
@@ -136,8 +124,6 @@
     document.getElementById("design").value = data.design || "";
     document.getElementById("qty").value = data.qty || "";
     document.getElementById("notes").value = data.notes || "";
-    seatSelect.value = data.seatTemplate || "blank";
-    backSelect.value = data.backTemplate || "blank";
 
     document.querySelectorAll('input[name="item"]').forEach((r) => {
       r.checked = r.value === data.item;
@@ -152,8 +138,27 @@
       c.checked = (data.border || []).includes(c.value);
     });
 
-    DrawingEditor.loadInline(seatSvg, data.seatSvg || "");
-    DrawingEditor.loadInline(backSvg, data.backSvg || "");
+    DrawingPanels.loadZone(
+      "drawings-seat",
+      "seat",
+      data.seatDrawings,
+      data.seatSvg,
+    );
+    DrawingPanels.loadZone(
+      "drawings-back",
+      "back",
+      data.backDrawings,
+      data.backSvg,
+    );
+    wireAllToolButtons();
+  }
+
+  function wireAllToolButtons() {
+    document.querySelectorAll(".draw-tools[data-drawing-id]").forEach((bar) => {
+      if (bar.dataset.wired) return;
+      bar.dataset.wired = "1";
+      wireToolButtons(bar);
+    });
   }
 
   function saveDraft() {
@@ -214,10 +219,9 @@
     document.querySelector('input[name="item"][value="chair"]').checked = true;
     document.querySelector('input[name="sizeType"][value="outer-barrier"]').checked = true;
     document.querySelectorAll('input[name="filling"], input[name="border"]').forEach((c) => { c.checked = false; });
-    seatSelect.value = "chair/t-cushion";
-    backSelect.value = "chair/t-back";
-    loadPanel("seat", seatSelect.value);
-    loadPanel("back", backSelect.value);
+    DrawingPanels.loadZone("drawings-seat", "seat", null, null);
+    DrawingPanels.loadZone("drawings-back", "back", null, null);
+    wireAllToolButtons();
   }
 
   function exportPdf() {
@@ -230,6 +234,12 @@
     autosaveTimer = setTimeout(saveDraft, 3000);
   }
 
+  window.CushionApp = {
+    openEditExisting,
+    promptNewLabel,
+    setToolButtonsActive,
+  };
+
   document.getElementById("print-area").addEventListener("input", scheduleAutosave);
   document.getElementById("print-area").addEventListener("change", scheduleAutosave);
 
@@ -238,46 +248,18 @@
   document.getElementById("btn-new").addEventListener("click", newOrder);
   document.getElementById("btn-export").addEventListener("click", exportPdf);
 
-  seatSelect.addEventListener("change", () => loadPanel("seat", seatSelect.value));
-  backSelect.addEventListener("change", () => loadPanel("back", backSelect.value));
-
-  document.querySelectorAll('[data-action="clear"]').forEach((btn) => {
+  document.querySelectorAll('[data-action="add-drawing"]').forEach((btn) => {
     btn.addEventListener("click", () => {
-      const panel = btn.dataset.panel;
-      const svg = panel === "seat" ? seatSvg : backSvg;
-      svg.innerHTML = "";
-      editorForPanel(panel).refresh();
-      if (panel === "seat") seatSelect.value = "blank";
-      else backSelect.value = "blank";
+      const zoneId = btn.dataset.zone;
+      DrawingPanels.addDrawing(zoneId);
+      wireAllToolButtons();
+      flash("New drawing added");
     });
   });
 
-  document.querySelectorAll(".draw-tools").forEach((bar) => {
-    const panel = bar.dataset.panel;
-    const ed = editorForPanel(panel);
-    bar.querySelectorAll("[data-tool]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const tool = btn.dataset.tool;
-        if (tool === "add-text") {
-          ed.setTool("add-text");
-          flash("Tap on the drawing where you want the label");
-          setToolButtonsActive(panel, "add-text");
-        } else if (tool === "add-line") {
-          ed.setTool("add-line");
-          flash("Tap start point, then end point for the dimension line");
-          setToolButtonsActive(panel, "add-line");
-        } else if (tool === "edit-text") {
-          if (!ed.editSelected()) flash("Tap a label first, then Edit");
-        } else if (tool === "delete") {
-          if (!ed.deleteSelected()) flash("Tap a line or label to select, then Delete");
-        }
-      });
-    });
-  });
-
-  populateSelects();
-  loadPanel("seat", seatSelect.value);
-  loadPanel("back", backSelect.value);
+  DrawingPanels.init("drawings-seat", "seat");
+  DrawingPanels.init("drawings-back", "back");
+  wireAllToolButtons();
 
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("sw.js").catch(() => {});
