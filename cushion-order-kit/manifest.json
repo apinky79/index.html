@@ -1,0 +1,124 @@
+{
+  "styles": {
+    "chair/seat/t-cushion": {
+      "name": "T-Cushion Seat",
+      "file": "drawings/svg/chair/seat/t-cushion.svg",
+      "groups": [
+        "outline",
+        "title",
+        "dimension-back-width",
+        "dimension-front-width",
+        "dimension-depth",
+        "dimension-wrap-depth"
+      ]
+    },
+    "chair/back/t-back": {
+      "name": "T-Back Cushion",
+      "file": "drawings/svg/chair/back/t-back.svg",
+      "groups": [
+        "outline",
+        "title",
+        "dimension-top-width",
+        "dimension-bottom-width",
+        "dimension-wing-height",
+        "dimension-total-height"
+      ]
+    },
+    "chair/seat/box": {
+      "name": "Box Cushion Seat",
+      "file": "drawings/svg/chair/seat/box.svg",
+      "groups": [
+        "outline",
+        "title",
+        "dimension-width",
+        "dimension-depth"
+      ]
+    },
+    "chair/back/box": {
+      "name": "Box Cushion Back",
+      "file": "drawings/svg/chair/back/box.svg",
+      "groups": [
+        "outline",
+        "title",
+        "dimension-width",
+        "dimension-depth"
+      ]
+    },
+    "sofa/seat/t-cushion": {
+      "name": "T-Cushion Seat",
+      "file": "drawings/svg/sofa/seat/t-cushion.svg",
+      "groups": [
+        "outline",
+        "title",
+        "dimension-back-width",
+        "dimension-front-width",
+        "dimension-depth",
+        "dimension-wrap-depth"
+      ]
+    },
+    "sofa/back/t-back": {
+      "name": "T-Back Cushion",
+      "file": "drawings/svg/sofa/back/t-back.svg",
+      "groups": [
+        "outline",
+        "title",
+        "dimension-top-width",
+        "dimension-bottom-width",
+        "dimension-wing-height",
+        "dimension-total-height"
+      ]
+    },
+    "sofa/seat/box": {
+      "name": "Box Cushion Seat",
+      "file": "drawings/svg/sofa/seat/box.svg",
+      "groups": [
+        "outline",
+        "title",
+        "dimension-width",
+        "dimension-depth"
+      ]
+    },
+    "sofa/back/box": {
+      "name": "Box Cushion Back",
+      "file": "drawings/svg/sofa/back/box.svg",
+      "groups": [
+        "outline",
+        "title",
+        "dimension-width",
+        "dimension-depth"
+      ]
+    },
+    "sofa/seat/l-cushion": {
+      "name": "L-Cushion Seat",
+      "file": "drawings/svg/sofa/seat/l-cushion.svg",
+      "groups": [
+        "outline",
+        "title",
+        "dimension-main-width",
+        "dimension-main-depth",
+        "dimension-leg-width"
+      ]
+    },
+    "sofa/back/l-back": {
+      "name": "L-Back Cushion",
+      "file": "drawings/svg/sofa/back/l-back.svg",
+      "groups": [
+        "outline",
+        "title",
+        "dimension-main-width",
+        "dimension-main-depth",
+        "dimension-leg-width"
+      ]
+    },
+    "chair/seat/round": {
+      "name": "Round Seat",
+      "file": "drawings/svg/chair/seat/round.svg",
+      "groups": [
+        "outline",
+        "title",
+        "dimension-diameter-h",
+        "dimension-diameter-v"
+      ]
+    }
+  }
+}
