@@ -101,7 +101,6 @@ const DrawingPanels = (() => {
     viewport.tabIndex = 0;
     const svg = document.createElementNS(NS, "svg");
     svg.setAttribute("xmlns", NS);
-    svg.setAttribute("viewBox", "0 0 520 420");
     viewport.appendChild(svg);
 
     card.append(toolbar, viewport);
