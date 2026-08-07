@@ -31,27 +31,19 @@ def find_original() -> Path:
 
 
 def luminance_alpha(rgba: Image.Image, threshold: int = 18) -> Image.Image:
-    """Build a soft alpha matte from dark-background artwork."""
     rgb = np.array(rgba.convert("RGB"), dtype=np.float32)
     lum = 0.2126 * rgb[:, :, 0] + 0.7152 * rgb[:, :, 1] + 0.0722 * rgb[:, :, 2]
     alpha = np.clip((lum - threshold) * 4.0, 0, 255).astype(np.uint8)
-    alpha = Image.fromarray(alpha, mode="L").filter(ImageFilter.GaussianBlur(1.2))
-    return alpha
+    return Image.fromarray(alpha, mode="L").filter(ImageFilter.GaussianBlur(1.2))
 
 
-def perspective_tilt(img: Image.Image, strength: float = 0.028) -> Image.Image:
-    """Subtle 3D tilt — bottom edge closer to viewer."""
+def perspective_tilt(img: Image.Image, strength: float = 0.055) -> Image.Image:
+    """Strong tilt — bottom edge leaps toward the viewer."""
     w, h = img.size
     dx = int(w * strength)
-    dy = int(h * strength * 0.35)
-    # Narrower at top, wider at bottom.
-    quad = (dx, dy, w - dx, dy, w, h, 0, h)
-    return img.transform(
-        (w, h),
-        Image.Transform.QUAD,
-        quad,
-        resample=Image.Resampling.BICUBIC,
-    )
+    dy = int(h * strength * 0.4)
+    quad = (dx, dy, w - dx, dy, w + dx // 2, h, -dx // 2, h)
+    return img.transform((w + dx, h), Image.Transform.QUAD, quad, resample=Image.Resampling.BICUBIC)
 
 
 def drop_shadow(layer: Image.Image, offset: tuple[int, int], blur: int, opacity: int) -> Image.Image:
@@ -65,133 +57,179 @@ def drop_shadow(layer: Image.Image, offset: tuple[int, int], blur: int, opacity:
     return canvas
 
 
-def floor_reflection(layer: Image.Image, fade: float = 0.28) -> Image.Image:
-    """Soft mirror reflection beneath the graphic."""
-    w, h = layer.size
-    reflected = ImageOps.flip(layer)
-    mask = Image.new("L", (w, h), 0)
-    draw = ImageDraw.Draw(mask)
-    for y in range(h):
-        t = y / max(h - 1, 1)
-        draw.line([(0, y), (w, y)], fill=int(255 * fade * (1 - t**1.6)))
-    reflected.putalpha(ImageChops.multiply(reflected.split()[-1], mask))
-    return reflected.filter(ImageFilter.GaussianBlur(2.5))
-
-
-def rim_light(layer: Image.Image) -> Image.Image:
-    """Warm edge highlight for pop-out depth."""
+def rim_light(layer: Image.Image, strength: float = 0.55) -> Image.Image:
     rgb = layer.convert("RGB")
     edges = rgb.filter(ImageFilter.FIND_EDGES).convert("L")
-    edges = ImageEnhance.Contrast(edges).enhance(2.2)
-    edges = edges.filter(ImageFilter.GaussianBlur(1.5))
-    warm = Image.new("RGBA", layer.size, (255, 170, 60, 0))
-    warm.putalpha(edges.point(lambda p: min(int(p * 0.55), 110)))
+    edges = ImageEnhance.Contrast(edges).enhance(2.4)
+    edges = edges.filter(ImageFilter.GaussianBlur(1.2))
+    warm = Image.new("RGBA", layer.size, (255, 200, 90, 0))
+    warm.putalpha(edges.point(lambda p: min(int(p * strength), 140)))
     return Image.alpha_composite(layer, warm)
 
 
-def depth_glow(width: int, height: int, cx: int, cy: int) -> Image.Image:
-    """Radial light pool under the artwork."""
+def foreground_mask(w: int, h: int) -> Image.Image:
+    """Mask the running player + lower fire — the part that breaks out of the screen."""
+    mask = Image.new("L", (w, h), 0)
+    draw = ImageDraw.Draw(mask)
+    # Torso, legs, and embers at the bottom of the circle.
+    draw.ellipse((w * 0.14, h * 0.38, w * 0.86, h * 0.98), fill=255)
+    draw.ellipse((w * 0.28, h * 0.48, w * 0.72, h * 1.02), fill=255)
+    return mask.filter(ImageFilter.GaussianBlur(10))
+
+
+def burst_mask(w: int, h: int) -> Image.Image:
+    """Fiery wings + sparks that spill forward."""
+    mask = Image.new("L", (w, h), 0)
+    draw = ImageDraw.Draw(mask)
+    draw.ellipse((w * 0.02, h * 0.30, w * 0.98, h * 0.82), fill=200)
+    draw.ellipse((w * 0.18, h * 0.52, w * 0.82, h * 0.95), fill=255)
+    return mask.filter(ImageFilter.GaussianBlur(14))
+
+
+def scale_from_bottom_center(layer: Image.Image, scale: float) -> tuple[Image.Image, tuple[int, int]]:
+    w, h = layer.size
+    nw, nh = max(1, int(w * scale)), max(1, int(h * scale))
+    scaled = layer.resize((nw, nh), Image.Resampling.LANCZOS)
+    ox = (w - nw) // 2
+    oy = h - nh
+    return scaled, (ox, oy)
+
+
+def phone_screen_vignette(width: int, height: int) -> Image.Image:
+    """Dark phone bezels — content breaks out through the center."""
+    vignette = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(vignette)
+    for i, alpha in enumerate(range(0, 200, 8)):
+        inset = i * 3
+        draw.rectangle(
+            (inset, inset, width - inset, height - inset),
+            outline=(0, 0, 0, alpha),
+            width=8,
+        )
+    # Stronger side and bottom bezels (phone in hand).
+    grad = Image.new("L", (width, height), 0)
+    gdraw = ImageDraw.Draw(grad)
+    for x in range(width):
+        t = min(x, width - x) / (width * 0.22)
+        t = max(0.0, min(1.0, t))
+        gdraw.line([(x, 0), (x, height)], fill=int(255 * (1 - t**1.3)))
+    for y in range(height):
+        t = (height - y) / (height * 0.18)
+        t = max(0.0, min(1.0, t))
+        row = grad.crop((0, y, width, y + 1))
+        boosted = row.point(lambda p: max(p, int(255 * (1 - t**1.1) * 0.85)))
+        grad.paste(boosted, (0, y))
+    vignette.putalpha(grad.filter(ImageFilter.GaussianBlur(22)))
+    return vignette
+
+
+def screen_surface_glow(width: int, height: int, cx: int, cy: int) -> Image.Image:
     glow = Image.new("RGBA", (width, height), (0, 0, 0, 0))
     draw = ImageDraw.Draw(glow)
-    for i, alpha in enumerate(range(90, 0, -6)):
-        r = 120 + i * 38
-        color = (255, 120, 30, alpha)
-        draw.ellipse((cx - r, cy - r, cx + r, cy + r), fill=color)
-    return glow.filter(ImageFilter.GaussianBlur(18))
+    draw.ellipse((cx - 520, cy - 120, cx + 520, cy + 280), fill=(255, 110, 25, 70))
+    draw.ellipse((cx - 300, cy + 40, cx + 300, cy + 220), fill=(255, 60, 10, 90))
+    return glow.filter(ImageFilter.GaussianBlur(28))
 
 
-def local_relief(layer: Image.Image) -> Image.Image:
-    """Subtle high-pass relief to add surface depth without changing identity."""
-    rgb = layer.convert("RGB")
-    blur = rgb.filter(ImageFilter.GaussianBlur(3))
-    detail = ImageChops.subtract(rgb, blur)
-    detail = ImageEnhance.Contrast(detail).enhance(1.8)
-    relief = Image.new("RGBA", layer.size, (255, 220, 180, 0))
-    relief.putalpha(detail.convert("L").point(lambda p: min(int(p * 0.35), 70)))
-    return Image.alpha_composite(layer, relief)
-
-
-def apply_depth_3d(scaled: Image.Image) -> Image.Image:
-    """Turn flat artwork into a floating 3D card while preserving the original photo."""
+def apply_breakout_3d(scaled: Image.Image) -> Image.Image:
+    """Make the player burst out of the phone screen toward the viewer."""
     rgba = scaled.convert("RGBA")
     alpha = luminance_alpha(rgba)
     rgba.putalpha(alpha)
 
-    tilted = perspective_tilt(rgba)
-    lit = rim_light(local_relief(tilted))
+    w, h = rgba.size
+    pad = int(max(w, h) * 0.28)
+    stage_w, stage_h = w + pad * 2, h + pad * 2 + int(h * 0.14)
+    stage = Image.new("RGBA", (stage_w, stage_h), (0, 0, 0, 0))
 
-    w, h = lit.size
-    pad = int(max(w, h) * 0.18)
-    stage = Image.new("RGBA", (w + pad * 2, h + pad * 2), (0, 0, 0, 0))
+    # --- Layer 1: recessed "inside the screen" artwork ---
+    recessed = rgba.copy()
+    recessed.putalpha(alpha)
+    recessed = ImageEnhance.Brightness(recessed).enhance(0.88)
+    recessed_rgb = recessed.convert("RGB").filter(ImageFilter.GaussianBlur(1.6))
+    recessed = Image.merge("RGBA", (*recessed_rgb.split(), recessed.split()[-1]))
+    recessed = perspective_tilt(recessed, strength=0.022)
+    rw, rh = recessed.size
+    rx = (stage_w - rw) // 2
+    ry = pad + int(h * 0.02)
+    stage.alpha_composite(recessed, (rx, ry))
 
-    cx, cy = (w + pad * 2) // 2, h + pad - int(h * 0.04)
-    stage.alpha_composite(depth_glow(stage.width, stage.height, cx, cy))
+    # Screen-plane shadow (cast onto the phone surface behind the pop-out figure).
+    screen_shadow = Image.new("RGBA", (stage_w, stage_h), (0, 0, 0, 0))
+    sdraw = ImageDraw.Draw(screen_shadow)
+    sx = stage_w // 2
+    sy = ry + rh - int(rh * 0.08)
+    for i, a in enumerate(range(120, 0, -5)):
+        rx_e = 80 + i * 16
+        ry_e = 24 + i * 7
+        sdraw.ellipse((sx - rx_e, sy - ry_e, sx + rx_e, sy + ry_e), fill=(0, 0, 0, a))
+    stage.alpha_composite(screen_shadow.filter(ImageFilter.GaussianBlur(10)))
 
-    # Layered shadows = depth.
-    for blur, offset, opacity in ((36, (0, 22), 130), (20, (0, 12), 95), (10, (0, 5), 65)):
-        stage.alpha_composite(drop_shadow(lit, offset, blur, opacity), (pad, pad))
+    # --- Layer 2: fire burst popping forward ---
+    burst = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    bmask = burst_mask(w, h)
+    burst.paste(rgba, (0, 0), ImageChops.multiply(alpha, bmask))
+    burst_big, (box, boy) = scale_from_bottom_center(burst, 1.14)
+    bx = pad + box
+    by = pad + boy + int(h * 0.04)
+    for blur, off, op in ((28, (0, 16), 120), (14, (0, 8), 80)):
+        stage.alpha_composite(drop_shadow(burst_big, off, blur, op), (bx, by))
+    stage.alpha_composite(rim_light(burst_big, 0.45), (bx, by))
 
-    reflection = floor_reflection(lit, fade=0.16)
-    stage.alpha_composite(reflection, (pad, pad + h + int(h * 0.015)))
+    # --- Layer 3: running player breaking OUT toward viewer ---
+    fg = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    fmask = foreground_mask(w, h)
+    fg.paste(rgba, (0, 0), ImageChops.multiply(alpha, fmask))
+    fg_big, (fox, foy) = scale_from_bottom_center(fg, 1.38)
+    fg_big = rim_light(fg_big, 0.75)
+    fg_big = ImageEnhance.Contrast(fg_big).enhance(1.12)
+    fg_big = ImageEnhance.Sharpness(fg_big).enhance(1.35)
+    fx = pad + fox
+    fy = pad + foy + int(h * 0.14)
 
-    stage.alpha_composite(lit, (pad, pad))
+    # Deep contact shadow where figure lifts off the screen.
+    for blur, off, op in ((48, (0, 28), 170), (24, (0, 14), 120), (10, (0, 4), 90)):
+        stage.alpha_composite(drop_shadow(fg_big, off, blur, op), (fx, fy))
 
-    # Inner vignette on the card for volume.
-    vignette = Image.new("L", (w, h), 255)
-    draw = ImageDraw.Draw(vignette)
-    draw.ellipse((-w * 0.08, -h * 0.08, w * 1.08, h * 1.08), fill=0)
-    vignette = vignette.filter(ImageFilter.GaussianBlur(28))
-    dark = Image.new("RGBA", (w, h), (0, 0, 0, 0))
-    dark.putalpha(vignette.point(lambda p: int((255 - p) * 0.35)))
-    card = stage.crop((pad, pad, pad + w, pad + h))
-    card = Image.alpha_composite(card, dark)
-    stage.paste(card, (pad, pad), card)
+    stage.alpha_composite(fg_big, (fx, fy))
 
     return stage
 
 
 def build_portrait_canvas(src: Image.Image) -> Image.Image:
-    """Center the 3D-enhanced graphic on a portrait canvas sized for Pro Max."""
     src = src.convert("RGBA")
     sw, sh = src.size
 
-    max_w = int(TARGET_W * 0.96)
-    max_h = int(TARGET_H * 0.86)
+    max_w = int(TARGET_W * 0.98)
+    max_h = int(TARGET_H * 0.82)
     scale = min(max_w / sw, max_h / sh)
     new_size = (max(1, int(sw * scale)), max(1, int(sh * scale)))
     scaled = src.resize(new_size, Image.Resampling.LANCZOS)
 
-    depth_layer = apply_depth_3d(scaled)
+    breakout = apply_breakout_3d(scaled)
 
-    rgb_src = src.convert("RGB")
-    corner = rgb_src.getpixel((min(10, sw - 1), min(10, sh - 1)))
-    if sum(corner) > 40:
-        corner = (0, 0, 0)
-    canvas = Image.new("RGBA", (TARGET_W, TARGET_H), corner + (255,))
+    canvas = Image.new("RGBA", (TARGET_W, TARGET_H), (0, 0, 0, 255))
 
-    # Subtle atmospheric glow behind the card only.
-    atm = Image.new("RGBA", (TARGET_W, TARGET_H), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(atm)
-    glow_y = int(TARGET_H * 0.55)
-    draw.ellipse(
-        (TARGET_W // 2 - 420, glow_y - 180, TARGET_W // 2 + 420, glow_y + 320),
-        fill=(255, 100, 25, 45),
-    )
-    atm = atm.filter(ImageFilter.GaussianBlur(35))
-    canvas = Image.alpha_composite(canvas, atm)
+    # Light pool on the phone "screen" behind the breakout.
+    glow_y = int(TARGET_H * 0.52)
+    canvas.alpha_composite(screen_surface_glow(TARGET_W, TARGET_H, TARGET_W // 2, glow_y))
 
-    x = (TARGET_W - depth_layer.width) // 2
-    y = int(TARGET_H * 0.08) + (max_h - depth_layer.height) // 2
-    canvas.alpha_composite(depth_layer, (x, y))
+    # Place lower on screen so the figure emerges toward the viewer's hands.
+    x = (TARGET_W - breakout.width) // 2
+    y = int(TARGET_H * 0.18) + (max_h - breakout.height) // 2
+    canvas.alpha_composite(breakout, (x, y))
+
+    # Phone bezel — frame the screen, subject breaks through center.
+    canvas = Image.alpha_composite(canvas, phone_screen_vignette(TARGET_W, TARGET_H))
     return canvas.convert("RGB")
 
 
 def enhance(img: Image.Image) -> Image.Image:
-    img = ImageEnhance.Contrast(img).enhance(1.1)
-    img = ImageEnhance.Color(img).enhance(1.08)
-    img = ImageEnhance.Brightness(img).enhance(1.02)
-    img = ImageEnhance.Sharpness(img).enhance(1.25)
-    img = img.filter(ImageFilter.UnsharpMask(radius=1.4, percent=125, threshold=2))
+    img = ImageEnhance.Contrast(img).enhance(1.12)
+    img = ImageEnhance.Color(img).enhance(1.1)
+    img = ImageEnhance.Brightness(img).enhance(1.03)
+    img = ImageEnhance.Sharpness(img).enhance(1.3)
+    img = img.filter(ImageFilter.UnsharpMask(radius=1.6, percent=135, threshold=2))
     return img
 
 
