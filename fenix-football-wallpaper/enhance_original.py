@@ -35,8 +35,8 @@ def build_portrait_canvas(src: Image.Image) -> Image.Image:
     sw, sh = src.size
 
     # Scale to fit width with breathing room; keep full graphic visible.
-    max_w = int(TARGET_W * 0.92)
-    max_h = int(TARGET_H * 0.78)
+    max_w = int(TARGET_W * 0.96)
+    max_h = int(TARGET_H * 0.86)
     scale = min(max_w / sw, max_h / sh)
     new_size = (max(1, int(sw * scale)), max(1, int(sh * scale)))
     scaled = src.resize(new_size, Image.Resampling.LANCZOS)
@@ -55,7 +55,7 @@ def build_portrait_canvas(src: Image.Image) -> Image.Image:
     canvas = Image.alpha_composite(canvas.convert("RGBA"), glow).convert("RGB")
 
     x = (TARGET_W - scaled.width) // 2
-    y = int(TARGET_H * 0.12) + (max_h - scaled.height) // 2
+    y = int(TARGET_H * 0.08) + (max_h - scaled.height) // 2
     canvas.paste(scaled, (x, y), scaled)
     return canvas
 
