@@ -23,15 +23,15 @@ def find_original() -> Path:
 
 def fit_portrait(
     src: Image.Image,
-    width_pct: float = 0.76,
-    height_pct: float = 0.52,
-    vertical_anchor: float = 0.38,
+    width_pct: float = 0.72,
+    height_pct: float = 0.48,
+    vertical_anchor: float = 0.44,
 ) -> Image.Image:
     """
     Place artwork on portrait canvas.
 
     vertical_anchor: 0 = top, 0.5 = centre, 1 = bottom.
-    Default 0.38 = shifted up for iPhone lock screen (clock at top).
+    Default 0.44 balances lock screen (clock at top) and home screen (icons mid).
     """
     max_w = int(TARGET_W * width_pct)
     max_h = int(TARGET_H * height_pct)
@@ -181,17 +181,13 @@ def main() -> int:
 
     enhanced = supersample_enhance(src.convert("RGB"))
 
-    out_png = OUT_DIR / "fenix-wallpaper-v3-iphone17.png"
-    out_jpg = OUT_DIR / "fenix-wallpaper-v3-iphone17.jpg"
+    out_png = OUT_DIR / "fenix-both-screens-iphone17.png"
+    out_jpg = OUT_DIR / "fenix-both-screens-iphone17.jpg"
     enhanced.save(out_png, "PNG", optimize=True, dpi=(460, 460))
     enhanced.save(out_jpg, "JPEG", quality=94, optimize=True, dpi=(460, 460))
 
-    # Legacy names
-    enhanced.save(OUT_DIR / "fenix-portrait-enhanced-iphone17.png", "PNG", optimize=True, dpi=(460, 460))
-    enhanced.save(OUT_DIR / "fenix-portrait-enhanced-iphone17.jpg", "JPEG", quality=94, optimize=True, dpi=(460, 460))
-
     print(f"Saved: {out_png} ({enhanced.size})")
-    print(f"Position: graphic anchored at 38% (moved UP from centre)")
+    print(f"Optimised for lock screen + home screen (anchor 44%, 72% width)")
     print(f"Saved: {out_jpg}")
     return 0
 
