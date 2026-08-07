@@ -21,8 +21,18 @@ def find_original() -> Path:
     raise FileNotFoundError("Add your photo as fenix-football-wallpaper/original.jpg")
 
 
-def fit_portrait(src: Image.Image, width_pct: float = 0.76, height_pct: float = 0.52) -> Image.Image:
-    """Center the artwork on portrait canvas — smaller, with breathing room."""
+def fit_portrait(
+    src: Image.Image,
+    width_pct: float = 0.76,
+    height_pct: float = 0.52,
+    vertical_anchor: float = 0.38,
+) -> Image.Image:
+    """
+    Place artwork on portrait canvas.
+
+    vertical_anchor: 0 = top, 0.5 = centre, 1 = bottom.
+    Default 0.38 = shifted up for iPhone lock screen (clock at top).
+    """
     max_w = int(TARGET_W * width_pct)
     max_h = int(TARGET_H * height_pct)
     scale = min(max_w / src.width, max_h / src.height)
@@ -31,7 +41,8 @@ def fit_portrait(src: Image.Image, width_pct: float = 0.76, height_pct: float = 
 
     canvas = Image.new("RGB", (TARGET_W, TARGET_H), (0, 0, 0))
     x = (TARGET_W - w) // 2
-    y = (TARGET_H - h) // 2
+    free_y = TARGET_H - h
+    y = int(free_y * vertical_anchor)
     canvas.paste(artwork, (x, y))
     return canvas
 
@@ -170,12 +181,17 @@ def main() -> int:
 
     enhanced = supersample_enhance(src.convert("RGB"))
 
-    out_png = OUT_DIR / "fenix-portrait-enhanced-iphone17.png"
-    out_jpg = OUT_DIR / "fenix-portrait-enhanced-iphone17.jpg"
+    out_png = OUT_DIR / "fenix-wallpaper-v3-iphone17.png"
+    out_jpg = OUT_DIR / "fenix-wallpaper-v3-iphone17.jpg"
     enhanced.save(out_png, "PNG", optimize=True, dpi=(460, 460))
     enhanced.save(out_jpg, "JPEG", quality=94, optimize=True, dpi=(460, 460))
 
+    # Legacy names
+    enhanced.save(OUT_DIR / "fenix-portrait-enhanced-iphone17.png", "PNG", optimize=True, dpi=(460, 460))
+    enhanced.save(OUT_DIR / "fenix-portrait-enhanced-iphone17.jpg", "JPEG", quality=94, optimize=True, dpi=(460, 460))
+
     print(f"Saved: {out_png} ({enhanced.size})")
+    print(f"Position: graphic anchored at 38% (moved UP from centre)")
     print(f"Saved: {out_jpg}")
     return 0
 
