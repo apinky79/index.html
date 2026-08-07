@@ -21,14 +21,19 @@ def find_original() -> Path:
     raise FileNotFoundError("Add your photo as fenix-football-wallpaper/original.jpg")
 
 
-def cover_crop_portrait(src: Image.Image) -> Image.Image:
-    """Fill the full portrait screen — no tiny square floating in black."""
-    scale = max(TARGET_W / src.width, TARGET_H / src.height)
-    w, h = int(src.width * scale), int(src.height * scale)
-    scaled = src.resize((w, h), Image.Resampling.LANCZOS)
-    left = (w - TARGET_W) // 2
-    top = (h - TARGET_H) // 2
-    return scaled.crop((left, top, left + TARGET_W, top + TARGET_H))
+def fit_portrait(src: Image.Image, width_pct: float = 0.76, height_pct: float = 0.52) -> Image.Image:
+    """Center the artwork on portrait canvas — smaller, with breathing room."""
+    max_w = int(TARGET_W * width_pct)
+    max_h = int(TARGET_H * height_pct)
+    scale = min(max_w / src.width, max_h / src.height)
+    w, h = max(1, int(src.width * scale)), max(1, int(src.height * scale))
+    artwork = src.resize((w, h), Image.Resampling.LANCZOS)
+
+    canvas = Image.new("RGB", (TARGET_W, TARGET_H), (0, 0, 0))
+    x = (TARGET_W - w) // 2
+    y = (TARGET_H - h) // 2
+    canvas.paste(artwork, (x, y))
+    return canvas
 
 
 def rgb_to_hsv(arr: np.ndarray) -> np.ndarray:
@@ -149,14 +154,14 @@ def edge_vignette(img: Image.Image) -> Image.Image:
 
 
 def supersample_enhance(src: Image.Image) -> Image.Image:
-    """2× supersample for cleaner upscale, then portrait cover crop."""
+    """2× supersample for cleaner detail, then fit centered on portrait canvas."""
     big = src.resize((src.width * 2, src.height * 2), Image.Resampling.LANCZOS)
     big = professional_grade(big)
     big = boost_fire_glow(big)
     big = clarity_and_sharpen(big)
     big = subtle_depth_lighting(big)
     big = edge_vignette(big)
-    return cover_crop_portrait(big)
+    return fit_portrait(big)
 
 
 def main() -> int:
