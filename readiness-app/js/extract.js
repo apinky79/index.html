@@ -1,6 +1,6 @@
 /**
- * Extract health metrics from OCR text or merged screenshot analysis.
- * Patterns tuned for Bevel, HRV, OutPerform, Sleep Cycle layouts.
+ * Extract health metrics from screenshot analysis.
+ * OCR is skipped on mobile (too slow); Vision API or manual entry used instead.
  */
 
 const FIELD_PATTERNS = {
@@ -105,6 +105,19 @@ export function metricsToEntry(metrics, feel = 'ok') {
   };
 }
 
+function isMobile() {
+  return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+}
+
+function withTimeout(promise, ms, label) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      setTimeout(() => reject(new Error(`${label} timed out`)), ms);
+    }),
+  ]);
+}
+
 const VISION_PROMPT = `You are extracting morning health metrics from iPhone app screenshots (Bevel, HRV tracker, OutPerform, Sleep Cycle, or Apple Health).
 
 Return ONLY valid JSON with numeric values where found, null if not visible:
@@ -129,16 +142,16 @@ Rules:
 - Readiness from OutPerform (0-100)
 - Stress from Bevel (0-100, lower is calmer)
 - Strain is yesterday's load percentage
-- Sleep score from Sleep Cycle if shown
+- Sleep score from Sleep Cycle or Bevel if shown
 - Do not invent values — only extract what is clearly visible`;
 
-export async function extractWithVision(imageDataUrls, apiKey) {
+export async function extractWithVision(imageDataUrls, apiKey, signal) {
   if (!apiKey) throw new Error('API key required for screenshot analysis');
   if (!imageDataUrls.length) throw new Error('No images provided');
 
   const content = [{ type: 'text', text: VISION_PROMPT }];
   for (const url of imageDataUrls) {
-    content.push({ type: 'image_url', image_url: { url, detail: 'high' } });
+    content.push({ type: 'image_url', image_url: { url, detail: 'low' } });
   }
 
   const res = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -153,6 +166,7 @@ export async function extractWithVision(imageDataUrls, apiKey) {
       max_tokens: 500,
       temperature: 0,
     }),
+    signal,
   });
 
   if (!res.ok) {
@@ -182,7 +196,7 @@ export async function extractWithVision(imageDataUrls, apiKey) {
   };
 }
 
-export async function extractWithOcr(imageFile) {
+async function extractWithOcr(imageFile) {
   const { default: Tesseract } = await import(
     'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.esm.min.js'
   );
@@ -192,48 +206,77 @@ export async function extractWithOcr(imageFile) {
   return parseMetricsFromText(data.text);
 }
 
-export async function fileToDataUrl(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
+/** Resize image for faster upload — max 1200px wide */
+export async function fileToDataUrl(file, maxWidth = 1200) {
+  const bitmap = await createImageBitmap(file);
+  const scale = Math.min(1, maxWidth / bitmap.width);
+  const w = Math.round(bitmap.width * scale);
+  const h = Math.round(bitmap.height * scale);
+
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(bitmap, 0, 0, w, h);
+  bitmap.close();
+
+  return canvas.toDataURL('image/jpeg', 0.85);
 }
 
-export async function extractFromScreenshots(files, { apiKey, onProgress }) {
+export async function extractFromScreenshots(files, { apiKey, onProgress, signal }) {
   const dataUrls = [];
-  const ocrResults = [];
 
   for (let i = 0; i < files.length; i++) {
-    onProgress?.(`Reading screenshot ${i + 1} of ${files.length}…`);
+    if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+    onProgress?.(`Preparing screenshot ${i + 1} of ${files.length}…`);
     dataUrls.push(await fileToDataUrl(files[i]));
-    try {
-      const ocr = await extractWithOcr(files[i]);
-      ocrResults.push(ocr);
-    } catch {
-      ocrResults.push({});
-    }
   }
 
   let visionResult = {};
+  let ocrMerged = {};
+  let method = 'manual';
+
   if (apiKey) {
-    onProgress?.('Analysing screenshots with AI…');
+    onProgress?.('Analysing with AI (10–20 seconds)…');
     try {
-      visionResult = await extractWithVision(dataUrls, apiKey);
+      visionResult = await withTimeout(
+        extractWithVision(dataUrls, apiKey, signal),
+        60000,
+        'AI analysis'
+      );
+      method = 'vision';
     } catch (e) {
-      onProgress?.(`AI extraction failed: ${e.message}. Using OCR fallback.`);
+      if (e.name === 'AbortError') throw e;
+      onProgress?.(`AI failed: ${e.message}`);
+      method = 'manual';
     }
   }
 
-  const ocrMerged = mergeMetrics(...ocrResults);
+  // OCR only on desktop without API key — never on mobile (hangs Safari)
+  if (!apiKey && !isMobile() && method === 'manual') {
+    onProgress?.('Trying OCR (desktop only)…');
+    const ocrResults = [];
+    for (let i = 0; i < files.length; i++) {
+      if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+      try {
+        const ocr = await withTimeout(extractWithOcr(files[i]), 20000, `OCR image ${i + 1}`);
+        ocrResults.push(ocr);
+      } catch {
+        ocrResults.push({});
+      }
+    }
+    ocrMerged = mergeMetrics(...ocrResults);
+    if (Object.keys(ocrMerged).length > 0) method = 'ocr';
+  }
+
   const final = mergeMetrics(ocrMerged, visionResult);
 
   return {
     metrics: final,
-    method: apiKey && Object.keys(visionResult).length > 1 ? 'vision+ocr' : 'ocr',
+    method,
     ocrMerged,
     visionResult,
     dataUrls,
+    needsManual: method === 'manual' && Object.keys(final).length === 0,
   };
 }

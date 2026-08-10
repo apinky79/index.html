@@ -523,6 +523,20 @@ input:focus, select:focus, textarea:focus {
   border: 1px solid var(--line);
 }
 
+.review-screenshots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.review-screenshots img {
+  width: 100%;
+  max-width: 160px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+}
+
 .extract-status {
   font-size: 0.85rem;
   color: var(--accent);

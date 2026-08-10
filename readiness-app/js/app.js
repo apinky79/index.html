@@ -21,6 +21,7 @@ const $$ = (sel) => document.querySelectorAll(sel);
 let currentDate = todayISO();
 let screenshotFiles = [];
 let lastExtracted = null;
+let extractAbort = null;
 
 function init() {
   bindForm();
@@ -381,33 +382,13 @@ function bindScan() {
     setExtractStatus('');
   });
 
-  $('#btn-extract').addEventListener('click', async () => {
-    if (!screenshotFiles.length) return;
-    const status = $('#extract-status');
-    status.hidden = false;
-    status.textContent = 'Starting analysis…';
-    $('#btn-extract').disabled = true;
+  $('#btn-extract').addEventListener('click', () => runExtract());
 
-    try {
-      const settings = loadSettings();
-      const apiKey = $('#api-key').value.trim() || settings.apiKey || null;
-      if ($('#api-key').value.trim()) {
-        saveSettings({ ...settings, apiKey: $('#api-key').value.trim() });
-      }
-      const result = await extractFromScreenshots(screenshotFiles, {
-        apiKey,
-        onProgress: (msg) => { status.textContent = msg; },
-      });
-      lastExtracted = result.metrics;
-      renderExtractReview(result.metrics, result.method);
-      status.textContent = result.method === 'vision+ocr'
-        ? 'Extracted with AI — please review below.'
-        : 'Extracted with OCR — please verify numbers (AI key in Settings improves accuracy).';
-    } catch (e) {
-      status.textContent = `Error: ${e.message}`;
-    } finally {
-      $('#btn-extract').disabled = false;
-    }
+  $('#btn-cancel-extract').addEventListener('click', () => {
+    extractAbort?.abort();
+    setExtractStatus('Cancelled.');
+    $('#btn-extract').disabled = false;
+    $('#btn-cancel-extract').hidden = true;
   });
 
   $('#btn-confirm-extract').addEventListener('click', () => {
@@ -518,7 +499,7 @@ const EXTRACT_FIELD_MAP = [
   ['strain', 'Strain (%)'],
 ];
 
-function renderExtractReview(metrics, method) {
+function renderExtractReview(metrics, method, dataUrls = []) {
   const container = $('#extract-fields');
   container.innerHTML = '';
   for (const [key, label] of EXTRACT_FIELD_MAP) {
@@ -527,7 +508,75 @@ function renderExtractReview(metrics, method) {
     wrap.innerHTML = `<span>${label}</span><input type="text" data-key="${key}" value="${metrics[key] ?? ''}">`;
     container.appendChild(wrap);
   }
+
+  const shots = $('#review-screenshots');
+  shots.innerHTML = '';
+  dataUrls.forEach((url, i) => {
+    const img = document.createElement('img');
+    img.src = url;
+    img.alt = `Screenshot ${i + 1}`;
+    shots.appendChild(img);
+  });
+
+  const hint = $('#extract-review-hint');
+  if (method === 'vision') {
+    hint.textContent = 'AI extracted these numbers — please verify before generating your report.';
+  } else if (method === 'ocr') {
+    hint.textContent = 'OCR extracted these numbers — verify against your screenshots below.';
+  } else {
+    hint.textContent = 'Enter numbers from your screenshots below. For auto-read, add an OpenAI API key in Settings (~£0.01/day).';
+  }
+
   $('#extract-review').hidden = false;
+}
+
+async function runExtract() {
+  if (!screenshotFiles.length) return;
+  const status = $('#extract-status');
+  status.hidden = false;
+  status.textContent = 'Starting…';
+  $('#btn-extract').disabled = true;
+  $('#btn-cancel-extract').hidden = false;
+  extractAbort = new AbortController();
+
+  try {
+    const settings = loadSettings();
+    const apiKey = $('#api-key').value.trim() || settings.apiKey || null;
+
+    if (!apiKey) {
+      status.textContent = 'Preparing screenshots for manual review…';
+    }
+
+    if ($('#api-key').value.trim()) {
+      saveSettings({ ...settings, apiKey: $('#api-key').value.trim() });
+    }
+
+    const result = await extractFromScreenshots(screenshotFiles, {
+      apiKey,
+      signal: extractAbort.signal,
+      onProgress: (msg) => { status.textContent = msg; },
+    });
+
+    lastExtracted = result.metrics;
+    renderExtractReview(result.metrics, result.method, result.dataUrls);
+
+    if (result.method === 'vision') {
+      status.textContent = 'Extracted with AI — review below.';
+    } else if (result.method === 'ocr') {
+      status.textContent = 'Extracted with OCR — verify numbers below.';
+    } else if (!apiKey) {
+      status.textContent = 'Fill in numbers from your screenshots below (or add API key in Settings for auto-read).';
+    } else {
+      status.textContent = 'Review and edit numbers below.';
+    }
+  } catch (e) {
+    if (e.name === 'AbortError') return;
+    status.textContent = `Error: ${e.message}`;
+  } finally {
+    $('#btn-extract').disabled = false;
+    $('#btn-cancel-extract').hidden = true;
+    extractAbort = null;
+  }
 }
 
 function readExtractFields() {

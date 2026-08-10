@@ -74,13 +74,15 @@
 
         <div class="actions">
           <button type="button" id="btn-extract" class="btn btn-primary" disabled>Analyse screenshots</button>
+          <button type="button" id="btn-cancel-extract" class="btn" hidden>Cancel</button>
           <button type="button" id="btn-clear-screenshots" class="btn">Clear</button>
         </div>
       </div>
 
       <div id="extract-review" class="card" hidden>
         <h2>Review extracted data</h2>
-        <p class="hint">Confirm numbers before generating your report. Edit anything that looks wrong.</p>
+        <p id="extract-review-hint" class="hint">Confirm numbers before generating your report. Edit anything that looks wrong.</p>
+        <div id="review-screenshots" class="review-screenshots"></div>
         <div id="extract-fields" class="extract-fields"></div>
         <div class="actions">
           <button type="button" id="btn-confirm-extract" class="btn btn-primary">Generate report</button>
