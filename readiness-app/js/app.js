@@ -335,9 +335,38 @@ function loadSettingsIntoUI() {
 function bindScan() {
   const input = $('#screenshot-input');
   const zone = $('#upload-zone');
+  const pasteZone = $('#paste-zone');
 
-  zone.addEventListener('click', () => input.click());
-  zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('dragover'); });
+  $('#btn-add-photos').addEventListener('click', () => input.click());
+
+  input.addEventListener('change', () => {
+    addScreenshots([...input.files]);
+    input.value = '';
+  });
+
+  $('#btn-paste-clipboard').addEventListener('click', () => pasteFromClipboard());
+
+  pasteZone.addEventListener('paste', (e) => {
+    e.preventDefault();
+    const files = filesFromDataTransfer(e.clipboardData);
+    if (files.length) {
+      addScreenshots(files);
+      setExtractStatus(`Added ${files.length} image(s) from paste.`);
+    } else {
+      setExtractStatus('Nothing to paste — use Add from Photos instead.');
+    }
+  });
+
+  document.addEventListener('paste', (e) => {
+    if (!$('#tab-scan').classList.contains('active')) return;
+    const files = filesFromDataTransfer(e.clipboardData);
+    if (!files.length) return;
+    e.preventDefault();
+    addScreenshots(files);
+    setExtractStatus(`Added ${files.length} image(s) from paste.`);
+  });
+
+  zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.remove('hidden'); zone.classList.add('dragover'); });
   zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
   zone.addEventListener('drop', (e) => {
     e.preventDefault();
@@ -345,16 +374,11 @@ function bindScan() {
     addScreenshots([...e.dataTransfer.files]);
   });
 
-  input.addEventListener('change', () => {
-    addScreenshots([...input.files]);
-    input.value = '';
-  });
-
   $('#btn-clear-screenshots').addEventListener('click', () => {
     screenshotFiles = [];
     renderScreenshotPreview();
     $('#extract-review').hidden = true;
-    $('#extract-status').hidden = true;
+    setExtractStatus('');
   });
 
   $('#btn-extract').addEventListener('click', async () => {
@@ -404,9 +428,69 @@ function bindScan() {
 }
 
 function addScreenshots(files) {
-  const images = files.filter((f) => f.type.startsWith('image/'));
+  const images = [...files].filter(isImageFile);
+  if (!images.length) {
+    setExtractStatus('No images found. On iPhone, use Add from Photos.');
+    return;
+  }
   screenshotFiles.push(...images);
   renderScreenshotPreview();
+  setExtractStatus(`${screenshotFiles.length} screenshot(s) ready.`);
+}
+
+function isImageFile(file) {
+  if (file.type && file.type.startsWith('image/')) return true;
+  return /\.(jpe?g|png|heic|heif|webp|gif)$/i.test(file.name || '');
+}
+
+function filesFromDataTransfer(dataTransfer) {
+  if (!dataTransfer) return [];
+  const files = [];
+  if (dataTransfer.files?.length) {
+    for (const f of dataTransfer.files) {
+      if (isImageFile(f)) files.push(f);
+    }
+  }
+  if (dataTransfer.items) {
+    for (const item of dataTransfer.items) {
+      if (item.kind === 'file') {
+        const f = item.getAsFile();
+        if (f && isImageFile(f)) files.push(f);
+      }
+    }
+  }
+  return files;
+}
+
+async function pasteFromClipboard() {
+  setExtractStatus('Reading clipboard…');
+  try {
+    if (navigator.clipboard?.read) {
+      const items = await navigator.clipboard.read();
+      const files = [];
+      for (const item of items) {
+        for (const type of item.types) {
+          if (type.startsWith('image/')) {
+            const blob = await item.getType(type);
+            files.push(new File([blob], `pasted-${Date.now()}.png`, { type }));
+          }
+        }
+      }
+      if (files.length) {
+        addScreenshots(files);
+        return;
+      }
+    }
+    setExtractStatus('Clipboard empty or paste not supported. On iPhone: tap Add from Photos, then pick screenshots from your library.');
+  } catch {
+    setExtractStatus('Paste blocked by Safari. Use Add from Photos — screenshots are saved there automatically.');
+  }
+}
+
+function setExtractStatus(msg) {
+  const status = $('#extract-status');
+  status.hidden = !msg;
+  status.textContent = msg;
 }
 
 function renderScreenshotPreview() {

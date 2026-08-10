@@ -32,14 +32,29 @@
     <!-- Scan tab -->
     <section id="tab-scan" class="tab-panel active">
       <div class="card">
-        <h2>Upload app screenshots</h2>
-        <p class="hint">Screenshot Bevel, HRV, OutPerform, and Sleep Cycle each morning. The app extracts your numbers and builds one mind &amp; body report.</p>
+        <h2>Add app screenshots</h2>
+        <p class="hint">Screenshot Bevel, HRV, OutPerform, and Sleep Cycle each morning. On iPhone, screenshots save to Photos — use the button below (paste often doesn't work in Safari).</p>
 
-        <label class="upload-zone" id="upload-zone">
-          <input type="file" id="screenshot-input" accept="image/*" multiple hidden>
+        <ol class="ios-steps">
+          <li>Take screenshots (side button + volume up)</li>
+          <li>Tap <strong>Add from Photos</strong> below</li>
+          <li>Select your app screenshots</li>
+        </ol>
+
+        <input type="file" id="screenshot-input" accept="image/*,.heic,.heif" multiple class="visually-hidden">
+
+        <div class="upload-actions">
+          <button type="button" id="btn-add-photos" class="btn btn-primary btn-block">Add from Photos</button>
+          <button type="button" id="btn-paste-clipboard" class="btn btn-block">Paste from clipboard</button>
+        </div>
+
+        <div class="paste-zone" id="paste-zone" tabindex="0">
+          <span>Or tap here and paste (works on some devices)</span>
+        </div>
+
+        <label class="upload-zone" id="upload-zone" hidden>
           <span class="upload-icon">📷</span>
-          <span>Tap to add screenshots</span>
-          <small>PNG or JPG from Photos</small>
+          <span>Drop screenshots here</span>
         </label>
 
         <div id="screenshot-preview" class="screenshot-preview"></div>
