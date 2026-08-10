@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="description" content="Hume-style daily readiness check — personal baselines, one clear assessment.">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self'; connect-src 'self'; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' https://cdn.jsdelivr.net; worker-src blob:; img-src 'self' blob: data:; connect-src 'self' https://cdn.jsdelivr.net https://api.openai.com; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';">
   <meta name="theme-color" content="#0f1419">
   <title>Readiness Check</title>
   <link rel="manifest" href="manifest.webmanifest">
@@ -20,16 +20,61 @@
   </header>
 
   <nav class="tabs no-print">
-    <button type="button" class="tab-btn active" data-tab="entry">Log</button>
-    <button type="button" class="tab-btn" data-tab="check">Check</button>
+    <button type="button" class="tab-btn active" data-tab="scan">Scan</button>
+    <button type="button" class="tab-btn" data-tab="entry">Log</button>
+    <button type="button" class="tab-btn" data-tab="check">Report</button>
     <button type="button" class="tab-btn" data-tab="trends">Trends</button>
     <button type="button" class="tab-btn" data-tab="history">History</button>
     <button type="button" class="tab-btn" data-tab="settings">Settings</button>
   </nav>
 
   <main class="main-content">
+    <!-- Scan tab -->
+    <section id="tab-scan" class="tab-panel active">
+      <div class="card">
+        <h2>Upload app screenshots</h2>
+        <p class="hint">Screenshot Bevel, HRV, OutPerform, and Sleep Cycle each morning. The app extracts your numbers and builds one mind &amp; body report.</p>
+
+        <label class="upload-zone" id="upload-zone">
+          <input type="file" id="screenshot-input" accept="image/*" multiple hidden>
+          <span class="upload-icon">📷</span>
+          <span>Tap to add screenshots</span>
+          <small>PNG or JPG from Photos</small>
+        </label>
+
+        <div id="screenshot-preview" class="screenshot-preview"></div>
+        <p id="extract-status" class="extract-status" hidden></p>
+
+        <label class="field">
+          <span>How I feel</span>
+          <select id="scan-feel">
+            <option value="great">Great</option>
+            <option value="good">Good</option>
+            <option value="ok" selected>OK</option>
+            <option value="tired">Tired</option>
+            <option value="exhausted">Exhausted</option>
+            <option value="unwell">Unwell</option>
+          </select>
+        </label>
+
+        <div class="actions">
+          <button type="button" id="btn-extract" class="btn btn-primary" disabled>Analyse screenshots</button>
+          <button type="button" id="btn-clear-screenshots" class="btn">Clear</button>
+        </div>
+      </div>
+
+      <div id="extract-review" class="card" hidden>
+        <h2>Review extracted data</h2>
+        <p class="hint">Confirm numbers before generating your report. Edit anything that looks wrong.</p>
+        <div id="extract-fields" class="extract-fields"></div>
+        <div class="actions">
+          <button type="button" id="btn-confirm-extract" class="btn btn-primary">Generate report</button>
+        </div>
+      </div>
+    </section>
+
     <!-- Entry tab -->
-    <section id="tab-entry" class="tab-panel active">
+    <section id="tab-entry" class="tab-panel">
       <div class="card">
         <h2>Morning metrics</h2>
         <p class="hint">Enter numbers from Bevel, HRV, Sleep Cycle, and OutPerform. Personal trends matter more than absolute values.</p>
@@ -114,9 +159,22 @@ How I feel: tired</pre>
       </div>
     </section>
 
-    <!-- Check tab -->
+    <!-- Report tab -->
     <section id="tab-check" class="tab-panel">
       <div id="assessment-output" class="card assessment-card" hidden>
+        <div class="mind-body-grid">
+          <div class="mind-body-card" id="body-state-card">
+            <span class="mb-label">Body</span>
+            <span id="body-state-label" class="mb-value">—</span>
+            <span id="body-state-detail" class="mb-detail"></span>
+          </div>
+          <div class="mind-body-card" id="mind-state-card">
+            <span class="mb-label">Mind</span>
+            <span id="mind-state-label" class="mb-value">—</span>
+            <span id="mind-state-detail" class="mb-detail"></span>
+          </div>
+        </div>
+
         <div class="assessment-header">
           <div id="readiness-badge" class="badge readiness-badge" data-level="good">—</div>
           <div class="training-block">
@@ -134,7 +192,7 @@ How I feel: tired</pre>
         <pre id="assessment-text" class="assessment-text"></pre>
         <button type="button" id="btn-copy" class="btn">Copy</button>
       </div>
-      <p id="no-assessment" class="empty">Log your morning metrics and tap "Assess today" to see your check.</p>
+      <p id="no-assessment" class="empty">Upload screenshots or log metrics, then generate your daily mind &amp; body report.</p>
     </section>
 
     <!-- Trends tab -->
@@ -168,6 +226,38 @@ How I feel: tired</pre>
 
     <!-- Settings tab -->
     <section id="tab-settings" class="tab-panel">
+      <div class="card">
+        <h2>Apple Health import</h2>
+        <p class="hint">A web app cannot link directly to Apple Health (that requires a native iOS app). Instead, export your data: <strong>iPhone Settings → Health → Export All Health Data</strong>, unzip in Files, then upload <code>export.xml</code> here. Processing happens entirely on your device.</p>
+        <label class="upload-zone upload-zone-small" id="health-upload-zone">
+          <input type="file" id="health-input" accept=".xml,.zip" hidden>
+          <span>Upload export.xml</span>
+        </label>
+        <p id="health-import-status" class="extract-status" hidden></p>
+      </div>
+
+      <div class="card">
+        <h2>Screenshot AI (optional)</h2>
+        <p class="hint">For best screenshot reading, add an OpenAI API key. Stored only on this device. Without it, basic OCR is used (less accurate). Screenshots are sent to OpenAI only if you add a key and tap Analyse.</p>
+        <label class="field">
+          <span>OpenAI API key <small>optional — sk-…</small></span>
+          <input type="password" id="api-key" autocomplete="off" placeholder="Leave blank for OCR only">
+        </label>
+      </div>
+
+      <div class="card">
+        <h2>Secure sharing</h2>
+        <p class="hint">Share reports with people you trust. Data is encrypted with a passphrase before export — send the file and passphrase separately (e.g. Signal). No cloud account needed; only someone with the passphrase can read it.</p>
+        <label class="field">
+          <span>Passphrase</span>
+          <input type="password" id="share-passphrase" autocomplete="off" placeholder="Min 8 characters">
+        </label>
+        <div class="actions">
+          <button type="button" id="btn-export-encrypted" class="btn btn-primary">Export encrypted</button>
+          <button type="button" id="btn-import-encrypted" class="btn">Import encrypted</button>
+        </div>
+      </div>
+
       <div class="card">
         <h2>Calibration</h2>
         <p class="hint">After travel or routine changes, set a calibration start date. The app treats the next 14 days as baseline-building rather than making strong conclusions.</p>

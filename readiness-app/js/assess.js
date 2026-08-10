@@ -299,6 +299,8 @@ export function formatAssessment(entry, assessment) {
   const lines = [];
   lines.push('HUME-STYLE DAILY CHECK');
   lines.push('');
+  lines.push(formatMindBodyReport(entry, assessment));
+  lines.push('');
   lines.push(`Overall readiness: ${assessment.overall}/10 — ${assessment.label}`);
   lines.push(`Training: ${assessment.training.level}`);
   lines.push(`Recovery: ${formatRecovery(entry, assessment)}`);
@@ -323,6 +325,82 @@ export function formatAssessment(entry, assessment) {
   );
 
   return lines.join('\n');
+}
+
+export function formatMindBodyReport(entry, assessment) {
+  const body = bodyState(entry, assessment);
+  const mind = mindState(entry, assessment);
+  return [
+    'BODY: ' + body.summary,
+    'MIND: ' + mind.summary,
+    '',
+    `Body state: ${body.label} (${body.detail})`,
+    `Mind state: ${mind.label} (${mind.detail})`,
+  ].join('\n');
+}
+
+function bodyState(entry, a) {
+  const signals = [];
+  let score = 5;
+
+  if (entry.hrv != null && a.hrvComp.pct != null) {
+    if (a.hrvComp.pct >= 3) { score += 1; signals.push('HRV at/above baseline'); }
+    else if (a.hrvComp.pct < -5) { score -= 1.5; signals.push('HRV below baseline'); }
+  }
+  if (entry.restingHr != null && a.rhrComp.delta != null) {
+    if (a.rhrComp.delta <= -2) { score += 0.5; signals.push('resting HR trending down'); }
+    else if (a.rhrComp.delta >= 3) { score -= 1; signals.push('resting HR elevated'); }
+  }
+  if (entry.sleep != null) {
+    if (entry.sleep >= 80) { score += 1; signals.push('strong sleep score'); }
+    else if (entry.sleep < 60) { score -= 1; signals.push('poor sleep'); }
+  }
+  if (entry.recovery != null && entry.recovery >= 75) score += 0.5;
+  if (entry.strain != null && entry.strain >= 80) { score -= 0.5; signals.push('high yesterday strain'); }
+
+  score = Math.max(1, Math.min(10, score));
+  let label, detail;
+  if (score >= 7.5) { label = 'Recovered'; detail = signals.join('; ') || 'physical markers look solid'; }
+  else if (score >= 5.5) { label = 'Moderately recovered'; detail = signals.join('; ') || 'mixed physical signals'; }
+  else { label = 'Needs recovery'; detail = signals.join('; ') || 'body is still catching up'; }
+
+  return { label, detail, summary: `${label} — ${detail}`, score };
+}
+
+function mindState(entry, a) {
+  const signals = [];
+  let score = 5;
+  const feel = entry.feel || 'ok';
+
+  if (entry.stress != null) {
+    if (entry.stress <= 15) { score += 1.5; signals.push('very low stress'); }
+    else if (entry.stress <= 35) score += 0.5;
+    else if (entry.stress >= 60) { score -= 1.5; signals.push('elevated stress'); }
+  }
+
+  if (feel === 'great' || feel === 'good') { score += 1.5; signals.push(`feeling ${feel}`); }
+  else if (feel === 'tired') { score -= 1.5; signals.push('self-reported tiredness'); }
+  else if (feel === 'exhausted' || feel === 'unwell') { score -= 2.5; signals.push(`feeling ${feel}`); }
+
+  if (entry.sleep != null && entry.sleep < 65) {
+    score -= 0.5;
+    signals.push('sleep may affect focus');
+  }
+
+  score = Math.max(1, Math.min(10, score));
+  let label, detail;
+  if (score >= 7.5) { label = 'Clear & steady'; detail = signals.join('; ') || 'mental energy looks good'; }
+  else if (score >= 5.5) { label = 'Functional but flat'; detail = signals.join('; ') || 'manageable but not sharp'; }
+  else { label = 'Depleted'; detail = signals.join('; ') || 'prioritise rest and low cognitive load'; }
+
+  return { label, detail, summary: `${label} — ${detail}`, score };
+}
+
+export function getMindBodyScores(entry, assessment) {
+  return {
+    body: bodyState(entry, assessment),
+    mind: mindState(entry, assessment),
+  };
 }
 
 function formatRecovery(entry, a) {

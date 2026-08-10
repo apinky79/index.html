@@ -420,6 +420,132 @@ input:focus, select:focus, textarea:focus {
 
 .disclaimer p:last-child { margin-bottom: 0; }
 
+.disclaimer p:last-child { margin-bottom: 0; }
+
+/* Upload zone */
+.upload-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 2rem 1rem;
+  border: 2px dashed var(--line);
+  border-radius: var(--radius);
+  cursor: pointer;
+  text-align: center;
+  color: var(--muted);
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.upload-zone:hover,
+.upload-zone.dragover {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+}
+
+.upload-zone-small {
+  padding: 1rem;
+}
+
+.upload-icon {
+  font-size: 2rem;
+}
+
+.screenshot-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.75rem 0;
+}
+
+.screenshot-thumb {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+}
+
+.extract-status {
+  font-size: 0.85rem;
+  color: var(--accent);
+  margin: 0.5rem 0;
+}
+
+.extract-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.extract-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.extract-field span {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.extract-field input {
+  padding: 0.4rem 0.5rem;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  color: var(--text);
+  font: inherit;
+}
+
+/* Mind & body report */
+.mind-body-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+@media (max-width: 420px) {
+  .mind-body-grid { grid-template-columns: 1fr; }
+}
+
+.mind-body-card {
+  background: var(--surface-2);
+  border-radius: 8px;
+  padding: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.mb-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.mb-value {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.mb-detail {
+  font-size: 0.8rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+code {
+  background: var(--surface-2);
+  padding: 0.1rem 0.35rem;
+  border-radius: 3px;
+  font-size: 0.85em;
+}
+
 @media print {
   .no-print, .tabs, .app-bar { display: none; }
   body { background: #fff; color: #000; }

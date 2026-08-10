@@ -1,85 +1,79 @@
 # Readiness Check
 
-A Hume-style daily recovery assessment for Apple Watch Series 6 + Bevel, HRV, Sleep Cycle, and OutPerform.
+Hume-style daily mind & body report for Apple Watch Series 6 + Bevel, HRV, Sleep Cycle, and OutPerform.
 
-**One clear morning check** — not eight separate app scores to interpret yourself.
+**Upload screenshots → get one clear health report.** No interpreting eight separate app scores yourself.
 
-## What it does
+## Quick start (iPhone)
 
-- Accepts manual morning metric entry (or paste from a text template)
-- Compares HRV and resting HR to **your personal rolling baseline** (7/14/30 days)
-- Weights subjective "how I feel" alongside sensor data
-- Produces a single readiness score, training recommendation, and 1–2 daily priorities
-- Tracks trends over time in your browser (no account, no server)
-- Supports a **calibration period** after travel or routine changes
+Open in Safari: **https://apinky79.github.io/index.html/readiness-app/**
 
-## What it does NOT do
+Tap **Add to Home Screen** for app-like access.
 
-- Pretend Apple Watch data equals Hume Band hardware
-- Treat Bevel Recovery and OutPerform Readiness as equivalent scores
-- Label a single HRV number as universally "good" or "bad"
-- Replace medical advice
+## Daily workflow
 
-## Quick start
+1. Each morning, screenshot your Bevel, HRV, OutPerform, and Sleep Cycle dashboards
+2. Open the app → **Scan** tab → add screenshots
+3. Tap **Analyse screenshots** → review extracted numbers
+4. Select how you feel → **Generate report**
+5. **Report** tab shows your mind & body state, training guidance, and priorities
 
-Open `index.html` in a browser (or serve the folder with any static server):
+## Screenshot analysis
 
-```bash
-cd readiness-app
-python3 -m http.server 8080
-# visit http://localhost:8080
-```
+| Method | Accuracy | Privacy |
+|---|---|---|
+| **AI (optional)** | Best — reads app layouts reliably | Requires OpenAI API key in Settings; screenshots sent to OpenAI only when you tap Analyse |
+| **OCR fallback** | Basic — may miss numbers on dark UIs | Stays entirely on your device |
 
-## Daily input template
+Add an OpenAI API key in **Settings** for reliable screenshot reading (~$0.01/day).
 
-Paste this into the app or type it in chat:
+## Apple Health
 
-```
-Sleep:
-HRV:
-7-day HRV:
-HRV CV:
-Recovery:
-Resting HR:
-Stress:
-Yesterday's strain:
-How I feel:
-```
+Web apps **cannot** link directly to Apple Health (HealthKit requires a native iOS app).
 
-## Output format
+**Workaround:** iPhone **Settings → Health → Export All Health Data** → unzip in Files → upload `export.xml` in Settings. Parsed locally on your device — nothing uploaded.
 
-```
-HUME-STYLE DAILY CHECK
+Imports: HRV, resting HR, VO2 max, sleep duration.
 
-Overall readiness: 7/10 — GOOD
-Training: Moderate
-Recovery: …
-HRV: … vs your baseline
-Sleep: …
-Resting HR: …
-Stress: …
-Yesterday's strain: …
-How you feel: …
-Today's priority: …
-```
+## Secure sharing
 
-## Data storage
+Share reports with people you choose:
 
-All entries live in browser `localStorage`. Use **Settings → Export JSON** for backup.
+1. Set a passphrase in **Settings**
+2. **Export encrypted** → send the file (email, AirDrop, etc.)
+3. Share the passphrase separately (Signal, in person)
+4. Recipient uses **Import encrypted** with the passphrase
 
-## Future direction
+Only someone with the passphrase can read the data. No cloud account, no public links.
 
-- HealthKit / Apple Health ingestion (when technically appropriate)
-- VO2 max as a long-term fitness trend (not daily readiness)
-- Optional sync across devices
+## Mind & body report
 
-## Hardware setup (reference)
+Each report includes:
 
-| App | Role |
-|---|---|
-| Bevel | Main recovery / HRV / stress / strain dashboard |
-| HRV | Detailed HRV trends and stability (CV) |
-| OutPerform | Readiness / performance guidance |
-| Sleep Cycle | Sleep quality and duration detail |
+- **Body state** — HRV, sleep, resting HR, recovery, strain
+- **Mind state** — stress, subjective feel, sleep impact on focus
+- **Overall readiness** — single 1–10 score vs your personal baseline
+- **Training** — Rest / Easy / Moderate / Hard
+- **Priorities** — 1–2 practical actions for the day
 
-Apple Watch = sensor platform. This app = interpretation layer.
+## Privacy
+
+- All data stored in your browser (localStorage)
+- No account, no server, no tracking
+- Apple Health export parsed locally
+- Screenshot AI is opt-in (your API key, your choice to analyse)
+- Encrypted export uses AES-GCM + PBKDF2 in the browser
+
+## Manual entry
+
+Still supported via **Log** tab or paste template if you prefer typing numbers.
+
+## Future
+
+- Native iOS app for direct HealthKit read access
+- Automatic screenshot import via Shortcuts
+- Shared family/coach dashboards with proper auth backend
+
+## Important
+
+Recovery scores are not medical diagnoses. Compare metrics to **your own trends**, not universal HRV norms.

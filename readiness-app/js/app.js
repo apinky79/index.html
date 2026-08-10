@@ -9,13 +9,18 @@ import {
   importData,
   todayISO,
 } from './storage.js';
-import { assessEntry, formatAssessment, parseTemplate, FEEL_LABELS } from './assess.js';
+import { assessEntry, formatAssessment, parseTemplate, getMindBodyScores } from './assess.js';
 import { computeBaselines, trendDirection } from './baselines.js';
+import { extractFromScreenshots, metricsToEntry } from './extract.js';
+import { parseHealthExport, healthToEntry } from './health-import.js';
+import { encryptExport, decryptExport, downloadEncrypted } from './crypto-share.js';
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
 
 let currentDate = todayISO();
+let screenshotFiles = [];
+let lastExtracted = null;
 
 function init() {
   bindForm();
@@ -24,9 +29,13 @@ function init() {
   bindPaste();
   bindHistory();
   bindSettings();
+  bindScan();
+  bindHealthImport();
+  bindEncryptedShare();
   loadFormForDate(currentDate);
   renderHistory();
   renderTrends();
+  loadSettingsIntoUI();
 }
 
 function bindForm() {
@@ -123,6 +132,12 @@ function renderAssessment(entry, assessment) {
   $('#assessment-text').textContent = text;
   $('#assessment-output').hidden = false;
   $('#no-assessment').hidden = true;
+
+  const mb = getMindBodyScores(entry, assessment);
+  $('#body-state-label').textContent = mb.body.label;
+  $('#body-state-detail').textContent = mb.body.detail;
+  $('#mind-state-label').textContent = mb.mind.label;
+  $('#mind-state-detail').textContent = mb.mind.detail;
 
   const badge = $('#readiness-badge');
   badge.textContent = `${assessment.overall}/10 — ${assessment.label}`;
@@ -298,14 +313,224 @@ function bindSettings() {
   if (settings.calibrationStart) {
     $('#calibration-start').value = settings.calibrationStart.slice(0, 10);
   }
+  if (settings.notes) $('#settings-notes').value = settings.notes;
+  if (settings.apiKey) $('#api-key').value = settings.apiKey;
 
   $('#btn-save-settings').addEventListener('click', () => {
     const start = $('#calibration-start').value;
     saveSettings({
       calibrationStart: start ? new Date(start).toISOString() : null,
       notes: $('#settings-notes').value,
+      apiKey: $('#api-key').value.trim(),
     });
     alert('Settings saved.');
+  });
+}
+
+function loadSettingsIntoUI() {
+  const settings = loadSettings();
+  if (settings.apiKey) $('#api-key').value = settings.apiKey;
+}
+
+function bindScan() {
+  const input = $('#screenshot-input');
+  const zone = $('#upload-zone');
+
+  zone.addEventListener('click', () => input.click());
+  zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('dragover'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+  zone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    zone.classList.remove('dragover');
+    addScreenshots([...e.dataTransfer.files]);
+  });
+
+  input.addEventListener('change', () => {
+    addScreenshots([...input.files]);
+    input.value = '';
+  });
+
+  $('#btn-clear-screenshots').addEventListener('click', () => {
+    screenshotFiles = [];
+    renderScreenshotPreview();
+    $('#extract-review').hidden = true;
+    $('#extract-status').hidden = true;
+  });
+
+  $('#btn-extract').addEventListener('click', async () => {
+    if (!screenshotFiles.length) return;
+    const status = $('#extract-status');
+    status.hidden = false;
+    status.textContent = 'Starting analysis…';
+    $('#btn-extract').disabled = true;
+
+    try {
+      const settings = loadSettings();
+      const apiKey = $('#api-key').value.trim() || settings.apiKey || null;
+      if ($('#api-key').value.trim()) {
+        saveSettings({ ...settings, apiKey: $('#api-key').value.trim() });
+      }
+      const result = await extractFromScreenshots(screenshotFiles, {
+        apiKey,
+        onProgress: (msg) => { status.textContent = msg; },
+      });
+      lastExtracted = result.metrics;
+      renderExtractReview(result.metrics, result.method);
+      status.textContent = result.method === 'vision+ocr'
+        ? 'Extracted with AI — please review below.'
+        : 'Extracted with OCR — please verify numbers (AI key in Settings improves accuracy).';
+    } catch (e) {
+      status.textContent = `Error: ${e.message}`;
+    } finally {
+      $('#btn-extract').disabled = false;
+    }
+  });
+
+  $('#btn-confirm-extract').addEventListener('click', () => {
+    const metrics = readExtractFields();
+    const feel = $('#scan-feel').value;
+    applyMetricsToForm(metricsToEntry(metrics, feel));
+    $('#feel').value = feel;
+
+    const entry = collectForm();
+    const entries = addEntry(entry);
+    const settings = loadSettings();
+    const assessment = assessEntry(entry, entries, settings);
+    renderAssessment(entry, assessment);
+    renderHistory();
+    renderTrends();
+    showTab('check');
+  });
+}
+
+function addScreenshots(files) {
+  const images = files.filter((f) => f.type.startsWith('image/'));
+  screenshotFiles.push(...images);
+  renderScreenshotPreview();
+}
+
+function renderScreenshotPreview() {
+  const container = $('#screenshot-preview');
+  container.innerHTML = '';
+  screenshotFiles.forEach((file, i) => {
+    const img = document.createElement('img');
+    img.className = 'screenshot-thumb';
+    img.src = URL.createObjectURL(file);
+    img.alt = `Screenshot ${i + 1}`;
+    container.appendChild(img);
+  });
+  $('#btn-extract').disabled = screenshotFiles.length === 0;
+}
+
+const EXTRACT_FIELD_MAP = [
+  ['sleep', 'Sleep score'],
+  ['hrv', 'HRV (ms)'],
+  ['hrv7', '7-day HRV'],
+  ['hrvCv', 'HRV CV (%)'],
+  ['recovery', 'Recovery (%)'],
+  ['readiness', 'Readiness (%)'],
+  ['restingHr', 'Resting HR'],
+  ['stress', 'Stress'],
+  ['strain', 'Strain (%)'],
+];
+
+function renderExtractReview(metrics, method) {
+  const container = $('#extract-fields');
+  container.innerHTML = '';
+  for (const [key, label] of EXTRACT_FIELD_MAP) {
+    const wrap = document.createElement('label');
+    wrap.className = 'extract-field';
+    wrap.innerHTML = `<span>${label}</span><input type="text" data-key="${key}" value="${metrics[key] ?? ''}">`;
+    container.appendChild(wrap);
+  }
+  $('#extract-review').hidden = false;
+}
+
+function readExtractFields() {
+  const metrics = {};
+  $$('#extract-fields input').forEach((input) => {
+    const v = input.value.trim();
+    if (v !== '') {
+      const n = parseFloat(v);
+      if (!Number.isNaN(n)) metrics[input.dataset.key] = n;
+    }
+  });
+  return metrics;
+}
+
+function applyMetricsToForm(partial) {
+  const map = {
+    sleep: 'sleep', hrv: 'hrv', hrv7: 'hrv7', hrvCv: 'hrv-cv',
+    recovery: 'recovery', restingHr: 'resting-hr', stress: 'stress', strain: 'strain',
+  };
+  for (const [k, id] of Object.entries(map)) {
+    if (partial[k] != null) $(`#${id}`).value = partial[k];
+  }
+}
+
+function bindHealthImport() {
+  const zone = $('#health-upload-zone');
+  const input = $('#health-input');
+  zone.addEventListener('click', () => input.click());
+  input.addEventListener('change', async () => {
+    const file = input.files[0];
+    if (!file) return;
+    const status = $('#health-import-status');
+    status.hidden = false;
+    status.textContent = 'Parsing Apple Health export…';
+    try {
+      const data = await parseHealthExport(file, currentDate);
+      applyMetricsToForm(healthToEntry(data));
+      const parts = [];
+      if (data.hrv) parts.push(`HRV ${data.hrv} ms`);
+      if (data.restingHr) parts.push(`RHR ${data.restingHr} bpm`);
+      if (data.vo2max) parts.push(`VO2 max ${data.vo2max}`);
+      if (data.sleepDuration) parts.push(`Sleep ${data.sleepDuration.toFixed(1)}h`);
+      status.textContent = parts.length
+        ? `Imported: ${parts.join(', ')}. Review in Log tab.`
+        : 'No recent metrics found in export for today.';
+      showTab('entry');
+    } catch (e) {
+      status.textContent = e.message;
+    }
+    input.value = '';
+  });
+}
+
+function bindEncryptedShare() {
+  $('#btn-export-encrypted').addEventListener('click', async () => {
+    const pass = $('#share-passphrase').value;
+    try {
+      const encrypted = await encryptExport(exportData(), pass);
+      downloadEncrypted(encrypted, `readiness-encrypted-${todayISO()}.json`);
+      alert('Encrypted export downloaded. Share the file and passphrase separately.');
+    } catch (e) {
+      alert(e.message);
+    }
+  });
+
+  $('#btn-import-encrypted').addEventListener('click', () => {
+    const pass = $('#share-passphrase').value;
+    if (!pass) { alert('Enter the passphrase used to encrypt the file.'); return; }
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = async () => {
+      const file = input.files[0];
+      if (!file) return;
+      try {
+        const encrypted = JSON.parse(await file.text());
+        const data = await decryptExport(encrypted, pass);
+        importData(data);
+        renderHistory();
+        renderTrends();
+        loadFormForDate(currentDate);
+        alert('Encrypted import complete.');
+      } catch {
+        alert('Wrong passphrase or invalid file.');
+      }
+    };
+    input.click();
   });
 }
 
@@ -348,30 +573,6 @@ function formatDate(iso) {
   return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
 }
 
-// Seed example entry from handoff if empty
-function seedIfEmpty() {
-  const entries = loadEntries();
-  if (entries.length > 0) return;
-  const example = {
-    date: todayISO(),
-    sleep: 94,
-    hrv: 24.3,
-    hrv7: 23.4,
-    hrvCv: 29.6,
-    recovery: 82,
-    restingHr: 65.8,
-    stress: 1,
-    strain: 53,
-    feel: 'tired',
-  };
-  addEntry(example);
-  saveSettings({
-    calibrationStart: new Date().toISOString(),
-    notes: 'Post-holiday calibration period',
-  });
-}
-
 document.addEventListener('DOMContentLoaded', () => {
-  seedIfEmpty();
   init();
 });

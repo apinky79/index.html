@@ -17,9 +17,9 @@ export function saveEntries(entries) {
 export function loadSettings() {
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
-    return raw ? JSON.parse(raw) : { calibrationStart: null, notes: '' };
+    return raw ? JSON.parse(raw) : { calibrationStart: null, notes: '', apiKey: '' };
   } catch {
-    return { calibrationStart: null, notes: '' };
+    return { calibrationStart: null, notes: '', apiKey: '' };
   }
 }
 
