@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="description" content="Hume-style daily readiness check — personal baselines, one clear assessment.">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self'; connect-src 'self'; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';">
+  <meta name="theme-color" content="#0f1419">
+  <title>Readiness Check</title>
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <header class="app-bar">
+    <div class="app-bar-inner">
+      <h1 class="app-title">Readiness</h1>
+      <span class="app-subtitle">Hume-style daily check</span>
+    </div>
+  </header>
+
+  <nav class="tabs no-print">
+    <button type="button" class="tab-btn active" data-tab="entry">Log</button>
+    <button type="button" class="tab-btn" data-tab="check">Check</button>
+    <button type="button" class="tab-btn" data-tab="trends">Trends</button>
+    <button type="button" class="tab-btn" data-tab="history">History</button>
+    <button type="button" class="tab-btn" data-tab="settings">Settings</button>
+  </nav>
+
+  <main class="main-content">
+    <!-- Entry tab -->
+    <section id="tab-entry" class="tab-panel active">
+      <div class="card">
+        <h2>Morning metrics</h2>
+        <p class="hint">Enter numbers from Bevel, HRV, Sleep Cycle, and OutPerform. Personal trends matter more than absolute values.</p>
+
+        <label class="field">
+          <span>Date</span>
+          <input type="date" id="entry-date">
+        </label>
+
+        <div class="metric-grid">
+          <label class="field">
+            <span>Sleep <small>Sleep Cycle score</small></span>
+            <input type="number" id="sleep" class="metric-input" min="0" max="100" step="1" inputmode="numeric">
+          </label>
+          <label class="field">
+            <span>HRV <small>ms</small></span>
+            <input type="number" id="hrv" class="metric-input" min="0" step="0.1" inputmode="decimal">
+          </label>
+          <label class="field">
+            <span>7-day HRV <small>ms — from HRV app</small></span>
+            <input type="number" id="hrv7" class="metric-input" min="0" step="0.1" inputmode="decimal">
+          </label>
+          <label class="field">
+            <span>HRV CV <small>%</small></span>
+            <input type="number" id="hrv-cv" class="metric-input" min="0" step="0.1" inputmode="decimal">
+          </label>
+          <label class="field">
+            <span>Recovery <small>Bevel %</small></span>
+            <input type="number" id="recovery" class="metric-input" min="0" max="100" step="1" inputmode="numeric">
+          </label>
+          <label class="field">
+            <span>Resting HR <small>bpm</small></span>
+            <input type="number" id="resting-hr" class="metric-input" min="30" max="120" step="0.1" inputmode="decimal">
+          </label>
+          <label class="field">
+            <span>Stress <small>Bevel 0–100</small></span>
+            <input type="number" id="stress" class="metric-input" min="0" max="100" step="1" inputmode="numeric">
+          </label>
+          <label class="field">
+            <span>Yesterday's strain <small>Bevel %</small></span>
+            <input type="number" id="strain" class="metric-input" min="0" max="100" step="1" inputmode="numeric">
+          </label>
+        </div>
+
+        <label class="field">
+          <span>How I feel</span>
+          <select id="feel">
+            <option value="great">Great</option>
+            <option value="good">Good</option>
+            <option value="ok" selected>OK</option>
+            <option value="tired">Tired</option>
+            <option value="exhausted">Exhausted</option>
+            <option value="unwell">Unwell</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span>Notes <small>optional</small></span>
+          <textarea id="notes" rows="2" placeholder="Travel, alcohol, poor sleep environment…"></textarea>
+        </label>
+
+        <div class="actions">
+          <button type="button" id="btn-assess" class="btn btn-primary">Assess today</button>
+          <button type="button" id="btn-clear-form" class="btn">Clear</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Paste template</h2>
+        <p class="hint">Paste your morning numbers in this format:</p>
+        <pre class="template-example">Sleep: 94
+HRV: 24.3
+7-day HRV: 23.4
+HRV CV: 29.6
+Recovery: 82
+Resting HR: 65.8
+Stress: 1
+Yesterday's strain: 53
+How I feel: tired</pre>
+        <textarea id="paste-area" rows="10" placeholder="Paste here…"></textarea>
+        <button type="button" id="btn-parse-paste" class="btn">Parse &amp; fill form</button>
+      </div>
+    </section>
+
+    <!-- Check tab -->
+    <section id="tab-check" class="tab-panel">
+      <div id="assessment-output" class="card assessment-card" hidden>
+        <div class="assessment-header">
+          <div id="readiness-badge" class="badge readiness-badge" data-level="good">—</div>
+          <div class="training-block">
+            <span class="training-label">Training</span>
+            <span id="training-badge" class="badge training-badge" data-level="moderate">—</span>
+          </div>
+        </div>
+        <p id="training-reason" class="training-reason"></p>
+        <p id="calibration-notice" class="calibration-notice" hidden></p>
+
+        <h3>Today's priorities</h3>
+        <ul id="priorities-list" class="priorities-list"></ul>
+
+        <h3>Full assessment</h3>
+        <pre id="assessment-text" class="assessment-text"></pre>
+        <button type="button" id="btn-copy" class="btn">Copy</button>
+      </div>
+      <p id="no-assessment" class="empty">Log your morning metrics and tap "Assess today" to see your check.</p>
+    </section>
+
+    <!-- Trends tab -->
+    <section id="tab-trends" class="tab-panel">
+      <div class="card">
+        <h2>Personal baselines</h2>
+        <p class="hint">Rolling averages from your logged mornings. Not population norms.</p>
+        <div id="trends-grid" class="trends-grid"></div>
+      </div>
+      <div class="card">
+        <h2>HRV trend (14 days)</h2>
+        <canvas id="sparkline-hrv" width="320" height="80" aria-label="HRV sparkline"></canvas>
+      </div>
+    </section>
+
+    <!-- History tab -->
+    <section id="tab-history" class="tab-panel">
+      <div class="card">
+        <h2>History</h2>
+        <div class="history-header">
+          <span>Date</span>
+          <span>Score</span>
+          <span>HRV</span>
+          <span>Training</span>
+          <span>Feel</span>
+          <span></span>
+        </div>
+        <div id="history-list" class="history-list"></div>
+      </div>
+    </section>
+
+    <!-- Settings tab -->
+    <section id="tab-settings" class="tab-panel">
+      <div class="card">
+        <h2>Calibration</h2>
+        <p class="hint">After travel or routine changes, set a calibration start date. The app treats the next 14 days as baseline-building rather than making strong conclusions.</p>
+        <label class="field">
+          <span>Calibration start date</span>
+          <input type="date" id="calibration-start">
+        </label>
+        <label class="field">
+          <span>Notes</span>
+          <textarea id="settings-notes" rows="2"></textarea>
+        </label>
+        <button type="button" id="btn-save-settings" class="btn btn-primary">Save settings</button>
+      </div>
+
+      <div class="card">
+        <h2>Data</h2>
+        <p class="hint">All data stays in your browser (localStorage). Export for backup.</p>
+        <div class="actions">
+          <button type="button" id="btn-export" class="btn">Export JSON</button>
+          <button type="button" id="btn-import" class="btn">Import JSON</button>
+        </div>
+      </div>
+
+      <div class="card disclaimer">
+        <h2>Important</h2>
+        <p>Recovery scores are not medical diagnoses. Compare metrics to <em>your own</em> trends, not universal "good" or "bad" HRV values. Bevel Recovery and OutPerform Readiness use different algorithms — treat each as an internal trend, not as equivalent scores.</p>
+        <p>Morning/overnight HRV under similar conditions is most useful. You don't need to check HRV throughout the day.</p>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
