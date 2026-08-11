@@ -64,6 +64,14 @@ namespace cAlgo.Robots
         [Parameter("Max Bars After CHoCH for OB Entry", DefaultValue = 24, MinValue = 4, MaxValue = 100, Group = "SMC Filters")]
         public int MaxBarsAfterChoCh { get; set; }
 
+        // 0.5 = must reclaim OB midpoint (strict). Lower = easier fill (e.g. 0.30 Lite).
+        [Parameter("OB Reclaim Fraction", DefaultValue = 0.5, MinValue = 0.2, MaxValue = 0.8, Group = "SMC Filters")]
+        public double ObReclaimFraction { get; set; }
+
+        // When One Trade Per Setup is OFF, wait this many bars after a close before re-using the same OB.
+        [Parameter("Min Bars Between Entries", DefaultValue = 4, MinValue = 1, MaxValue = 48, Group = "SMC Filters")]
+        public int MinBarsBetweenEntries { get; set; }
+
         // ---- News pause -------------------------------------------------------------------------
 
         [Parameter("Enable News Pause", DefaultValue = true, Group = "News Pause")]
@@ -164,6 +172,7 @@ namespace cAlgo.Robots
         private double _obLow;
         private bool _obArmed;
         private bool _setupTraded;
+        private int _lastEntryBarIndex = -999;
 
         private DateTime _weekStartUtc;
         private double _weekStartEquity;
@@ -558,6 +567,7 @@ namespace cAlgo.Robots
             if (i - _choChBarIndex > MaxBarsAfterChoCh) { _obArmed = false; return; }
             if (CountOurPositions() >= MaxOpenPositions) return;
             if (EnableWeekDdBrake && IsWeekDdBrakeActive()) return;
+            if (i - _lastEntryBarIndex < MinBarsBetweenEntries) return;
 
             string newsReason;
             if (IsNewsPauseActive(out newsReason))
@@ -569,6 +579,7 @@ namespace cAlgo.Robots
             double high = Bars.HighPrices[i];
             double low = Bars.LowPrices[i];
             double close = Bars.ClosePrices[i];
+            double reclaimLevel = _obLow + (_obHigh - _obLow) * ObReclaimFraction;
 
             bool longOk = OrderDirection != SmcTradeDirectionMode.ShortOnly;
             bool shortOk = OrderDirection != SmcTradeDirectionMode.LongOnly;
@@ -576,7 +587,7 @@ namespace cAlgo.Robots
             if (_choChDir > 0 && longOk)
             {
                 bool touched = low <= _obHigh && low >= _obLow - Symbol.PipSize * SlBufferPips;
-                bool reclaim = close >= (_obLow + _obHigh) * 0.5;
+                bool reclaim = close >= reclaimLevel;
                 if (touched && reclaim)
                 {
                     string domDetail;
@@ -587,14 +598,18 @@ namespace cAlgo.Robots
                     }
                     EnterLong();
                     _setupTraded = true;
-                    _obArmed = false;
+                    _lastEntryBarIndex = i;
+                    // Strict: one fill kills the OB. Lite (OneTradePerSetup OFF): keep OB for retests after flat.
+                    if (OneTradePerSetup)
+                        _obArmed = false;
                 }
             }
 
             if (_choChDir < 0 && shortOk)
             {
                 bool touched = high >= _obLow && high <= _obHigh + Symbol.PipSize * SlBufferPips;
-                bool reject = close <= (_obLow + _obHigh) * 0.5;
+                double rejectLevel = _obHigh - (_obHigh - _obLow) * ObReclaimFraction;
+                bool reject = close <= rejectLevel;
                 if (touched && reject)
                 {
                     string domDetail;
@@ -605,7 +620,9 @@ namespace cAlgo.Robots
                     }
                     EnterShort();
                     _setupTraded = true;
-                    _obArmed = false;
+                    _lastEntryBarIndex = i;
+                    if (OneTradePerSetup)
+                        _obArmed = false;
                 }
             }
         }
