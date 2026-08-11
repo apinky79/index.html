@@ -177,8 +177,6 @@ namespace cAlgo.Robots
         private bool _obArmed;
         private bool _setupTraded;
         private int _lastEntryBarIndex = -999;
-        private int _consumedSwingHighIndex = -1;
-        private int _consumedSwingLowIndex = -1;
 
         private DateTime _weekStartUtc;
         private double _weekStartEquity;
@@ -205,8 +203,8 @@ namespace cAlgo.Robots
                     _depth.BidEntries.Count, _depth.AskEntries.Count);
             }
 
-            Print("SMC_Testing started. Chart={0} Bias={1} SLMode={2} NewsPause={3} MaxHold={4}h",
-                Bars.TimeFrame, BiasTimeFrame, SlMode, EnableNewsPause,
+            Print("SMC_Testing v1.4 | Chart={0} Bias={1} EnterOnChoCh={2} ObReclaim={3} MaxHold={4}h",
+                Bars.TimeFrame, BiasTimeFrame, EnterOnChoCh, ObReclaimFraction,
                 EnableMaxHold ? MaxHoldHours : 0);
             Print("SIDE EXPERIMENT — do not replace UltimateTrader2026 / Test G until A/B wins.");
         }
@@ -507,17 +505,20 @@ namespace cAlgo.Robots
 
         private void DetectChoCh(int i)
         {
-            // When RequireLiquiditySweep is OFF, allow structure breaks without a prior sweep.
-            // Consume each swing once so we don't re-fire every bar while price stays beyond it.
-            bool bullishBreak = _ltfLastSwingHighIndex >= 0
-                && _ltfLastSwingHighIndex != _consumedSwingHighIndex
-                && Bars.ClosePrices[i] > _ltfLastSwingHigh;
-            bool bearishBreak = _ltfLastSwingLowIndex >= 0
-                && _ltfLastSwingLowIndex != _consumedSwingLowIndex
-                && Bars.ClosePrices[i] < _ltfLastSwingLow;
+            if (i < 1)
+                return;
 
-            bool bullishSetup = RequireLiquiditySweep ? (_sweepLowDone && bullishBreak) : bullishBreak;
-            bool bearishSetup = RequireLiquiditySweep ? (_sweepHighDone && bearishBreak) : bearishBreak;
+            // One-bar cross: fires once when close crosses beyond the swing (no consume fields).
+            bool bullishCross = _ltfLastSwingHighIndex >= 0
+                && Bars.ClosePrices[i] > _ltfLastSwingHigh
+                && Bars.ClosePrices[i - 1] <= _ltfLastSwingHigh;
+            bool bearishCross = _ltfLastSwingLowIndex >= 0
+                && Bars.ClosePrices[i] < _ltfLastSwingLow
+                && Bars.ClosePrices[i - 1] >= _ltfLastSwingLow;
+
+            // Sweep required: still need a prior sweep flag. Sweep OFF: any structure cross counts.
+            bool bullishSetup = RequireLiquiditySweep ? (_sweepLowDone && bullishCross) : bullishCross;
+            bool bearishSetup = RequireLiquiditySweep ? (_sweepHighDone && bearishCross) : bearishCross;
 
             if (bullishSetup)
             {
@@ -525,7 +526,6 @@ namespace cAlgo.Robots
                 {
                     _choChDir = 1;
                     _choChBarIndex = i;
-                    _consumedSwingHighIndex = _ltfLastSwingHighIndex;
                     MarkOrderBlock(i, bullish: true);
                     _sweepLowDone = false;
                     Print("{0} Bullish CHoCH OB [{1:F2}..{2:F2}]", Bars.OpenTimes[i], _obLow, _obHigh);
@@ -542,7 +542,6 @@ namespace cAlgo.Robots
 
                 _choChDir = -1;
                 _choChBarIndex = i;
-                _consumedSwingLowIndex = _ltfLastSwingLowIndex;
                 MarkOrderBlock(i, bullish: false);
                 _sweepHighDone = false;
                 Print("{0} Bearish CHoCH OB [{1:F2}..{2:F2}]", Bars.OpenTimes[i], _obLow, _obHigh);
