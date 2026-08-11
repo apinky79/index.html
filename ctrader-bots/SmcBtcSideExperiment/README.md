@@ -1,62 +1,51 @@
-# SmcBtcSideExperiment (cTrader)
+# SmcBtcSideExperiment / SMC_Testing (cTrader)
 
-**Side experiment only.** Does **not** replace UltimateTrader2026 / Test G (Double EMA + ADX H4).
+**Side experiment only.** Does **not** replace UltimateTrader2026 / Test G.
 
-Lean **Smart Money Concepts** cBot using OHLC only — **no order book / DOM required**.
+## Install
 
-## What it does
+1. Open **SMC Testing** in Automate  
+2. **Ctrl+A → Delete** (wipe template)  
+3. Paste entire `SMC_Testing.cs`  
+4. **Build**  
+5. Attach **BTCUSD m15** · Bias TF **Hour4**
 
-| Step | Timeframe | Logic |
+## What’s included now
+
+### Core SMC
+H4 BOS bias → m15 liquidity sweep → CHoCH → order-block retest.
+
+### News pause
+- ON by default · PauseBefore **90** / ResumeAfter **45**
+- Toggles: NFP / FOMC / CPI / Core PCE  
+- Built-in approximate calendar + **Extra Events UTC**  
+  Format: `yyyy-MM-dd HH:mm|Title;yyyy-MM-dd HH:mm|Title`  
+  Example: `2026-07-29 18:00|FOMC;2026-08-01 12:30|CPI`  
+- Blocks **new entries** only (open trades left alone)
+
+### Optimisable SL / TP (match G ranges)
+| Param | Default | Optimise in UI |
 |---|---|---|
-| Bias | **H4** (param) | Last BOS direction |
-| Sweep | Chart (**m15**) | Wick beyond swing high/low, close back inside |
-| CHoCH | Chart | Close breaks opposite swing after sweep |
-| Entry | Chart | Retest of order block (last opposing candle) |
-| Risk | — | Fixed USD risk, SL beyond OB, TP = RR multiple |
-| Brake | — | Optional week DD % (default 3.5%, no new entries) |
+| SL Mode | **Percent** | or OrderBlock |
+| SL Percent | 0.7 | **0.6 → 1.0** (set step **0.1** in Optimizer) |
+| TP Risk Multiplier | 2.0 | **1.8 → 2.8** (step **0.2**) |
 
-## Install in cTrader
+In Optimizer: tick **SL Percent** and **TP Risk Multiplier**, set min/max/step as above (Grid).
 
-**Use `SMC_Testing.cs` if your cBot project is named “SMC Testing”.**
+### Level-2 order book (DOM)
+| Setting | Meaning |
+|---|---|
+| Use Level-2 Imbalance Filter | OFF by default |
+| DOM Levels to Sum | Top N bids/asks |
+| Min Bid/Ask Imbalance Ratio | e.g. 1.2 |
 
-1. Open **cTrader Automate** → your **SMC Testing** cBot  
-2. **Select all** in the editor → **Delete** (wipe the default template completely)  
-3. Paste the **entire** `SMC_Testing.cs` file  
-4. **Build**
+**How it works:** before entry, sums top N bid vs ask volume. Long needs bids ≥ asks × ratio; short needs asks ≥ bids × ratio.
 
-If you paste *into* the empty `OnStart` / `OnTick` template you get errors like `CS1022` and `CS0106` (“private is not valid”). That means the class closed too early — replace the whole file instead.
+**Important limits**
+- cTrader can read DOM via `MarketData.GetMarketDepth` (**AccessRights.None** is enough).
+- Many **BTC / prop** feeds publish **empty** depth → filter auto-**skips** (won’t block).
+- Backtests usually have **no historical DOM** → L2 does nothing in history; only useful live if your broker shows Depth of Market on BTCUSD.
+- Check the log on start: `BidLevels=0 AskLevels=0` means no L2 available.
 
-5. Attach to **BTCUSD m15**  
-6. **Bias Time Frame = Hour4**  
-7. `Trade Risk (USD)` ≈ 400 on a 50k account
-
-## Suggested first A/B (vs G)
-
-Same weeks as Test G kill-zone diggers + one green:
-
-| # | Forward week | Log |
-|---|---|---|
-| S1 | 24–30 Nov | $ / DD / trades |
-| S2 | 8–14 Dec | |
-| S3 | 22–28 Dec | |
-| S4 | 19–25 Jan | (G green) |
-| S5 | 16–22 Feb | |
-| S6 | 8–14 Jun | |
-| S7 | 20–26 Jul | |
-
-**Pass SMC side experiment if:** sum PnL ≥ G H4 on those weeks **and** it doesn’t wreck G4/G7-type greens.
-
-Until then: **live Challenge stays on G (UltimateTrader + ADX H4).**
-
-## Parameters to leave alone at first
-
-- Require HTF Bias Align = **true**
-- Require Liquidity Sweep = **true**
-- TP Risk Multiplier = **2.0**
-- Week DD Brake = **ON · 3.5%**
-
-## Notes
-
-- This is a **v1 research bot** — expect tuning (pivot strength, sweep ratio, OB rules).
-- cTrader backtests are run **by you**; paste stats here to score.
-- SMC here ≠ institutional order flow; it’s chart-structure approximations.
+## Live Challenge
+Stay on **UltimateTrader + ADX H4 (G)** until this beats G on the digger/green panel.
