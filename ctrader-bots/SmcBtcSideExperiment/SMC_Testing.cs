@@ -8,6 +8,7 @@
 //   H4 bias → m15 sweep → CHoCH → order-block retest
 //   News pause (entries blocked around events)
 //   Optimisable SL % (0.6–1.0) and TP RR (1.8–2.8) — set ranges in Optimizer
+//   Max hold force-close (default 24h — match G “max hold 1” so weekly opts get closed trades)
 //   Optional Level-2 depth imbalance filter (broker must publish DOM)
 // -------------------------------------------------------------------------------------------------
 
@@ -116,6 +117,15 @@ namespace cAlgo.Robots
         [Parameter("One Trade Per Setup", DefaultValue = true, Group = "Risk")]
         public bool OneTradePerSetup { get; set; }
 
+        // ---- Max hold (required for weekly hunt — otherwise trades sit open → 0 closed trades) --
+
+        [Parameter("Enable Max Hold", DefaultValue = true, Group = "Max Hold")]
+        public bool EnableMaxHold { get; set; }
+
+        // Match UltimateTrader “max hold 1” day. On m15 that is ~96 bars; time-based is TF-safe.
+        [Parameter("Max Hold Hours", DefaultValue = 24, MinValue = 1, MaxValue = 168, Group = "Max Hold")]
+        public int MaxHoldHours { get; set; }
+
         // ---- Week DD ----------------------------------------------------------------------------
 
         [Parameter("Enable Week DD Brake", DefaultValue = true, Group = "Week DD Brake")]
@@ -180,14 +190,16 @@ namespace cAlgo.Robots
                     _depth.BidEntries.Count, _depth.AskEntries.Count);
             }
 
-            Print("SMC_Testing started. Chart={0} Bias={1} SLMode={2} NewsPause={3}",
-                Bars.TimeFrame, BiasTimeFrame, SlMode, EnableNewsPause);
+            Print("SMC_Testing started. Chart={0} Bias={1} SLMode={2} NewsPause={3} MaxHold={4}h",
+                Bars.TimeFrame, BiasTimeFrame, SlMode, EnableNewsPause,
+                EnableMaxHold ? MaxHoldHours : 0);
             Print("SIDE EXPERIMENT — do not replace UltimateTrader2026 / Test G until A/B wins.");
         }
 
         protected override void OnBar()
         {
             ResetWeekIfNeeded(force: false);
+            CloseExpiredPositions();
 
             if (Bars.Count < PivotStrength * 4 + 10 || _htf.Count < PivotStrength * 4 + 10)
                 return;
@@ -658,6 +670,35 @@ namespace cAlgo.Robots
             foreach (var p in Positions)
                 if (p.SymbolName == SymbolName && p.Label == BotTradeId) n++;
             return n;
+        }
+
+        private void CloseExpiredPositions()
+        {
+            if (!EnableMaxHold || MaxHoldHours <= 0)
+                return;
+
+            var now = Server.Time;
+            // Snapshot list — ClosePosition mutates Positions
+            var ours = new List<Position>();
+            foreach (var p in Positions)
+            {
+                if (p.SymbolName == SymbolName && p.Label == BotTradeId)
+                    ours.Add(p);
+            }
+
+            foreach (var p in ours)
+            {
+                var held = now - p.EntryTime;
+                if (held.TotalHours < MaxHoldHours)
+                    continue;
+
+                var result = ClosePosition(p);
+                if (result.IsSuccessful)
+                    Print("Max hold close: {0} after {1:F1}h PnL={2:F2}",
+                        p.TradeType, held.TotalHours, p.GrossProfit);
+                else
+                    Print("Max hold close failed: {0}", result.Error);
+            }
         }
 
         private void ResetWeekIfNeeded(bool force)

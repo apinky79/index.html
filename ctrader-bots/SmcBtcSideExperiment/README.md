@@ -23,6 +23,14 @@ H4 BOS bias → m15 liquidity sweep → CHoCH → order-block retest.
   Example: `2026-07-29 18:00|FOMC;2026-08-01 12:30|CPI`  
 - Blocks **new entries** only (open trades left alone)
 
+### Max hold (required for weekly hunt)
+| Param | Value |
+|---|---|
+| Enable Max Hold | **ON** |
+| Max Hold Hours | **24** (match G “max hold 1”) |
+
+Without this, trades often sit open past the opt/forward window → **0 closed trades** + one open PnL, so min-trades hard gate never passes.
+
 ### Optimisable SL / TP (match G ranges)
 | Param | Default | Optimise in UI |
 |---|---|---|
