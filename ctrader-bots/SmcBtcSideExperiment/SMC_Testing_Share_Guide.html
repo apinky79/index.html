@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SMC Testing — Share Guide</title>
+  <style>
+    :root {
+      --ink: #1f2a33;
+      --muted: #5a6670;
+      --accent: #1a4f7a;
+      --line: #d7dee5;
+      --bg: #f7f5f1;
+      --card: #fffdf9;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(1200px 600px at 10% -10%, #e8eef4 0%, transparent 55%),
+        radial-gradient(900px 500px at 100% 0%, #efe8df 0%, transparent 50%),
+        var(--bg);
+      line-height: 1.45;
+    }
+    main {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 2rem 1.25rem 3rem;
+    }
+    h1 {
+      font-size: 1.85rem;
+      margin: 0 0 0.4rem;
+      letter-spacing: -0.02em;
+    }
+    .sub {
+      color: var(--muted);
+      margin: 0 0 1.5rem;
+    }
+    h2 {
+      color: var(--accent);
+      font-size: 1.15rem;
+      margin: 1.6rem 0 0.5rem;
+      border-top: 1px solid var(--line);
+      padding-top: 1rem;
+    }
+    ul { padding-left: 1.2rem; margin: 0.4rem 0 0.8rem; }
+    li { margin: 0.25rem 0; }
+    p { margin: 0.45rem 0; }
+    code {
+      display: block;
+      background: #eef2f6;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 0.65rem 0.75rem;
+      font-size: 0.9rem;
+      overflow-x: auto;
+      margin: 0.4rem 0;
+    }
+    .note {
+      background: var(--card);
+      border: 1px solid #c5d4e3;
+      border-radius: 8px;
+      padding: 0.9rem 1rem;
+      margin: 0.6rem 0;
+    }
+    .note strong { color: var(--accent); display: block; margin-bottom: 0.35rem; }
+    .foot {
+      margin-top: 2rem;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+    @media print {
+      body { background: white; }
+      main { max-width: none; padding: 0; }
+      h2 { break-after: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>SMC Testing — Share Guide</h1>
+    <p class="sub">cTrader side experiment for BTCUSD (m15) with H4 bias. Not a replacement for live Challenge stack (UltimateTrader + ADX H4 / Test G).</p>
+
+    <h2>1. What the bot does</h2>
+    <p>Core flow (price-action SMC on OHLC):</p>
+    <ul>
+      <li>H4 Break of Structure (BOS) sets directional bias</li>
+      <li>m15 liquidity sweep</li>
+      <li>Change of Character (CHoCH)</li>
+      <li>Order-block retest entry</li>
+    </ul>
+    <p>Also includes week drawdown brake (default 3.5%) and dollar risk sizing.</p>
+
+    <h2>2. News pause</h2>
+    <p>Blocks <strong>new entries</strong> around high-impact events. Open trades are left alone.</p>
+    <ul>
+      <li>Enabled by default</li>
+      <li>Pause before: 90 minutes</li>
+      <li>Resume after: 45 minutes</li>
+      <li>Event toggles: NFP / FOMC / CPI / Core PCE</li>
+      <li>Built-in approximate calendar + Extra Events UTC for exact times</li>
+    </ul>
+    <p>Extra Events UTC format:</p>
+    <code>yyyy-MM-dd HH:mm|Title;yyyy-MM-dd HH:mm|Title</code>
+    <code>Example: 2026-07-29 18:00|FOMC;2026-08-01 12:30|CPI</code>
+
+    <h2>3. Optimisable SL and TP</h2>
+    <p>Same ranges as the G weekly hunt (set step in Optimizer UI):</p>
+    <ul>
+      <li>SL Mode: Percent (default) or OrderBlock</li>
+      <li>SL Percent: optimise 0.6 → 1.0, step 0.1</li>
+      <li>TP Risk Multiplier: optimise 1.8 → 2.8, step 0.2</li>
+    </ul>
+    <p>In Optimizer: tick SL Percent and TP Risk Multiplier, set min/max/step, run Grid.</p>
+
+    <h2>4. Level-2 order book (DOM)</h2>
+    <p>Optional imbalance filter using cTrader <code style="display:inline;padding:0.1rem 0.3rem">MarketData.GetMarketDepth</code>.</p>
+    <ul>
+      <li>Use Level-2 Imbalance Filter: OFF by default</li>
+      <li>DOM Levels to Sum: top N bids/asks (default 5)</li>
+      <li>Min Bid/Ask Imbalance Ratio: e.g. 1.2</li>
+    </ul>
+    <p>When ON: before entry, sums top N bid vs ask volume. Longs need bids dominating; shorts need asks dominating.</p>
+
+    <h2>5. What if Level-2 is not available?</h2>
+    <div class="note">
+      <strong>Nothing breaks — entries still use normal SMC rules.</strong>
+      If the filter is OFF, DOM is never used. If the filter is ON but depth is empty (common on BTC/prop feeds and in all backtests), the bot logs BidLevels=0 AskLevels=0 and skips the check (“DOM empty — skipped”). Missing L2 does not block trades and does not change SL/TP. A real imbalance gate only applies live when the broker publishes Depth of Market on BTCUSD.
+    </div>
+
+    <h2>6. Install (cTrader)</h2>
+    <ul>
+      <li>Open cBot named SMC Testing in Automate</li>
+      <li>Ctrl+A, Delete (wipe the template completely)</li>
+      <li>Paste entire SMC_Testing.cs, then Build</li>
+      <li>Attach BTCUSD m15 · Bias timeframe Hour4</li>
+    </ul>
+    <p>CS1022 / CS0106 usually means the code was pasted inside leftover template code — wipe the file first.</p>
+
+    <h2>7. Live Challenge reminder</h2>
+    <p>Keep Challenge / funded live trading on UltimateTrader + ADX H4 (Test G) until this SMC experiment clearly beats G on the digger / green panel. Use this bot for side backtests and A/B weeks only.</p>
+
+    <p class="foot">Source: ctrader-bots/SmcBtcSideExperiment/SMC_Testing.cs · Tip: use Print → Save as PDF in your browser if you need a PDF file.</p>
+  </main>
+</body>
+</html>
