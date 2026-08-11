@@ -72,6 +72,10 @@ namespace cAlgo.Robots
         [Parameter("Min Bars Between Entries", DefaultValue = 4, MinValue = 1, MaxValue = 48, Group = "SMC Filters")]
         public int MinBarsBetweenEntries { get; set; }
 
+        // Enter at the CHoCH bar (market). OB retest can still fire later if One Trade Per Setup is OFF.
+        [Parameter("Enter On CHoCH", DefaultValue = false, Group = "SMC Filters")]
+        public bool EnterOnChoCh { get; set; }
+
         // ---- News pause -------------------------------------------------------------------------
 
         [Parameter("Enable News Pause", DefaultValue = true, Group = "News Pause")]
@@ -173,6 +177,8 @@ namespace cAlgo.Robots
         private bool _obArmed;
         private bool _setupTraded;
         private int _lastEntryBarIndex = -999;
+        private int _consumedSwingHighIndex = -1;
+        private int _consumedSwingLowIndex = -1;
 
         private DateTime _weekStartUtc;
         private double _weekStartEquity;
@@ -501,10 +507,15 @@ namespace cAlgo.Robots
 
         private void DetectChoCh(int i)
         {
-            if (RequireLiquiditySweep && !_sweepHighDone && !_sweepLowDone)
-                return;
+            // BUGFIX: when RequireLiquiditySweep is OFF, allow structure breaks without a prior sweep.
+            // Previously CHoCH still required _sweepLowDone/_sweepHighDone, so the toggle did almost nothing.
+            bool bullishBreak = _ltfLastSwingHighIndex >= 0 && Bars.ClosePrices[i] > _ltfLastSwingHigh;
+            bool bearishBreak = _ltfLastSwingLowIndex >= 0 && Bars.ClosePrices[i] < _ltfLastSwingLow;
 
-            if (_sweepLowDone && _ltfLastSwingHighIndex >= 0 && Bars.ClosePrices[i] > _ltfLastSwingHigh)
+            bool bullishSetup = RequireLiquiditySweep ? (_sweepLowDone && bullishBreak) : bullishBreak;
+            bool bearishSetup = RequireLiquiditySweep ? (_sweepHighDone && bearishBreak) : bearishBreak;
+
+            if (bullishSetup)
             {
                 if (!(RequireHtfBias && _htfBias < 0))
                 {
@@ -513,11 +524,13 @@ namespace cAlgo.Robots
                     MarkOrderBlock(i, bullish: true);
                     _sweepLowDone = false;
                     Print("{0} Bullish CHoCH OB [{1:F2}..{2:F2}]", Bars.OpenTimes[i], _obLow, _obHigh);
+                    if (EnterOnChoCh)
+                        TryEnterChoChImmediate(i, forLong: true);
                     return;
                 }
             }
 
-            if (_sweepHighDone && _ltfLastSwingLowIndex >= 0 && Bars.ClosePrices[i] < _ltfLastSwingLow)
+            if (bearishSetup)
             {
                 if (RequireHtfBias && _htfBias > 0)
                     return;
@@ -527,7 +540,43 @@ namespace cAlgo.Robots
                 MarkOrderBlock(i, bullish: false);
                 _sweepHighDone = false;
                 Print("{0} Bearish CHoCH OB [{1:F2}..{2:F2}]", Bars.OpenTimes[i], _obLow, _obHigh);
+                if (EnterOnChoCh)
+                    TryEnterChoChImmediate(i, forLong: false);
             }
+        }
+
+        private void TryEnterChoChImmediate(int i, bool forLong)
+        {
+            if (OneTradePerSetup && _setupTraded) return;
+            if (CountOurPositions() >= MaxOpenPositions) return;
+            if (EnableWeekDdBrake && IsWeekDdBrakeActive()) return;
+            if (i - _lastEntryBarIndex < MinBarsBetweenEntries) return;
+
+            string newsReason;
+            if (IsNewsPauseActive(out newsReason))
+            {
+                Print("CHoCH entry blocked by news pause: {0}", newsReason);
+                return;
+            }
+
+            if (forLong && OrderDirection == SmcTradeDirectionMode.ShortOnly) return;
+            if (!forLong && OrderDirection == SmcTradeDirectionMode.LongOnly) return;
+
+            string domDetail;
+            if (!PassesDomFilter(forLong, out domDetail))
+            {
+                Print("CHoCH entry blocked by DOM ({0})", domDetail);
+                return;
+            }
+
+            if (forLong) EnterLong();
+            else EnterShort();
+
+            _setupTraded = true;
+            _lastEntryBarIndex = i;
+            // Keep OB armed for a later retest when OneTradePerSetup is OFF
+            if (OneTradePerSetup)
+                _obArmed = false;
         }
 
         private void MarkOrderBlock(int choChIndex, bool bullish)
