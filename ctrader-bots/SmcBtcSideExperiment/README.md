@@ -17,13 +17,18 @@ Lean **Smart Money Concepts** cBot using OHLC only — **no order book / DOM req
 
 ## Install in cTrader
 
-1. Open **cTrader Automate**
-2. **New cBot** → name `SmcBtcSideExperiment`
-3. Paste contents of `SmcBtcSideExperiment.cs` (replace template)
+**Use `SMC_Testing.cs` if your cBot project is named “SMC Testing”.**
+
+1. Open **cTrader Automate** → your **SMC Testing** cBot  
+2. **Select all** in the editor → **Delete** (wipe the default template completely)  
+3. Paste the **entire** `SMC_Testing.cs` file  
 4. **Build**
-5. Attach to **BTCUSD m15** chart
-6. Set **Bias Time Frame = Hour4**
-7. `Trade Risk (USD)` ≈ Challenge 0.8% of equity (e.g. 400 on 50k)
+
+If you paste *into* the empty `OnStart` / `OnTick` template you get errors like `CS1022` and `CS0106` (“private is not valid”). That means the class closed too early — replace the whole file instead.
+
+5. Attach to **BTCUSD m15**  
+6. **Bias Time Frame = Hour4**  
+7. `Trade Risk (USD)` ≈ 400 on a 50k account
 
 ## Suggested first A/B (vs G)
 
