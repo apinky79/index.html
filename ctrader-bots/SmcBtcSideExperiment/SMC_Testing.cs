@@ -507,10 +507,14 @@ namespace cAlgo.Robots
 
         private void DetectChoCh(int i)
         {
-            // BUGFIX: when RequireLiquiditySweep is OFF, allow structure breaks without a prior sweep.
-            // Previously CHoCH still required _sweepLowDone/_sweepHighDone, so the toggle did almost nothing.
-            bool bullishBreak = _ltfLastSwingHighIndex >= 0 && Bars.ClosePrices[i] > _ltfLastSwingHigh;
-            bool bearishBreak = _ltfLastSwingLowIndex >= 0 && Bars.ClosePrices[i] < _ltfLastSwingLow;
+            // When RequireLiquiditySweep is OFF, allow structure breaks without a prior sweep.
+            // Consume each swing once so we don't re-fire every bar while price stays beyond it.
+            bool bullishBreak = _ltfLastSwingHighIndex >= 0
+                && _ltfLastSwingHighIndex != _consumedSwingHighIndex
+                && Bars.ClosePrices[i] > _ltfLastSwingHigh;
+            bool bearishBreak = _ltfLastSwingLowIndex >= 0
+                && _ltfLastSwingLowIndex != _consumedSwingLowIndex
+                && Bars.ClosePrices[i] < _ltfLastSwingLow;
 
             bool bullishSetup = RequireLiquiditySweep ? (_sweepLowDone && bullishBreak) : bullishBreak;
             bool bearishSetup = RequireLiquiditySweep ? (_sweepHighDone && bearishBreak) : bearishBreak;
@@ -521,6 +525,7 @@ namespace cAlgo.Robots
                 {
                     _choChDir = 1;
                     _choChBarIndex = i;
+                    _consumedSwingHighIndex = _ltfLastSwingHighIndex;
                     MarkOrderBlock(i, bullish: true);
                     _sweepLowDone = false;
                     Print("{0} Bullish CHoCH OB [{1:F2}..{2:F2}]", Bars.OpenTimes[i], _obLow, _obHigh);
@@ -537,6 +542,7 @@ namespace cAlgo.Robots
 
                 _choChDir = -1;
                 _choChBarIndex = i;
+                _consumedSwingLowIndex = _ltfLastSwingLowIndex;
                 MarkOrderBlock(i, bullish: false);
                 _sweepHighDone = false;
                 Print("{0} Bearish CHoCH OB [{1:F2}..{2:F2}]", Bars.OpenTimes[i], _obLow, _obHigh);
