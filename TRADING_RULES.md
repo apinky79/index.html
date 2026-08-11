@@ -25,13 +25,18 @@ Bot: BTCUSD m15 · Hunt weekly · max hold 1 · Approve off.
 | Week DD brake | **ON** · **3.5%** from week-start equity · **no new entries** (don’t flatten) |
 | News pause | **ON** · entries only · NFP / FOMC / CPI / CorePCE |
 | Hard gates | MC P95 Max DD ≤ **8%** · MC PF ≥ **1.2** · min trades **5** |
-| VolumeTrend | **OFF** |
+| VolumeTrend | **ON as Condition** (always was — do not flip mid-plan) |
+| ADX Momentum | **ON** · Condition · Trending · **25** / Ranging **20** · Period **14** · TF **h4** (Test G winner — locked) |
+| SL range (opt) | **0.6 → 1.0** · step **0.1** |
+| TP range (opt) | **1.8 → 2.8** · step **0.2** |
 | Sort | Challenge-safe: MC P95 DD → MC PF → MC Win → P95 Min |
 | Pick | **TOP PICK badge** (even if not row 1) |
 | Commission | **10** (match scans) |
 | Auth / stack | One TOP PICK per week · no mid-week param hopping |
 
 If nothing passes hard gates → **SKIP** (flat week).
+
+**Live stack:** UltimateTrader2026 + ADX H4 only. SMC side experiment **closed** (never cleared min 5 on weekly hunt) — do not deploy.
 
 ---
 
