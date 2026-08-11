@@ -47,8 +47,11 @@ In Optimizer: tick **SL Percent** and **TP Risk Multiplier**, set min/max/step a
 - Backtests usually have **no historical DOM** → L2 does nothing in history; only useful live if your broker shows Depth of Market on BTCUSD.
 - Check the log on start: `BidLevels=0 AskLevels=0` means no L2 available.
 
-## Shareable PDF
-`SMC_Testing_Share_Guide.pdf` — one-pager you can send covering news pause, SL/TP opt, Level-2, and what happens when DOM is missing. Rebuild with `python3 build_share_guide_pdf.py` if needed.
+## Shareable guide
+- **HTML (open in browser / Print → Save as PDF):** `SMC_Testing_Share_Guide.html`
+- **PDF:** `SMC_Testing_Share_Guide.pdf`
+
+Covers news pause, SL/TP opt, Level-2, and what happens when DOM is missing.
 
 ## Live Challenge
 Stay on **UltimateTrader + ADX H4 (G)** until this beats G on the digger/green panel.
