@@ -1,0 +1,2378 @@
+﻿{
+  "parameters": [
+    {
+      "name": "c02b25309272471b89a4de3831c473c5",
+      "value": "m15",
+      "parameterType": "TimeFrame",
+      "metadata": null,
+      "optimize": false,
+      "values": [
+        "m1",
+        "m2",
+        "m3",
+        "m4",
+        "m5",
+        "m6",
+        "m7",
+        "m8",
+        "m9",
+        "m10",
+        "m15",
+        "m20",
+        "m30",
+        "m45",
+        "h1",
+        "h2",
+        "h3",
+        "h4",
+        "h6",
+        "h8",
+        "h12",
+        "D1",
+        "D2",
+        "D3",
+        "W1",
+        "Month1"
+      ]
+    },
+    {
+      "name": "BotTradeId",
+      "value": "BTC_100K",
+      "parameterType": "String",
+      "metadata": {
+        "defaultValue": "Ultimatetrader2026",
+        "parameterType": "String",
+        "propertyName": "BotTradeId",
+        "friendlyName": "Bot Trade ID",
+        "groupName": "Trade Options",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false
+    },
+    {
+      "name": "OrderDirection",
+      "value": "0",
+      "parameterType": "Enum",
+      "metadata": {
+        "enumValues": [
+          {
+            "value": 0,
+            "name": "LongAndShort"
+          },
+          {
+            "value": 1,
+            "name": "LongOnly"
+          },
+          {
+            "value": 2,
+            "name": "ShortOnly"
+          }
+        ],
+        "defaultValue": 0,
+        "parameterType": "Enum",
+        "propertyName": "OrderDirection",
+        "friendlyName": "Order Direction",
+        "groupName": "Trade Options",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "values": [
+        "0",
+        "1",
+        "2"
+      ]
+    },
+    {
+      "name": "ActiveTradeTrigger",
+      "value": "0",
+      "parameterType": "Enum",
+      "metadata": {
+        "enumValues": [
+          {
+            "value": 0,
+            "name": "None"
+          },
+          {
+            "value": 1,
+            "name": "Close"
+          },
+          {
+            "value": 2,
+            "name": "Reverse"
+          }
+        ],
+        "defaultValue": 0,
+        "parameterType": "Enum",
+        "propertyName": "ActiveTradeTrigger",
+        "friendlyName": "Active Trade Trigger Action",
+        "groupName": "Trade Options",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "values": [
+        "0",
+        "1",
+        "2"
+      ]
+    },
+    {
+      "name": "TradeRestrictionsCme",
+      "value": "1",
+      "parameterType": "Enum",
+      "metadata": {
+        "enumValues": [
+          {
+            "value": 0,
+            "name": "Yes"
+          },
+          {
+            "value": 1,
+            "name": "No"
+          }
+        ],
+        "defaultValue": 1,
+        "parameterType": "Enum",
+        "propertyName": "TradeRestrictionsCme",
+        "friendlyName": "Enable CME Restrictions",
+        "groupName": "Trade Options",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "values": [
+        "0",
+        "1"
+      ]
+    },
+    {
+      "name": "DisconnectionManagement",
+      "value": "0",
+      "parameterType": "Enum",
+      "metadata": {
+        "enumValues": [
+          {
+            "value": 0,
+            "name": "Yes"
+          },
+          {
+            "value": 1,
+            "name": "No"
+          }
+        ],
+        "defaultValue": 0,
+        "parameterType": "Enum",
+        "propertyName": "DisconnectionManagement",
+        "friendlyName": "Enable Disconnection Management",
+        "groupName": "Trade Options",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "values": [
+        "0",
+        "1"
+      ]
+    },
+    {
+      "name": "UseStartDateTime",
+      "value": "False",
+      "parameterType": "Boolean",
+      "metadata": {
+        "defaultValue": false,
+        "parameterType": "Boolean",
+        "propertyName": "UseStartDateTime",
+        "friendlyName": "Use Start DateTime",
+        "groupName": "Trading Window",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false
+    },
+    {
+      "name": "StartDate",
+      "value": "01/01/2026",
+      "parameterType": "String",
+      "metadata": {
+        "defaultValue": "01/01/2026",
+        "parameterType": "String",
+        "propertyName": "StartDate",
+        "friendlyName": "Start Date (dd/MM/yyyy)",
+        "groupName": "Trading Window",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false
+    },
+    {
+      "name": "StartTime",
+      "value": "00:00",
+      "parameterType": "String",
+      "metadata": {
+        "defaultValue": "00:00",
+        "parameterType": "String",
+        "propertyName": "StartTime",
+        "friendlyName": "Start Time (HH:mm)",
+        "groupName": "Trading Window",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false
+    },
+    {
+      "name": "UseEndDateTime",
+      "value": "False",
+      "parameterType": "Boolean",
+      "metadata": {
+        "defaultValue": false,
+        "parameterType": "Boolean",
+        "propertyName": "UseEndDateTime",
+        "friendlyName": "Use End DateTime",
+        "groupName": "Trading Window",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false
+    },
+    {
+      "name": "EndDate",
+      "value": "31/12/2099",
+      "parameterType": "String",
+      "metadata": {
+        "defaultValue": "31/12/2099",
+        "parameterType": "String",
+        "propertyName": "EndDate",
+        "friendlyName": "End Date (dd/MM/yyyy)",
+        "groupName": "Trading Window",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false
+    },
+    {
+      "name": "EndTime",
+      "value": "23:59",
+      "parameterType": "String",
+      "metadata": {
+        "defaultValue": "23:59",
+        "parameterType": "String",
+        "propertyName": "EndTime",
+        "friendlyName": "End Time (HH:mm)",
+        "groupName": "Trading Window",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false
+    },
+    {
+      "name": "EnableNewsPause",
+      "value": "True",
+      "parameterType": "Boolean",
+      "metadata": {
+        "defaultValue": true,
+        "parameterType": "Boolean",
+        "propertyName": "EnableNewsPause",
+        "friendlyName": "Enable News Pause",
+        "groupName": "News Pause",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false
+    },
+    {
+      "name": "PauseBeforeMinutes",
+      "value": "90",
+      "parameterType": "Integer",
+      "metadata": {
+        "minValue": 0,
+        "maxValue": 2147483647,
+        "step": 1,
+        "defaultValue": 90,
+        "parameterType": "Integer",
+        "propertyName": "PauseBeforeMinutes",
+        "friendlyName": "Pause Before Minutes",
+        "groupName": "News Pause",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "0",
+      "max": "95",
+      "step": "1"
+    },
+    {
+      "name": "ResumeAfterMinutes",
+      "value": "45",
+      "parameterType": "Integer",
+      "metadata": {
+        "minValue": 0,
+        "maxValue": 2147483647,
+        "step": 1,
+        "defaultValue": 45,
+        "parameterType": "Integer",
+        "propertyName": "ResumeAfterMinutes",
+        "friendlyName": "Resume After Minutes",
+        "groupName": "News Pause",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "0",
+      "max": "50",
+      "step": "1"
+    },
+    {
+      "name": "ExtraNewsEventsUtc",
+      "value": "",
+      "parameterType": "String",
+      "metadata": {
+        "defaultValue": "",
+        "parameterType": "String",
+        "propertyName": "ExtraNewsEventsUtc",
+        "friendlyName": "Extra Events UTC (yyyy-MM-dd HH:mm|Title;...)",
+        "groupName": "News Pause",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false
+    },
+    {
+      "name": "PauseOnNfp",
+      "value": "True",
+      "parameterType": "Boolean",
+      "metadata": {
+        "defaultValue": true,
+        "parameterType": "Boolean",
+        "propertyName": "PauseOnNfp",
+        "friendlyName": "NFP / Non-Farm Payrolls",
+        "groupName": "News Pause Events",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false
+    },
+    {
+      "name": "PauseOnFomc",
+      "value": "True",
+      "parameterType": "Boolean",
+      "metadata": {
+        "defaultValue": true,
+        "parameterType": "Boolean",
+        "propertyName": "PauseOnFomc",
+        "friendlyName": "FOMC / Fed Rate Decision",
+        "groupName": "News Pause Events",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false
+    },
+    {
+      "name": "PauseOnCpi",
+      "value": "True",
+      "parameterType": "Boolean",
+      "metadata": {
+        "defaultValue": true,
+        "parameterType": "Boolean",
+        "propertyName": "PauseOnCpi",
+        "friendlyName": "CPI / Consumer Price Index",
+        "groupName": "News Pause Events",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false
+    },
+    {
+      "name": "PauseOnCorePce",
+      "value": "True",
+      "parameterType": "Boolean",
+      "metadata": {
+        "defaultValue": true,
+        "parameterType": "Boolean",
+        "propertyName": "PauseOnCorePce",
+        "friendlyName": "Core PCE",
+        "groupName": "News Pause Events",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false
+    },
+    {
+      "name": "PauseOnPpi",
+      "value": "False",
+      "parameterType": "Boolean",
+      "metadata": {
+        "defaultValue": false,
+        "parameterType": "Boolean",
+        "propertyName": "PauseOnPpi",
+        "friendlyName": "PPI",
+        "groupName": "News Pause Events",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false
+    },
+    {
+      "name": "PauseOnGdp",
+      "value": "False",
+      "parameterType": "Boolean",
+      "metadata": {
+        "defaultValue": false,
+        "parameterType": "Boolean",
+        "propertyName": "PauseOnGdp",
+        "friendlyName": "GDP",
+        "groupName": "News Pause Events",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false
+    },
+    {
+      "name": "PauseOnUnemploymentClaims",
+      "value": "False",
+      "parameterType": "Boolean",
+      "metadata": {
+        "defaultValue": false,
+        "parameterType": "Boolean",
+        "propertyName": "PauseOnUnemploymentClaims",
+        "friendlyName": "Unemployment / Jobless Claims",
+        "groupName": "News Pause Events",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false
+    },
+    {
+      "name": "PauseOnRetailSales",
+      "value": "False",
+      "parameterType": "Boolean",
+      "metadata": {
+        "defaultValue": false,
+        "parameterType": "Boolean",
+        "propertyName": "PauseOnRetailSales",
+        "friendlyName": "Retail Sales",
+        "groupName": "News Pause Events",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false
+    },
+    {
+      "name": "EnableWeekDdBrake",
+      "value": "True",
+      "parameterType": "Boolean",
+      "metadata": {
+        "defaultValue": true,
+        "parameterType": "Boolean",
+        "propertyName": "EnableWeekDdBrake",
+        "friendlyName": "Enable Week DD Brake",
+        "groupName": "Week DD Brake",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false
+    },
+    {
+      "name": "WeekDdBrakePct",
+      "value": "3.5",
+      "parameterType": "Double",
+      "metadata": {
+        "minValue": 0.0,
+        "maxValue": 1.7976931348623157E+308,
+        "step": 0.1,
+        "defaultValue": 3.5,
+        "parameterType": "Double",
+        "propertyName": "WeekDdBrakePct",
+        "friendlyName": "Week DD Brake %",
+        "groupName": "Week DD Brake",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "0",
+      "max": "4",
+      "step": "0.1"
+    },
+    {
+      "name": "WeekDdBrakeModeSetting",
+      "value": "0",
+      "parameterType": "Enum",
+      "metadata": {
+        "enumValues": [
+          {
+            "value": 0,
+            "name": "NoNewEntries"
+          }
+        ],
+        "defaultValue": 0,
+        "parameterType": "Enum",
+        "propertyName": "WeekDdBrakeModeSetting",
+        "friendlyName": "Week DD Brake Mode",
+        "groupName": "Week DD Brake",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "values": [
+        "0"
+      ]
+    },
+    {
+      "name": "EntryType",
+      "value": "1",
+      "parameterType": "Enum",
+      "metadata": {
+        "enumValues": [
+          {
+            "value": 0,
+            "name": "OnTrigger"
+          },
+          {
+            "value": 1,
+            "name": "EMATest"
+          }
+        ],
+        "defaultValue": 0,
+        "parameterType": "Enum",
+        "propertyName": "EntryType",
+        "friendlyName": "Entry Type",
+        "groupName": "Entry Type",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "values": [
+        "0",
+        "1"
+      ]
+    },
+    {
+      "name": "EntryEMALength",
+      "value": "12",
+      "parameterType": "Enum",
+      "metadata": {
+        "enumValues": [
+          {
+            "value": 5,
+            "name": "EMA5"
+          },
+          {
+            "value": 8,
+            "name": "EMA8"
+          },
+          {
+            "value": 12,
+            "name": "EMA12"
+          },
+          {
+            "value": 21,
+            "name": "EMA21"
+          },
+          {
+            "value": 34,
+            "name": "EMA34"
+          },
+          {
+            "value": 55,
+            "name": "EMA55"
+          },
+          {
+            "value": 89,
+            "name": "EMA89"
+          },
+          {
+            "value": 144,
+            "name": "EMA144"
+          },
+          {
+            "value": 233,
+            "name": "EMA233"
+          }
+        ],
+        "defaultValue": 21,
+        "parameterType": "Enum",
+        "propertyName": "EntryEMALength",
+        "friendlyName": "EMA Length",
+        "groupName": "Entry Type",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "values": [
+        "5",
+        "8",
+        "12",
+        "21"
+      ]
+    },
+    {
+      "name": "PriceEMATrend",
+      "value": "0",
+      "parameterType": "Enum",
+      "metadata": {
+        "enumValues": [
+          {
+            "value": 0,
+            "name": "Disabled"
+          },
+          {
+            "value": 1,
+            "name": "Condition"
+          },
+          {
+            "value": 2,
+            "name": "Trigger"
+          }
+        ],
+        "defaultValue": 0,
+        "parameterType": "Enum",
+        "propertyName": "PriceEMATrend",
+        "friendlyName": "Price EMA Trend",
+        "groupName": "Entry Condition - Price EMA Trend",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "values": [
+        "0",
+        "1"
+      ]
+    },
+    {
+      "name": "EMALength",
+      "value": "55",
+      "parameterType": "Enum",
+      "metadata": {
+        "enumValues": [
+          {
+            "value": 5,
+            "name": "EMA5"
+          },
+          {
+            "value": 8,
+            "name": "EMA8"
+          },
+          {
+            "value": 12,
+            "name": "EMA12"
+          },
+          {
+            "value": 21,
+            "name": "EMA21"
+          },
+          {
+            "value": 34,
+            "name": "EMA34"
+          },
+          {
+            "value": 55,
+            "name": "EMA55"
+          },
+          {
+            "value": 89,
+            "name": "EMA89"
+          },
+          {
+            "value": 144,
+            "name": "EMA144"
+          },
+          {
+            "value": 233,
+            "name": "EMA233"
+          }
+        ],
+        "defaultValue": 21,
+        "parameterType": "Enum",
+        "propertyName": "EMALength",
+        "friendlyName": "EMA Length",
+        "groupName": "Entry Condition - Price EMA Trend",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "values": [
+        "12",
+        "21",
+        "34",
+        "55",
+        "89"
+      ]
+    },
+    {
+      "name": "DoubleEMATrend",
+      "value": "2",
+      "parameterType": "Enum",
+      "metadata": {
+        "enumValues": [
+          {
+            "value": 0,
+            "name": "Disabled"
+          },
+          {
+            "value": 1,
+            "name": "Condition"
+          },
+          {
+            "value": 2,
+            "name": "Trigger"
+          }
+        ],
+        "defaultValue": 0,
+        "parameterType": "Enum",
+        "propertyName": "DoubleEMATrend",
+        "friendlyName": "Double EMA Trend",
+        "groupName": "Entry Condition - Double EMA Trend",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "values": [
+        "0",
+        "1",
+        "2"
+      ]
+    },
+    {
+      "name": "FastEMALength",
+      "value": "5",
+      "parameterType": "Enum",
+      "metadata": {
+        "enumValues": [
+          {
+            "value": 5,
+            "name": "EMA5"
+          },
+          {
+            "value": 8,
+            "name": "EMA8"
+          },
+          {
+            "value": 12,
+            "name": "EMA12"
+          },
+          {
+            "value": 21,
+            "name": "EMA21"
+          },
+          {
+            "value": 34,
+            "name": "EMA34"
+          },
+          {
+            "value": 55,
+            "name": "EMA55"
+          },
+          {
+            "value": 89,
+            "name": "EMA89"
+          },
+          {
+            "value": 144,
+            "name": "EMA144"
+          },
+          {
+            "value": 233,
+            "name": "EMA233"
+          }
+        ],
+        "defaultValue": 8,
+        "parameterType": "Enum",
+        "propertyName": "FastEMALength",
+        "friendlyName": "Fast EMA Length",
+        "groupName": "Entry Condition - Double EMA Trend",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": true,
+      "values": [
+        "5",
+        "8",
+        "12"
+      ]
+    },
+    {
+      "name": "SlowEMALength",
+      "value": "21",
+      "parameterType": "Enum",
+      "metadata": {
+        "enumValues": [
+          {
+            "value": 5,
+            "name": "EMA5"
+          },
+          {
+            "value": 8,
+            "name": "EMA8"
+          },
+          {
+            "value": 12,
+            "name": "EMA12"
+          },
+          {
+            "value": 21,
+            "name": "EMA21"
+          },
+          {
+            "value": 34,
+            "name": "EMA34"
+          },
+          {
+            "value": 55,
+            "name": "EMA55"
+          },
+          {
+            "value": 89,
+            "name": "EMA89"
+          },
+          {
+            "value": 144,
+            "name": "EMA144"
+          },
+          {
+            "value": 233,
+            "name": "EMA233"
+          }
+        ],
+        "defaultValue": 21,
+        "parameterType": "Enum",
+        "propertyName": "SlowEMALength",
+        "friendlyName": "Slow EMA Length",
+        "groupName": "Entry Condition - Double EMA Trend",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": true,
+      "values": [
+        "12",
+        "21",
+        "34"
+      ]
+    },
+    {
+      "name": "EMATrendOffsetTypeMode",
+      "value": "0",
+      "parameterType": "Enum",
+      "metadata": {
+        "enumValues": [
+          {
+            "value": 0,
+            "name": "None"
+          },
+          {
+            "value": 1,
+            "name": "Pips"
+          },
+          {
+            "value": 2,
+            "name": "Percent"
+          },
+          {
+            "value": 3,
+            "name": "ATR"
+          }
+        ],
+        "defaultValue": 0,
+        "parameterType": "Enum",
+        "propertyName": "EMATrendOffsetTypeMode",
+        "friendlyName": "Offset Type",
+        "groupName": "Entry Condition - Double EMA Trend",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "values": [
+        "0",
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    {
+      "name": "EMATrendOffsetValue",
+      "value": "0",
+      "parameterType": "Double",
+      "metadata": {
+        "minValue": -1.7976931348623157E+308,
+        "maxValue": 1.7976931348623157E+308,
+        "step": 0.1,
+        "defaultValue": 0.0,
+        "parameterType": "Double",
+        "propertyName": "EMATrendOffsetValue",
+        "friendlyName": "Offset Value",
+        "groupName": "Entry Condition - Double EMA Trend",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "0",
+      "max": "50",
+      "step": "10"
+    },
+    {
+      "name": "VolumeTrend",
+      "value": "0",
+      "parameterType": "Enum",
+      "metadata": {
+        "enumValues": [
+          {
+            "value": 0,
+            "name": "Disabled"
+          },
+          {
+            "value": 1,
+            "name": "Condition"
+          },
+          {
+            "value": 2,
+            "name": "Trigger"
+          }
+        ],
+        "defaultValue": 0,
+        "parameterType": "Enum",
+        "propertyName": "VolumeTrend",
+        "friendlyName": "Volume Trend",
+        "groupName": "Entry Condition - Volume Trend",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "values": [
+        "0",
+        "1"
+      ]
+    },
+    {
+      "name": "VolumeEMALength",
+      "value": "14",
+      "parameterType": "Integer",
+      "metadata": {
+        "minValue": -2147483648,
+        "maxValue": 2147483647,
+        "step": 1,
+        "defaultValue": 21,
+        "parameterType": "Integer",
+        "propertyName": "VolumeEMALength",
+        "friendlyName": "EMA Length",
+        "groupName": "Entry Condition - Volume Trend",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "7",
+      "max": "34",
+      "step": "2"
+    },
+    {
+      "name": "RSIThreshold",
+      "value": "0",
+      "parameterType": "Enum",
+      "metadata": {
+        "enumValues": [
+          {
+            "value": 0,
+            "name": "Disabled"
+          },
+          {
+            "value": 1,
+            "name": "Condition"
+          },
+          {
+            "value": 2,
+            "name": "Trigger"
+          }
+        ],
+        "defaultValue": 0,
+        "parameterType": "Enum",
+        "propertyName": "RSIThreshold",
+        "friendlyName": "RSI Threshold Mode",
+        "groupName": "Entry Condition - RSI Threshold",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "values": [
+        "0",
+        "1"
+      ]
+    },
+    {
+      "name": "RSILength",
+      "value": "14",
+      "parameterType": "Integer",
+      "metadata": {
+        "minValue": 1,
+        "maxValue": 2147483647,
+        "step": 1,
+        "defaultValue": 14,
+        "parameterType": "Integer",
+        "propertyName": "RSILength",
+        "friendlyName": "RSI Length",
+        "groupName": "Entry Condition - RSI Threshold",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "1",
+      "max": "19",
+      "step": "1"
+    },
+    {
+      "name": "LongRSIThreshold",
+      "value": "60",
+      "parameterType": "Integer",
+      "metadata": {
+        "minValue": 0,
+        "maxValue": 100,
+        "step": 1,
+        "defaultValue": 50,
+        "parameterType": "Integer",
+        "propertyName": "LongRSIThreshold",
+        "friendlyName": "Long RSI Threshold",
+        "groupName": "Entry Condition - RSI Threshold",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "50",
+      "max": "60",
+      "step": "5"
+    },
+    {
+      "name": "ShortRSIThreshold",
+      "value": "40",
+      "parameterType": "Integer",
+      "metadata": {
+        "minValue": 0,
+        "maxValue": 100,
+        "step": 1,
+        "defaultValue": 50,
+        "parameterType": "Integer",
+        "propertyName": "ShortRSIThreshold",
+        "friendlyName": "Short RSI Threshold",
+        "groupName": "Entry Condition - RSI Threshold",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "40",
+      "max": "50",
+      "step": "5"
+    },
+    {
+      "name": "BBWPTrend",
+      "value": "0",
+      "parameterType": "Enum",
+      "metadata": {
+        "enumValues": [
+          {
+            "value": 0,
+            "name": "Disabled"
+          },
+          {
+            "value": 1,
+            "name": "Condition"
+          },
+          {
+            "value": 2,
+            "name": "Trigger"
+          }
+        ],
+        "defaultValue": 0,
+        "parameterType": "Enum",
+        "propertyName": "BBWPTrend",
+        "friendlyName": "BBWP Trend Mode",
+        "groupName": "Entry Condition - BBWP",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "values": [
+        "0",
+        "1"
+      ]
+    },
+    {
+      "name": "BBTrendPeriod",
+      "value": "20",
+      "parameterType": "Integer",
+      "metadata": {
+        "minValue": 1,
+        "maxValue": 2147483647,
+        "step": 1,
+        "defaultValue": 20,
+        "parameterType": "Integer",
+        "propertyName": "BBTrendPeriod",
+        "friendlyName": "BB Period",
+        "groupName": "Entry Condition - BBWP",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "14",
+      "max": "21",
+      "step": "7"
+    },
+    {
+      "name": "BBTrendLookback",
+      "value": "252",
+      "parameterType": "Integer",
+      "metadata": {
+        "minValue": 1,
+        "maxValue": 2147483647,
+        "step": 1,
+        "defaultValue": 252,
+        "parameterType": "Integer",
+        "propertyName": "BBTrendLookback",
+        "friendlyName": "BBWP Lookback",
+        "groupName": "Entry Condition - BBWP",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "252",
+      "max": "365",
+      "step": "113"
+    },
+    {
+      "name": "BBWPEMALength",
+      "value": "12",
+      "parameterType": "Integer",
+      "metadata": {
+        "minValue": 1,
+        "maxValue": 2147483647,
+        "step": 1,
+        "defaultValue": 14,
+        "parameterType": "Integer",
+        "propertyName": "BBWPEMALength",
+        "friendlyName": "BBWP EMA Length",
+        "groupName": "Entry Condition - BBWP",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "12",
+      "max": "21",
+      "step": "2"
+    },
+    {
+      "name": "UpperBBWPTrendThreshold",
+      "value": "100",
+      "parameterType": "Integer",
+      "metadata": {
+        "minValue": 0,
+        "maxValue": 100,
+        "step": 1,
+        "defaultValue": 100,
+        "parameterType": "Integer",
+        "propertyName": "UpperBBWPTrendThreshold",
+        "friendlyName": "Upper BBWP Threshold",
+        "groupName": "Entry Condition - BBWP",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "80",
+      "max": "100",
+      "step": "10"
+    },
+    {
+      "name": "LowerBBWPTrendThreshold",
+      "value": "0",
+      "parameterType": "Integer",
+      "metadata": {
+        "minValue": 0,
+        "maxValue": 100,
+        "step": 1,
+        "defaultValue": 0,
+        "parameterType": "Integer",
+        "propertyName": "LowerBBWPTrendThreshold",
+        "friendlyName": "Lower BBWP Threshold",
+        "groupName": "Entry Condition - BBWP",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "0",
+      "max": "20",
+      "step": "10"
+    },
+    {
+      "name": "BBWPTrendExpansionMode",
+      "value": "0",
+      "parameterType": "Enum",
+      "metadata": {
+        "enumValues": [
+          {
+            "value": 0,
+            "name": "Disabled"
+          },
+          {
+            "value": 1,
+            "name": "Enabled"
+          }
+        ],
+        "defaultValue": 0,
+        "parameterType": "Enum",
+        "propertyName": "BBWPTrendExpansionMode",
+        "friendlyName": "BBWP Expansion Mode",
+        "groupName": "Entry Condition - BBWP",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "values": [
+        "0",
+        "1"
+      ]
+    },
+    {
+      "name": "BBWPExpansionLookback",
+      "value": "20",
+      "parameterType": "Integer",
+      "metadata": {
+        "minValue": 0,
+        "maxValue": 100,
+        "step": 1,
+        "defaultValue": 20,
+        "parameterType": "Integer",
+        "propertyName": "BBWPExpansionLookback",
+        "friendlyName": "BBWP Expansion Lookback (BBWP Expansion Mode)",
+        "groupName": "Entry Condition - BBWP",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "15",
+      "max": "30",
+      "step": "5"
+    },
+    {
+      "name": "BBWPExpansionThreshold",
+      "value": "60",
+      "parameterType": "Integer",
+      "metadata": {
+        "minValue": 0,
+        "maxValue": 100,
+        "step": 1,
+        "defaultValue": 1,
+        "parameterType": "Integer",
+        "propertyName": "BBWPExpansionThreshold",
+        "friendlyName": "BWWP Expansion Threshold (BBWP Expansion Mode)",
+        "groupName": "Entry Condition - BBWP",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "2",
+      "max": "5",
+      "step": "1"
+    },
+    {
+      "name": "ADXMode",
+      "value": "1",
+      "parameterType": "Enum",
+      "metadata": {
+        "enumValues": [
+          {
+            "value": 0,
+            "name": "Disabled"
+          },
+          {
+            "value": 1,
+            "name": "Condition"
+          },
+          {
+            "value": 2,
+            "name": "Trigger"
+          }
+        ],
+        "defaultValue": 0,
+        "parameterType": "Enum",
+        "propertyName": "ADXMode",
+        "friendlyName": "ADX Momentum Mode",
+        "groupName": "Entry Condition - ADX Momentum",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "values": [
+        "0",
+        "1"
+      ]
+    },
+    {
+      "name": "ADXCondition",
+      "value": "0",
+      "parameterType": "Enum",
+      "metadata": {
+        "enumValues": [
+          {
+            "value": 0,
+            "name": "Trending"
+          },
+          {
+            "value": 1,
+            "name": "Ranging"
+          }
+        ],
+        "defaultValue": 0,
+        "parameterType": "Enum",
+        "propertyName": "ADXCondition",
+        "friendlyName": "ADX Condition",
+        "groupName": "Entry Condition - ADX Momentum",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "values": [
+        "0",
+        "1"
+      ]
+    },
+    {
+      "name": "TrendingThreshold",
+      "value": "25",
+      "parameterType": "Integer",
+      "metadata": {
+        "minValue": -2147483648,
+        "maxValue": 2147483647,
+        "step": 1,
+        "defaultValue": 25,
+        "parameterType": "Integer",
+        "propertyName": "TrendingThreshold",
+        "friendlyName": "Trending Threshold",
+        "groupName": "Entry Condition - ADX Momentum",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "16",
+      "max": "24",
+      "step": "2"
+    },
+    {
+      "name": "RangingThreshold",
+      "value": "20",
+      "parameterType": "Integer",
+      "metadata": {
+        "minValue": -2147483648,
+        "maxValue": 2147483647,
+        "step": 1,
+        "defaultValue": 20,
+        "parameterType": "Integer",
+        "propertyName": "RangingThreshold",
+        "friendlyName": "Ranging Threshold",
+        "groupName": "Entry Condition - ADX Momentum",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "15",
+      "max": "25",
+      "step": "1"
+    },
+    {
+      "name": "ADXTimeFrame",
+      "value": "h4",
+      "parameterType": "TimeFrame",
+      "metadata": {
+        "defaultValue": "D1",
+        "parameterType": "TimeFrame",
+        "propertyName": "ADXTimeFrame",
+        "friendlyName": "ADX Time Frame",
+        "groupName": "Entry Condition - ADX Momentum",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "values": [
+        "m15",
+        "h1",
+        "h4",
+        "D1"
+      ]
+    },
+    {
+      "name": "ADXPeriod",
+      "value": "14",
+      "parameterType": "Integer",
+      "metadata": {
+        "minValue": 1,
+        "maxValue": 2147483647,
+        "step": 1,
+        "defaultValue": 14,
+        "parameterType": "Integer",
+        "propertyName": "ADXPeriod",
+        "friendlyName": "ADX Period",
+        "groupName": "Entry Condition - ADX Momentum",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "1",
+      "max": "19",
+      "step": "1"
+    },
+    {
+      "name": "ADXTrendMode",
+      "value": "1",
+      "parameterType": "Enum",
+      "metadata": {
+        "enumValues": [
+          {
+            "value": 0,
+            "name": "Disabled"
+          },
+          {
+            "value": 1,
+            "name": "Condition"
+          },
+          {
+            "value": 2,
+            "name": "Trigger"
+          }
+        ],
+        "defaultValue": 0,
+        "parameterType": "Enum",
+        "propertyName": "ADXTrendMode",
+        "friendlyName": "ADX Trend Mode",
+        "groupName": "Entry Condition - ADX Trend",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "values": [
+        "0",
+        "1"
+      ]
+    },
+    {
+      "name": "ADXTrendTimeFrame",
+      "value": "m15",
+      "parameterType": "TimeFrame",
+      "metadata": {
+        "defaultValue": "D1",
+        "parameterType": "TimeFrame",
+        "propertyName": "ADXTrendTimeFrame",
+        "friendlyName": "ADX Trend Time Frame",
+        "groupName": "Entry Condition - ADX Trend",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "values": []
+    },
+    {
+      "name": "ADXTrendPeriod",
+      "value": "14",
+      "parameterType": "Integer",
+      "metadata": {
+        "minValue": 1,
+        "maxValue": 2147483647,
+        "step": 1,
+        "defaultValue": 14,
+        "parameterType": "Integer",
+        "propertyName": "ADXTrendPeriod",
+        "friendlyName": "ADX Trend Period",
+        "groupName": "Entry Condition - ADX Trend",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "1",
+      "max": "19",
+      "step": "1"
+    },
+    {
+      "name": "ADXTrendOffset",
+      "value": "0",
+      "parameterType": "Integer",
+      "metadata": {
+        "minValue": 0,
+        "maxValue": 2147483647,
+        "step": 1,
+        "defaultValue": 8,
+        "parameterType": "Integer",
+        "propertyName": "ADXTrendOffset",
+        "friendlyName": "ADX Trend Offset",
+        "groupName": "Entry Condition - ADX Trend",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "0",
+      "max": "8",
+      "step": "2"
+    },
+    {
+      "name": "SLType",
+      "value": "1",
+      "parameterType": "Enum",
+      "metadata": {
+        "enumValues": [
+          {
+            "value": 0,
+            "name": "Pips"
+          },
+          {
+            "value": 1,
+            "name": "Percent"
+          },
+          {
+            "value": 2,
+            "name": "ATR"
+          }
+        ],
+        "defaultValue": 0,
+        "parameterType": "Enum",
+        "propertyName": "SLType",
+        "friendlyName": "SL Type",
+        "groupName": "Stoploss",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "values": [
+        "0",
+        "1",
+        "2"
+      ]
+    },
+    {
+      "name": "SLValue",
+      "value": "0.7",
+      "parameterType": "Double",
+      "metadata": {
+        "minValue": -1.7976931348623157E+308,
+        "maxValue": 1.7976931348623157E+308,
+        "step": 0.1,
+        "defaultValue": 0.0,
+        "parameterType": "Double",
+        "propertyName": "SLValue",
+        "friendlyName": "SL Value",
+        "groupName": "Stoploss",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": true,
+      "min": "0.6",
+      "max": "1",
+      "step": "0.1"
+    },
+    {
+      "name": "SLtoBE",
+      "value": "0",
+      "parameterType": "Enum",
+      "metadata": {
+        "enumValues": [
+          {
+            "value": 0,
+            "name": "None"
+          },
+          {
+            "value": 1,
+            "name": "Pips"
+          },
+          {
+            "value": 2,
+            "name": "Percent"
+          },
+          {
+            "value": 3,
+            "name": "ATR"
+          },
+          {
+            "value": 4,
+            "name": "RiskMultiplier"
+          }
+        ],
+        "defaultValue": 0,
+        "parameterType": "Enum",
+        "propertyName": "SLtoBE",
+        "friendlyName": "SL to BE Type",
+        "groupName": "Stoploss",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "values": [
+        "0",
+        "4"
+      ]
+    },
+    {
+      "name": "SLtoBEValue",
+      "value": "0",
+      "parameterType": "Double",
+      "metadata": {
+        "minValue": -1.7976931348623157E+308,
+        "maxValue": 1.7976931348623157E+308,
+        "step": 0.1,
+        "defaultValue": 0.0,
+        "parameterType": "Double",
+        "propertyName": "SLtoBEValue",
+        "friendlyName": "SL to BE Value",
+        "groupName": "Stoploss",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "0.5",
+      "max": "1.5",
+      "step": "0.2"
+    },
+    {
+      "name": "TrailingSL",
+      "value": "0",
+      "parameterType": "Enum",
+      "metadata": {
+        "enumValues": [
+          {
+            "value": 0,
+            "name": "None"
+          },
+          {
+            "value": 1,
+            "name": "Pips"
+          },
+          {
+            "value": 2,
+            "name": "Percent"
+          },
+          {
+            "value": 3,
+            "name": "ATR"
+          },
+          {
+            "value": 4,
+            "name": "RiskMultiplier"
+          }
+        ],
+        "defaultValue": 0,
+        "parameterType": "Enum",
+        "propertyName": "TrailingSL",
+        "friendlyName": "Trailing SL Type",
+        "groupName": "Stoploss",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "values": [
+        "0",
+        "4"
+      ]
+    },
+    {
+      "name": "TrailingSLValue",
+      "value": "0",
+      "parameterType": "Double",
+      "metadata": {
+        "minValue": -1.7976931348623157E+308,
+        "maxValue": 1.7976931348623157E+308,
+        "step": 0.1,
+        "defaultValue": 0.0,
+        "parameterType": "Double",
+        "propertyName": "TrailingSLValue",
+        "friendlyName": "Trailing SL Value",
+        "groupName": "Stoploss",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "1",
+      "max": "3",
+      "step": "0.5"
+    },
+    {
+      "name": "TPType",
+      "value": "4",
+      "parameterType": "Enum",
+      "metadata": {
+        "enumValues": [
+          {
+            "value": 0,
+            "name": "None"
+          },
+          {
+            "value": 1,
+            "name": "Pips"
+          },
+          {
+            "value": 2,
+            "name": "Percent"
+          },
+          {
+            "value": 3,
+            "name": "ATR"
+          },
+          {
+            "value": 4,
+            "name": "RiskMultiplier"
+          }
+        ],
+        "defaultValue": 0,
+        "parameterType": "Enum",
+        "propertyName": "TPType",
+        "friendlyName": "TP Type",
+        "groupName": "Take Profit",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "values": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4"
+      ]
+    },
+    {
+      "name": "TPValue",
+      "value": "5",
+      "parameterType": "Double",
+      "metadata": {
+        "minValue": -1.7976931348623157E+308,
+        "maxValue": 1.7976931348623157E+308,
+        "step": 0.1,
+        "defaultValue": 0.0,
+        "parameterType": "Double",
+        "propertyName": "TPValue",
+        "friendlyName": "TP Value",
+        "groupName": "Take Profit",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": true,
+      "min": "1.8",
+      "max": "3",
+      "step": "0.2"
+    },
+    {
+      "name": "ExitPriceEMATrend",
+      "value": "0",
+      "parameterType": "Enum",
+      "metadata": {
+        "enumValues": [
+          {
+            "value": 0,
+            "name": "Disabled"
+          },
+          {
+            "value": 1,
+            "name": "Trigger"
+          }
+        ],
+        "defaultValue": 0,
+        "parameterType": "Enum",
+        "propertyName": "ExitPriceEMATrend",
+        "friendlyName": "Price EMA Trend Exit",
+        "groupName": "Exit Trigger - Price EMA Trend",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "values": [
+        "0",
+        "1"
+      ]
+    },
+    {
+      "name": "ExitEMALength",
+      "value": "8",
+      "parameterType": "Enum",
+      "metadata": {
+        "enumValues": [
+          {
+            "value": 5,
+            "name": "EMA5"
+          },
+          {
+            "value": 8,
+            "name": "EMA8"
+          },
+          {
+            "value": 12,
+            "name": "EMA12"
+          },
+          {
+            "value": 21,
+            "name": "EMA21"
+          },
+          {
+            "value": 34,
+            "name": "EMA34"
+          },
+          {
+            "value": 55,
+            "name": "EMA55"
+          },
+          {
+            "value": 89,
+            "name": "EMA89"
+          },
+          {
+            "value": 144,
+            "name": "EMA144"
+          },
+          {
+            "value": 233,
+            "name": "EMA233"
+          }
+        ],
+        "defaultValue": 21,
+        "parameterType": "Enum",
+        "propertyName": "ExitEMALength",
+        "friendlyName": "EMA Length",
+        "groupName": "Exit Trigger - Price EMA Trend",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "values": [
+        "12",
+        "21"
+      ]
+    },
+    {
+      "name": "ExitDoubleEMATrend",
+      "value": "0",
+      "parameterType": "Enum",
+      "metadata": {
+        "enumValues": [
+          {
+            "value": 0,
+            "name": "Disabled"
+          },
+          {
+            "value": 1,
+            "name": "Trigger"
+          }
+        ],
+        "defaultValue": 0,
+        "parameterType": "Enum",
+        "propertyName": "ExitDoubleEMATrend",
+        "friendlyName": "Double EMA Trend Exit",
+        "groupName": "Exit Trigger - Double EMA Trend",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "values": [
+        "0",
+        "1"
+      ]
+    },
+    {
+      "name": "ExitFastEMALength",
+      "value": "5",
+      "parameterType": "Enum",
+      "metadata": {
+        "enumValues": [
+          {
+            "value": 5,
+            "name": "EMA5"
+          },
+          {
+            "value": 8,
+            "name": "EMA8"
+          },
+          {
+            "value": 12,
+            "name": "EMA12"
+          },
+          {
+            "value": 21,
+            "name": "EMA21"
+          },
+          {
+            "value": 34,
+            "name": "EMA34"
+          },
+          {
+            "value": 55,
+            "name": "EMA55"
+          },
+          {
+            "value": 89,
+            "name": "EMA89"
+          },
+          {
+            "value": 144,
+            "name": "EMA144"
+          },
+          {
+            "value": 233,
+            "name": "EMA233"
+          }
+        ],
+        "defaultValue": 8,
+        "parameterType": "Enum",
+        "propertyName": "ExitFastEMALength",
+        "friendlyName": "Fast EMA Length",
+        "groupName": "Exit Trigger - Double EMA Trend",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "values": [
+        "5",
+        "8",
+        "12"
+      ]
+    },
+    {
+      "name": "ExitSlowEMALength",
+      "value": "12",
+      "parameterType": "Enum",
+      "metadata": {
+        "enumValues": [
+          {
+            "value": 5,
+            "name": "EMA5"
+          },
+          {
+            "value": 8,
+            "name": "EMA8"
+          },
+          {
+            "value": 12,
+            "name": "EMA12"
+          },
+          {
+            "value": 21,
+            "name": "EMA21"
+          },
+          {
+            "value": 34,
+            "name": "EMA34"
+          },
+          {
+            "value": 55,
+            "name": "EMA55"
+          },
+          {
+            "value": 89,
+            "name": "EMA89"
+          },
+          {
+            "value": 144,
+            "name": "EMA144"
+          },
+          {
+            "value": 233,
+            "name": "EMA233"
+          }
+        ],
+        "defaultValue": 21,
+        "parameterType": "Enum",
+        "propertyName": "ExitSlowEMALength",
+        "friendlyName": "Slow EMA Length",
+        "groupName": "Exit Trigger - Double EMA Trend",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "values": [
+        "8",
+        "12",
+        "21"
+      ]
+    },
+    {
+      "name": "ExitADXMode",
+      "value": "0",
+      "parameterType": "Enum",
+      "metadata": {
+        "enumValues": [
+          {
+            "value": 0,
+            "name": "Disabled"
+          },
+          {
+            "value": 1,
+            "name": "Trigger"
+          }
+        ],
+        "defaultValue": 0,
+        "parameterType": "Enum",
+        "propertyName": "ExitADXMode",
+        "friendlyName": "ADX Momentum Exit",
+        "groupName": "Exit Trigger - ADX Momentum",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "values": [
+        "0",
+        "1"
+      ]
+    },
+    {
+      "name": "ExitThreshold",
+      "value": "18",
+      "parameterType": "Integer",
+      "metadata": {
+        "minValue": -2147483648,
+        "maxValue": 2147483647,
+        "step": 1,
+        "defaultValue": 25,
+        "parameterType": "Integer",
+        "propertyName": "ExitThreshold",
+        "friendlyName": "Exit Threshold",
+        "groupName": "Exit Trigger - ADX Momentum",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "5",
+      "max": "10",
+      "step": "1"
+    },
+    {
+      "name": "ExitADXPeriod",
+      "value": "14",
+      "parameterType": "Integer",
+      "metadata": {
+        "minValue": 1,
+        "maxValue": 2147483647,
+        "step": 1,
+        "defaultValue": 14,
+        "parameterType": "Integer",
+        "propertyName": "ExitADXPeriod",
+        "friendlyName": "ADX Period",
+        "groupName": "Exit Trigger - ADX Momentum",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "1",
+      "max": "19",
+      "step": "1"
+    },
+    {
+      "name": "ExitADXTrendMode",
+      "value": "0",
+      "parameterType": "Enum",
+      "metadata": {
+        "enumValues": [
+          {
+            "value": 0,
+            "name": "Disabled"
+          },
+          {
+            "value": 1,
+            "name": "Trigger"
+          }
+        ],
+        "defaultValue": 0,
+        "parameterType": "Enum",
+        "propertyName": "ExitADXTrendMode",
+        "friendlyName": "ADX Trend Exit",
+        "groupName": "Exit Trigger - ADX Trend",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "values": [
+        "0",
+        "1"
+      ]
+    },
+    {
+      "name": "ExitADXTrendPeriod",
+      "value": "14",
+      "parameterType": "Integer",
+      "metadata": {
+        "minValue": 1,
+        "maxValue": 2147483647,
+        "step": 1,
+        "defaultValue": 14,
+        "parameterType": "Integer",
+        "propertyName": "ExitADXTrendPeriod",
+        "friendlyName": "ADX Trend Period",
+        "groupName": "Exit Trigger - ADX Trend",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "1",
+      "max": "19",
+      "step": "1"
+    },
+    {
+      "name": "TradeRisk",
+      "value": "400",
+      "parameterType": "Double",
+      "metadata": {
+        "minValue": -1.7976931348623157E+308,
+        "maxValue": 1.7976931348623157E+308,
+        "step": 0.1,
+        "defaultValue": 0.0,
+        "parameterType": "Double",
+        "propertyName": "TradeRisk",
+        "friendlyName": "Trade Risk (USD)",
+        "groupName": "Risk Management",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "350",
+      "max": "400",
+      "step": "10"
+    },
+    {
+      "name": "UseMinTrades",
+      "value": "False",
+      "parameterType": "Boolean",
+      "metadata": {
+        "defaultValue": false,
+        "parameterType": "Boolean",
+        "propertyName": "UseMinTrades",
+        "friendlyName": "Use Min Trades",
+        "groupName": "Fitness Filters",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false
+    },
+    {
+      "name": "MinTrades",
+      "value": "21",
+      "parameterType": "Integer",
+      "metadata": {
+        "minValue": 1,
+        "maxValue": 2147483647,
+        "step": 1,
+        "defaultValue": 50,
+        "parameterType": "Integer",
+        "propertyName": "MinTrades",
+        "friendlyName": "Min Trades",
+        "groupName": "Fitness Filters",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "1",
+      "max": "55",
+      "step": "1"
+    },
+    {
+      "name": "UseMaxTrades",
+      "value": "False",
+      "parameterType": "Boolean",
+      "metadata": {
+        "defaultValue": false,
+        "parameterType": "Boolean",
+        "propertyName": "UseMaxTrades",
+        "friendlyName": "Use Max Trades",
+        "groupName": "Fitness Filters",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false
+    },
+    {
+      "name": "MaxTrades",
+      "value": "30",
+      "parameterType": "Integer",
+      "metadata": {
+        "minValue": 1,
+        "maxValue": 2147483647,
+        "step": 1,
+        "defaultValue": 50,
+        "parameterType": "Integer",
+        "propertyName": "MaxTrades",
+        "friendlyName": "Max Trades",
+        "groupName": "Fitness Filters",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "1",
+      "max": "55",
+      "step": "1"
+    },
+    {
+      "name": "UseMinProfitFactor",
+      "value": "False",
+      "parameterType": "Boolean",
+      "metadata": {
+        "defaultValue": false,
+        "parameterType": "Boolean",
+        "propertyName": "UseMinProfitFactor",
+        "friendlyName": "Use Min Profit Factor",
+        "groupName": "Fitness Filters",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false
+    },
+    {
+      "name": "MinProfitFactor",
+      "value": "1.2",
+      "parameterType": "Double",
+      "metadata": {
+        "minValue": 0.0,
+        "maxValue": 1.7976931348623157E+308,
+        "step": 0.1,
+        "defaultValue": 1.2,
+        "parameterType": "Double",
+        "propertyName": "MinProfitFactor",
+        "friendlyName": "Min Profit Factor",
+        "groupName": "Fitness Filters",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "0",
+      "max": "1.7",
+      "step": "0.1"
+    },
+    {
+      "name": "UseMinWinRate",
+      "value": "False",
+      "parameterType": "Boolean",
+      "metadata": {
+        "defaultValue": false,
+        "parameterType": "Boolean",
+        "propertyName": "UseMinWinRate",
+        "friendlyName": "Use Min Win Rate %",
+        "groupName": "Fitness Filters",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false
+    },
+    {
+      "name": "MinWinRatePercent",
+      "value": "40",
+      "parameterType": "Double",
+      "metadata": {
+        "minValue": 0.0,
+        "maxValue": 100.0,
+        "step": 0.1,
+        "defaultValue": 45.0,
+        "parameterType": "Double",
+        "propertyName": "MinWinRatePercent",
+        "friendlyName": "Min Win Rate %",
+        "groupName": "Fitness Filters",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "0",
+      "max": "100",
+      "step": "0.1"
+    },
+    {
+      "name": "UseMaxConsecLosers",
+      "value": "False",
+      "parameterType": "Boolean",
+      "metadata": {
+        "defaultValue": false,
+        "parameterType": "Boolean",
+        "propertyName": "UseMaxConsecLosers",
+        "friendlyName": "Use Max Consecutive Losers",
+        "groupName": "Fitness Filters",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false
+    },
+    {
+      "name": "MaxConsecutiveLosingTrades",
+      "value": "4",
+      "parameterType": "Integer",
+      "metadata": {
+        "minValue": 1,
+        "maxValue": 2147483647,
+        "step": 1,
+        "defaultValue": 5,
+        "parameterType": "Integer",
+        "propertyName": "MaxConsecutiveLosingTrades",
+        "friendlyName": "Max Consecutive Losing Trades",
+        "groupName": "Fitness Filters",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "1",
+      "max": "10",
+      "step": "1"
+    },
+    {
+      "name": "UseMaxEquityDD",
+      "value": "False",
+      "parameterType": "Boolean",
+      "metadata": {
+        "defaultValue": false,
+        "parameterType": "Boolean",
+        "propertyName": "UseMaxEquityDD",
+        "friendlyName": "Use Max Equity DD %",
+        "groupName": "Fitness Filters",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false
+    },
+    {
+      "name": "MaxEquityDrawdownPercent",
+      "value": "3.5",
+      "parameterType": "Double",
+      "metadata": {
+        "minValue": 0.0,
+        "maxValue": 100.0,
+        "step": 0.1,
+        "defaultValue": 20.0,
+        "parameterType": "Double",
+        "propertyName": "MaxEquityDrawdownPercent",
+        "friendlyName": "Max Equity Drawdown %",
+        "groupName": "Fitness Filters",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "3",
+      "max": "10",
+      "step": "0.1"
+    },
+    {
+      "name": "UseMaxBalanceDD",
+      "value": "False",
+      "parameterType": "Boolean",
+      "metadata": {
+        "defaultValue": false,
+        "parameterType": "Boolean",
+        "propertyName": "UseMaxBalanceDD",
+        "friendlyName": "Use Max Balance DD %",
+        "groupName": "Fitness Filters",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false
+    },
+    {
+      "name": "MaxBalanceDrawdownPercent",
+      "value": "3.5",
+      "parameterType": "Double",
+      "metadata": {
+        "minValue": 0.0,
+        "maxValue": 100.0,
+        "step": 0.1,
+        "defaultValue": 20.0,
+        "parameterType": "Double",
+        "propertyName": "MaxBalanceDrawdownPercent",
+        "friendlyName": "Max Balance Drawdown %",
+        "groupName": "Fitness Filters",
+        "isValueVisibleInTitle": true,
+        "description": ""
+      },
+      "optimize": false,
+      "min": "0",
+      "max": "100",
+      "step": "0.1"
+    }
+  ]
+}
