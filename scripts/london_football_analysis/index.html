@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>London-born professional football players — inner vs outer</title>
+  <style>
+    :root {
+      --bg: #f8f9fb;
+      --card: #ffffff;
+      --text: #1a1a2e;
+      --muted: #5c6370;
+      --inner: #1d3557;
+      --outer: #e63946;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.55;
+    }
+    main {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 2rem 1.25rem 3rem;
+    }
+    h1 { font-size: 1.75rem; margin-bottom: 0.35rem; }
+    .subtitle { color: var(--muted); margin-bottom: 1.75rem; }
+    .card {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+      box-shadow: 0 2px 12px rgba(0,0,0,.06);
+      margin-bottom: 1.25rem;
+    }
+    img { max-width: 100%; height: auto; display: block; margin: 0 auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+    th, td { padding: 0.55rem 0.75rem; text-align: left; border-bottom: 1px solid #e8eaed; }
+    th { font-weight: 600; background: #f1f3f6; }
+    .pill { display: inline-block; padding: 0.15rem 0.55rem; border-radius: 999px; font-size: 0.8rem; color: #fff; }
+    .pill.inner { background: var(--inner); }
+    .pill.outer { background: var(--outer); }
+    ul { padding-left: 1.2rem; color: var(--muted); }
+    a { color: var(--inner); }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>London-born players in English professional football</h1>
+    <p class="subtitle">Inner London vs outer London (within 10 miles of central London) · 2024/25 squads</p>
+
+    <div class="card">
+      <img src="london_birthplace_chart.png" alt="Bar chart comparing inner and outer London-born players by league" />
+    </div>
+
+    <div class="card">
+      <h2>Results by competition</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Competition</th>
+            <th><span class="pill inner">Inner London</span></th>
+            <th><span class="pill outer">Outer London</span></th>
+            <th>Total London-born</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Premier League</td><td>20</td><td>19</td><td>39</td></tr>
+          <tr><td>Championship</td><td>24</td><td>26</td><td>50</td></tr>
+          <tr><td>League One</td><td>43</td><td>24</td><td>67</td></tr>
+          <tr><td>League Two</td><td>35</td><td>20</td><td>55</td></tr>
+          <tr><td>National League</td><td>21</td><td>25</td><td>46</td></tr>
+          <tr><th>All leagues</th><th>143</th><th>114</th><th>257</th></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h2>Methodology</h2>
+      <ul>
+        <li><strong>Leagues:</strong> Premier League, Championship, League One, League Two, and National League (5th tier).</li>
+        <li><strong>Data source:</strong> Transfermarkt squad lists (3,081 unique players scraped).</li>
+        <li><strong>Inner London:</strong> Official inner boroughs (Camden, Greenwich, Hackney, Hammersmith &amp; Fulham, Islington, Kensington &amp; Chelsea, Lambeth, Lewisham, Southwark, Tower Hamlets, Wandsworth, Westminster, City of London).</li>
+        <li><strong>Outer London:</strong> Official outer boroughs (Barking &amp; Dagenham, Barnet, Bexley, Brent, Bromley, Croydon, Ealing, Enfield, Haringey, Harrow, Havering, Hillingdon, Hounslow, Kingston, Merton, Newham, Redbridge, Richmond, Sutton, Waltham Forest).</li>
+        <li><strong>10-mile radius:</strong> Birthplaces must fall within 10 miles of Charing Cross; geocoded locations are validated against a Greater London bounding box to avoid false matches (e.g. “Poole” matching a London street).</li>
+        <li><strong>Generic “London”</strong> entries without a borough hint are excluded as unknown.</li>
+      </ul>
+      <p><a href="london_birthplace_chart.html">Interactive chart (Plotly)</a> · <a href="london_players.csv">Full player list (CSV)</a></p>
+    </div>
+  </main>
+</body>
+</html>
