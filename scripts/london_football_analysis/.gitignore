@@ -1,0 +1,4 @@
+player_birthplaces_cache.json
+__pycache__/
+*.log
+london_birthplace_chart.html
