@@ -1852,11 +1852,16 @@ namespace cAlgo.Robots
         private bool _initialDrawDone;
         private int _timerRefreshCount;
 
+        private bool IsOptimizationMode
+        {
+            get { return RunningMode == RunningMode.Optimization; }
+        }
+
         protected override void OnStart()
         {
             _effectiveConfig = AlgoTraderPresets.Resolve(
                 ApplyAlgoTraderPreset,
-                IsOptimizing,
+                IsOptimizationMode,
                 UseChartTimeframeForZones,
                 UseChartTimeframeForEntry,
                 TimeFrame,
@@ -1922,9 +1927,9 @@ namespace cAlgo.Robots
             Print("Liquidity TF: " + AlgoTraderPresets.FormatTimeFrame(_resolvedZoneTimeFrame)
                 + " | Entry TF: " + AlgoTraderPresets.FormatTimeFrame(_resolvedEntryTimeFrame)
                 + " | Chart TF: " + AlgoTraderPresets.FormatTimeFrame(TimeFrame) + " | Symbol: " + Symbol.Name);
-            Print("DrawZonesOnChart: " + DrawZonesOnChart + " | Backtesting: " + IsBacktesting + " | Optimizing: " + IsOptimizing);
+            Print("DrawZonesOnChart: " + DrawZonesOnChart + " | RunningMode: " + RunningMode);
 
-            if (IsOptimizing)
+            if (IsOptimizationMode)
                 Print("Optimisation mode — sweeping parameter values (live algo preset overrides disabled).");
 
             if (_effectiveConfig.PresetActive)
@@ -2393,16 +2398,16 @@ namespace cAlgo.Robots
         protected override double GetFitness(GetFitnessArgs args)
         {
             const int minTrades = 15;
-            if (args.Trades < minTrades)
-                return 0;
+            if (args.TotalTrades < minTrades)
+                return double.MinValue;
 
             double pf = args.ProfitFactor;
             if (pf <= 0 || double.IsNaN(pf) || double.IsInfinity(pf))
-                return 0;
+                return double.MinValue;
 
-            double dd = args.MaxEquityDrawdown;
-            if (dd < 1)
-                dd = 1;
+            double dd = args.MaxEquityDrawdownPercentages;
+            if (dd < 0.5)
+                dd = 0.5;
 
             return pf * args.NetProfit / dd;
         }
