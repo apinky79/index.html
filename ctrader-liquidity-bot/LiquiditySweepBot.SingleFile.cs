@@ -1,3 +1,4 @@
+// LiquiditySweepBot — file version 20260915-v5 (line ~614 must be: foreach (var zone in zones) with NO .Where)
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -615,7 +616,7 @@ namespace cAlgo.Robots
             {
                 if (!zone.IsActive || zone.StrengthScore < _minZoneStrength)
                     continue;
-                if (!ZoneTouchesLevel(zone, high, low))
+                if (low > zone.ZoneTop || high < zone.ZoneBottom)
                     continue;
 
                 if (setups.Any(s => s.Zone.LevelPrice == zone.LevelPrice && s.Zone.Source == zone.Source && s.Phase != SweepPhase.Invalidated))
@@ -782,17 +783,6 @@ namespace cAlgo.Robots
                 (s.Phase != SweepPhase.None && bar - s.SweepBarIndex > _maxSweepAgeBars));
         }
 
-        /// <summary>
-        /// Only evaluate sweeps for zones near current price (within zone box + recent interaction).
-        /// H4 levels far from M15 price still appear on chart but rarely get swept — this avoids skipping
-        /// zones that were filtered only by strength while keeping work bounded.
-        /// </summary>
-        private static bool ZoneTouchesLevel(LiquidityZone zone, double barHigh, double barLow)
-        {
-            if (barLow <= zone.ZoneTop && barHigh >= zone.ZoneBottom)
-                return true;
-            return false;
-        }
     }
 
     // --- RiskManager ---
