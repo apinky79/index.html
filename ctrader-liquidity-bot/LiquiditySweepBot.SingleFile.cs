@@ -1537,6 +1537,142 @@ namespace cAlgo.Robots
         }
     }
 
+    // --- Algo trader preset (HTF liquidity / LTF execution model) ---
+
+    /// <summary>
+    /// Research-backed defaults used when "Use Chart Timeframe" toggles are OFF.
+    /// Model: H4 (or D1) liquidity map + M15 sweep confirmation — standard ICT/SMC algo split
+    /// used by systematic crypto and FX liquidity bots (4:1 to 16:1 HTF:LTF ratio).
+    /// </summary>
+    internal sealed class AlgoEffectiveConfig
+    {
+        public TimeFrame ZoneTimeFrame;
+        public TimeFrame EntryTimeFrame;
+        public int PivotBars;
+        public double EqualLevelToleranceAtr;
+        public int MinEqualTouches;
+        public double ZonePaddingAtr;
+        public bool UseSessionLevels;
+        public int MinZoneStrength;
+        public int MaxActiveZones;
+        public int ConfirmationBarDelay;
+        public int MaxSweepAgeBars;
+        public bool RequireStructureShift;
+        public int StructurePivotBars;
+        public double MinWickBodyRatio;
+        public double StopBufferAtr;
+        public double RiskPercent;
+        public double MaxSpreadPips;
+        public bool PresetActive;
+    }
+
+    internal static class AlgoTraderPresets
+    {
+        public static AlgoEffectiveConfig Resolve(
+            bool applyPreset,
+            bool useChartForZones,
+            bool useChartForEntry,
+            TimeFrame chartTimeFrame,
+            TimeFrame zoneTimeFrameParam,
+            TimeFrame entryTimeFrameParam,
+            int pivotBars,
+            double equalLevelToleranceAtr,
+            int minEqualTouches,
+            double zonePaddingAtr,
+            bool useSessionLevels,
+            int minZoneStrength,
+            int maxActiveZones,
+            int confirmationBarDelay,
+            int maxSweepAgeBars,
+            bool requireStructureShift,
+            int structurePivotBars,
+            double minWickBodyRatio,
+            double stopBufferAtr,
+            double riskPercent,
+            double maxSpreadPips)
+        {
+            var config = new AlgoEffectiveConfig
+            {
+                ZoneTimeFrame = useChartForZones ? chartTimeFrame : zoneTimeFrameParam,
+                EntryTimeFrame = useChartForEntry ? chartTimeFrame : entryTimeFrameParam,
+                PivotBars = pivotBars,
+                EqualLevelToleranceAtr = equalLevelToleranceAtr,
+                MinEqualTouches = minEqualTouches,
+                ZonePaddingAtr = zonePaddingAtr,
+                UseSessionLevels = useSessionLevels,
+                MinZoneStrength = minZoneStrength,
+                MaxActiveZones = maxActiveZones,
+                ConfirmationBarDelay = confirmationBarDelay,
+                MaxSweepAgeBars = maxSweepAgeBars,
+                RequireStructureShift = requireStructureShift,
+                StructurePivotBars = structurePivotBars,
+                MinWickBodyRatio = minWickBodyRatio,
+                StopBufferAtr = stopBufferAtr,
+                RiskPercent = riskPercent,
+                MaxSpreadPips = maxSpreadPips,
+                PresetActive = false
+            };
+
+            bool algoTimeframeMode = !useChartForZones || !useChartForEntry;
+            if (!applyPreset || !algoTimeframeMode)
+                return config;
+
+            config.PresetActive = true;
+
+            if (!useChartForZones)
+                config.ZoneTimeFrame = TimeFrame.Hour4;
+
+            if (!useChartForEntry)
+                config.EntryTimeFrame = TimeFrame.Minute15;
+
+            config.PivotBars = 5;
+            config.EqualLevelToleranceAtr = 0.15;
+            config.MinEqualTouches = 2;
+            config.ZonePaddingAtr = 0.10;
+            config.UseSessionLevels = true;
+            config.MinZoneStrength = 65;
+            config.MaxActiveZones = 10;
+            config.ConfirmationBarDelay = 1;
+            config.MaxSweepAgeBars = 10;
+            config.RequireStructureShift = true;
+            config.StructurePivotBars = 3;
+            config.MinWickBodyRatio = 0.8;
+            config.StopBufferAtr = 0.05;
+            config.RiskPercent = 0.5;
+            config.MaxSpreadPips = 30;
+
+            return config;
+        }
+
+        public static string FormatTimeFrame(TimeFrame tf)
+        {
+            if (tf == TimeFrame.Minute) return "M1";
+            if (tf == TimeFrame.Minute5) return "M5";
+            if (tf == TimeFrame.Minute15) return "M15";
+            if (tf == TimeFrame.Minute30) return "M30";
+            if (tf == TimeFrame.Hour) return "H1";
+            if (tf == TimeFrame.Hour4) return "H4";
+            if (tf == TimeFrame.Daily) return "D1";
+            if (tf == TimeFrame.Weekly) return "W1";
+            return tf.ToString();
+        }
+
+        public static void PrintBanner(Robot robot, AlgoEffectiveConfig config, bool useChartForZones, bool useChartForEntry)
+        {
+            robot.Print("=== ALGO TRADER PRESET ACTIVE ===");
+            robot.Print("HTF/LTF model: " + FormatTimeFrame(config.ZoneTimeFrame) + " liquidity -> "
+                + FormatTimeFrame(config.EntryTimeFrame) + " sweep entries (attach chart to "
+                + FormatTimeFrame(config.EntryTimeFrame) + " or higher for best visuals)");
+            robot.Print("Use Chart TF Zones: " + useChartForZones + " | Use Chart TF Entry: " + useChartForEntry);
+            robot.Print("Pivot: " + config.PivotBars + " | Min strength: " + config.MinZoneStrength
+                + " | MSS: " + config.RequireStructureShift + " | Confirm delay: " + config.ConfirmationBarDelay + " bar(s)");
+            robot.Print("SL: SweepWick + " + config.StopBufferAtr + " ATR | TP: 2R | Risk: "
+                + config.RiskPercent + "% equity (or set Trade Risk USD)");
+            robot.Print("Session levels PDH/L: " + config.UseSessionLevels + " | Max spread: "
+                + config.MaxSpreadPips + " pips | Max zones: " + config.MaxActiveZones);
+        }
+    }
+
     // --- Main Robot ---
 
     /// <summary>
@@ -1562,13 +1698,16 @@ namespace cAlgo.Robots
         public int MaxPositionsPerSymbol { get; set; }
 
         // --- Timeframes ---
+        [Parameter("Apply Algo Preset (when TF unchecked)", DefaultValue = true, Group = "Timeframes")]
+        public bool ApplyAlgoTraderPreset { get; set; }
+
         [Parameter("Use Chart Timeframe for Zones", DefaultValue = false, Group = "Timeframes")]
         public bool UseChartTimeframeForZones { get; set; }
 
         [Parameter("Liquidity Zone Timeframe", DefaultValue = "Hour4", Group = "Timeframes")]
         public TimeFrame ZoneTimeFrame { get; set; }
 
-        [Parameter("Use Chart Timeframe for Entry", DefaultValue = true, Group = "Timeframes")]
+        [Parameter("Use Chart Timeframe for Entry", DefaultValue = false, Group = "Timeframes")]
         public bool UseChartTimeframeForEntry { get; set; }
 
         [Parameter("Entry Timeframe", DefaultValue = "Minute15", Group = "Timeframes")]
@@ -1590,17 +1729,17 @@ namespace cAlgo.Robots
         [Parameter("Use Session Levels (PDH/L, PWH/L)", DefaultValue = true, Group = "Liquidity")]
         public bool UseSessionLevels { get; set; }
 
-        [Parameter("Min Zone Strength (0-100)", DefaultValue = 60, MinValue = 0, MaxValue = 100, Group = "Liquidity")]
+        [Parameter("Min Zone Strength (0-100)", DefaultValue = 65, MinValue = 0, MaxValue = 100, Group = "Liquidity")]
         public int MinZoneStrength { get; set; }
 
-        [Parameter("Max Active Zones", DefaultValue = 12, MinValue = 5, Group = "Liquidity")]
+        [Parameter("Max Active Zones", DefaultValue = 10, MinValue = 5, Group = "Liquidity")]
         public int MaxActiveZones { get; set; }
 
         // --- Sweep confirmation ---
         [Parameter("Confirmation Bar Delay", DefaultValue = 1, MinValue = 0, Group = "Confirmation")]
         public int ConfirmationBarDelay { get; set; }
 
-        [Parameter("Max Sweep Age (entry bars)", DefaultValue = 12, MinValue = 3, Group = "Confirmation")]
+        [Parameter("Max Sweep Age (entry bars)", DefaultValue = 10, MinValue = 3, Group = "Confirmation")]
         public int MaxSweepAgeBars { get; set; }
 
         [Parameter("Require Structure Shift (MSS)", DefaultValue = true, Group = "Confirmation")]
@@ -1651,10 +1790,10 @@ namespace cAlgo.Robots
         [Parameter("Fixed USD Risk", DefaultValue = 100, MinValue = 1, Group = "Risk Management")]
         public double FixedUsdRisk { get; set; }
 
-        [Parameter("Risk Percent", DefaultValue = 0.8, MinValue = 0.01, Group = "Risk Management")]
+        [Parameter("Risk Percent", DefaultValue = 0.5, MinValue = 0.01, Group = "Risk Management")]
         public double RiskPercent { get; set; }
 
-        [Parameter("Max Spread (pips, 0=off)", DefaultValue = 0, MinValue = 0, Group = "Risk Management")]
+        [Parameter("Max Spread (pips, 0=off)", DefaultValue = 30, MinValue = 0, Group = "Risk Management")]
         public double MaxSpreadPips { get; set; }
 
         [Parameter("ATR Period", DefaultValue = 14, MinValue = 5, Group = "Risk Management")]
@@ -1679,7 +1818,7 @@ namespace cAlgo.Robots
         [Parameter("Zone Lookback Bars", DefaultValue = 200, MinValue = 50, Group = "Visual")]
         public int ZoneLookbackBars { get; set; }
 
-        [Parameter("Debug Zone Drawing (log)", DefaultValue = true, Group = "Visual")]
+        [Parameter("Debug Zone Drawing (log)", DefaultValue = false, Group = "Visual")]
         public bool DebugZoneDrawing { get; set; }
 
         [Parameter("Keep Drawings After Stop", DefaultValue = true, Group = "Visual")]
@@ -1692,6 +1831,7 @@ namespace cAlgo.Robots
         private AverageTrueRange _chartAtr;
         private TimeFrame _resolvedZoneTimeFrame;
         private TimeFrame _resolvedEntryTimeFrame;
+        private AlgoEffectiveConfig _effectiveConfig;
         private SymbolTradingContext _chartContext;
         private int _lastProcessedBarIndex = -1;
         private bool _initialDrawDone;
@@ -1699,17 +1839,44 @@ namespace cAlgo.Robots
 
         protected override void OnStart()
         {
-            _resolvedZoneTimeFrame = UseChartTimeframeForZones ? TimeFrame : ZoneTimeFrame;
-            _resolvedEntryTimeFrame = UseChartTimeframeForEntry ? TimeFrame : EntryTimeFrame;
+            _effectiveConfig = AlgoTraderPresets.Resolve(
+                ApplyAlgoTraderPreset,
+                UseChartTimeframeForZones,
+                UseChartTimeframeForEntry,
+                TimeFrame,
+                ZoneTimeFrame,
+                EntryTimeFrame,
+                PivotBars,
+                EqualLevelToleranceAtr,
+                MinEqualTouches,
+                ZonePaddingAtr,
+                UseSessionLevels,
+                MinZoneStrength,
+                MaxActiveZones,
+                ConfirmationBarDelay,
+                MaxSweepAgeBars,
+                RequireStructureShift,
+                StructurePivotBars,
+                MinWickBodyRatio,
+                StopBufferAtr,
+                RiskPercent,
+                MaxSpreadPips);
+
+            _resolvedZoneTimeFrame = _effectiveConfig.ZoneTimeFrame;
+            _resolvedEntryTimeFrame = _effectiveConfig.EntryTimeFrame;
 
             _chartAtr = Indicators.AverageTrueRange(Bars, AtrPeriod, MovingAverageType.Simple);
+
+            double riskPercent = _effectiveConfig.PresetActive ? _effectiveConfig.RiskPercent : RiskPercent;
+            double maxSpread = _effectiveConfig.PresetActive ? _effectiveConfig.MaxSpreadPips : MaxSpreadPips;
+            double stopBuffer = _effectiveConfig.PresetActive ? _effectiveConfig.StopBufferAtr : StopBufferAtr;
 
             _riskManager = new RiskManager(
                 RiskModeSetting,
                 FixedUsdRisk,
-                RiskPercent,
-                MaxSpreadPips,
-                StopBufferAtr);
+                riskPercent,
+                maxSpread,
+                stopBuffer);
 
             foreach (var symbol in ResolveSymbols())
             {
@@ -1736,8 +1903,17 @@ namespace cAlgo.Robots
             }
 
             Print("=== LiquiditySweepBot STARTED ===");
-            Print("Liquidity TF: " + _resolvedZoneTimeFrame + " | Entry TF: " + _resolvedEntryTimeFrame + " | Chart TF: " + TimeFrame + " | Symbol: " + Symbol.Name);
+            Print("Liquidity TF: " + AlgoTraderPresets.FormatTimeFrame(_resolvedZoneTimeFrame)
+                + " | Entry TF: " + AlgoTraderPresets.FormatTimeFrame(_resolvedEntryTimeFrame)
+                + " | Chart TF: " + AlgoTraderPresets.FormatTimeFrame(TimeFrame) + " | Symbol: " + Symbol.Name);
             Print("DrawZonesOnChart: " + DrawZonesOnChart + " | Backtesting: " + IsBacktesting);
+
+            if (_effectiveConfig.PresetActive)
+                AlgoTraderPresets.PrintBanner(this, _effectiveConfig, UseChartTimeframeForZones, UseChartTimeframeForEntry);
+            else if (!UseChartTimeframeForZones || !UseChartTimeframeForEntry)
+                Print("Algo preset OFF — using your manual parameter values. Enable 'Apply Algo Preset' for recommended HTF/LTF settings.");
+            else
+                Print("Chart-timeframe mode — zones and entries follow the chart TF. Uncheck TF boxes + enable preset for algo defaults (H4/M15).");
 
             if (_chartContext == null)
             {
@@ -1846,21 +2022,23 @@ namespace cAlgo.Robots
             var zoneAtr = Indicators.AverageTrueRange(zoneBars, AtrPeriod, MovingAverageType.Simple);
             var entryAtr = Indicators.AverageTrueRange(entryBars, AtrPeriod, MovingAverageType.Simple);
 
+            var cfg = _effectiveConfig;
+
             var zoneEngine = new LiquidityZoneEngine(
-                PivotBars,
-                EqualLevelToleranceAtr,
-                MinEqualTouches,
-                ZonePaddingAtr,
-                UseSessionLevels,
-                MaxActiveZones);
+                cfg.PivotBars,
+                cfg.EqualLevelToleranceAtr,
+                cfg.MinEqualTouches,
+                cfg.ZonePaddingAtr,
+                cfg.UseSessionLevels,
+                cfg.MaxActiveZones);
 
             var sweepEngine = new SweepConfirmationEngine(
-                ConfirmationBarDelay,
-                MaxSweepAgeBars,
-                RequireStructureShift,
-                StructurePivotBars,
-                MinWickBodyRatio,
-                MinZoneStrength);
+                cfg.ConfirmationBarDelay,
+                cfg.MaxSweepAgeBars,
+                cfg.RequireStructureShift,
+                cfg.StructurePivotBars,
+                cfg.MinWickBodyRatio,
+                cfg.MinZoneStrength);
 
             var ctx = new SymbolTradingContext(symbol, zoneBars, entryBars, zoneAtr, entryAtr, zoneEngine, sweepEngine);
             _contexts[symbol.Name] = ctx;

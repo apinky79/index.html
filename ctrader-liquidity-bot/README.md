@@ -85,6 +85,18 @@ When **Draw Zones On Chart** is enabled (default):
 
 Toggle individually: **Show Zone Labels**, **Show Sweep Markers**, **Show Entry Markers**.
 
+A **gold badge** in the top-left shows `drawn: N / detected: M`. If you see the badge but no boxes, scroll/zoom the chart — zones are drawn on the visible bar range.
+
+### Zones not showing?
+
+1. **Re-copy** the latest `LiquiditySweepBot.SingleFile.cs` and rebuild.
+2. Confirm **Draw Zones On Chart = true** and the bot is **running** (green play), not just built.
+3. **Live chart or visual backtest** — silent backtest does not render drawings.
+4. Enable **Debug Zone Drawing (log)** and check the cTrader log:
+   - `detected 0` → lower **Min Zone Strength**, ensure zone TF has history (e.g. H4 loaded).
+   - `detected N, drawn N` but nothing visible → zoom out on price; BTC zones may be off-screen.
+5. Wait ~20 seconds after start — the bot retries drawing while H4 bars load.
+
 ## Recommended starting settings (BTCUSD)
 
 | Parameter | Value | Notes |
