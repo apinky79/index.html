@@ -3,9 +3,20 @@ using System.Collections.Generic;
 using System.Linq;
 using cAlgo.API;
 using cAlgo.API.Internals;
+using cAlgo.API.Indicators;
 
 namespace cAlgo.Robots
 {
+    internal static class SymbolHelper
+    {
+        public static double NormalizePrice(Symbol symbol, double price)
+        {
+            if (symbol.TickSize > 0)
+                price = Math.Round(price / symbol.TickSize) * symbol.TickSize;
+            return Math.Round(price, symbol.Digits);
+        }
+    }
+
     // --- Enums ---
 
     public enum LiquiditySide
@@ -767,7 +778,7 @@ namespace cAlgo.Robots
             return symbol.Spread / symbol.PipSize <= _maxSpreadPips;
         }
 
-        public double CalculateRiskAmount(Account account)
+        public double CalculateRiskAmount(IAccount account)
         {
             switch (_mode)
             {
@@ -789,7 +800,7 @@ namespace cAlgo.Robots
                 ? sweepWickExtreme - buffer
                 : sweepWickExtreme + buffer;
 
-            return symbol.NormalizePrice(stop);
+            return SymbolHelper.NormalizePrice(symbol, stop);
         }
 
         public double CalculateVolumeInUnits(Symbol symbol, double entryPrice, double stopLoss, double riskAmount)
@@ -905,13 +916,13 @@ namespace cAlgo.Robots
                         ? state.HighestPrice - trailDistance
                         : state.LowestPrice + trailDistance;
 
-                    trailStop = symbol.NormalizePrice(trailStop);
+                    trailStop = SymbolHelper.NormalizePrice(symbol, trailStop);
                     newStop = BetterStop(position, newStop, trailStop);
                 }
 
                 if (newStop.HasValue && IsImprovement(position, newStop.Value))
                 {
-                    robot.ModifyPosition(position, newStop.Value, position.TakeProfit);
+                    robot.ModifyPosition(position, newStop.Value, position.TakeProfit, ProtectionType.Absolute);
                 }
             }
 
@@ -1626,7 +1637,7 @@ namespace cAlgo.Robots
             double atr = ctx.EntryAtr.Result[atrIndex];
 
             double stopLoss = _riskManager.BuildStopLoss(setup.Direction, setup.SweepWickExtreme, atr, symbol);
-            double takeProfit = symbol.NormalizePrice(
+            double takeProfit = SymbolHelper.NormalizePrice(symbol,
                 _profitManager.CalculateTakeProfit(setup.Direction, entry, stopLoss));
 
             double riskAmount = _riskManager.CalculateRiskAmount(Account);
