@@ -529,7 +529,7 @@ namespace cAlgo.Robots
                     break;
                 case LiquiditySource.SwingHigh:
                 case LiquiditySource.SwingLow:
-                    baseScore = 50;
+                    baseScore = 65;
                     break;
                 default:
                     baseScore = 40;
@@ -611,7 +611,7 @@ namespace cAlgo.Robots
             double close = closes[bar];
             double body = Math.Abs(close - open);
 
-            foreach (var zone in zones.Where(z => z.IsActive && z.StrengthScore >= _minZoneStrength))
+            foreach (var zone in zones.Where(z => z.IsActive && z.StrengthScore >= _minZoneStrength && ZoneTouchesLevel(zone, high, low)))
             {
                 if (setups.Any(s => s.Zone.LevelPrice == zone.LevelPrice && s.Zone.Source == zone.Source && s.Phase != SweepPhase.Invalidated))
                     continue;
@@ -779,6 +779,18 @@ namespace cAlgo.Robots
             setups.RemoveAll(s =>
                 s.Phase == SweepPhase.Invalidated ||
                 (s.Phase != SweepPhase.None && bar - s.SweepBarIndex > _maxSweepAgeBars));
+        }
+
+        /// <summary>
+        /// Only evaluate sweeps for zones near current price (within zone box + recent interaction).
+        /// H4 levels far from M15 price still appear on chart but rarely get swept — this avoids skipping
+        /// zones that were filtered only by strength while keeping work bounded.
+        /// </summary>
+        private static bool ZoneTouchesLevel(LiquidityZone zone, double barHigh, double barLow)
+        {
+            if (barLow <= zone.ZoneTop && barHigh >= zone.ZoneBottom)
+                return true;
+            return false;
         }
     }
 
@@ -1461,6 +1473,8 @@ namespace cAlgo.Robots
         public SweepConfirmationEngine SweepEngine { get; private set; }
         public List<SweepSetup> ActiveSetups { get; private set; }
         public IReadOnlyList<LiquidityZone> LastZones { get; private set; }
+        /// <summary>Last entry-TF closed bar index we attempted execution on (avoids double orders).</summary>
+        public int LastEntryExecutionBarIndex { get; set; }
 
         public static int GetLastClosedBarIndex(Bars bars)
         {
@@ -1645,13 +1659,13 @@ namespace cAlgo.Robots
             config.MinEqualTouches = 2;
             config.ZonePaddingAtr = 0.10;
             config.UseSessionLevels = true;
-            config.MinZoneStrength = 65;
-            config.MaxActiveZones = 10;
+            config.MinZoneStrength = 55;
+            config.MaxActiveZones = 12;
             config.ConfirmationBarDelay = 1;
-            config.MaxSweepAgeBars = 10;
-            config.RequireStructureShift = true;
+            config.MaxSweepAgeBars = 12;
+            config.RequireStructureShift = false;
             config.StructurePivotBars = 3;
-            config.MinWickBodyRatio = 0.8;
+            config.MinWickBodyRatio = 0.6;
             config.StopBufferAtr = 0.05;
             config.RiskPercent = 0.5;
             config.MaxSpreadPips = 30;
@@ -1836,6 +1850,9 @@ namespace cAlgo.Robots
         [Parameter("Debug Zone Drawing (log)", DefaultValue = false, Group = "Visual")]
         public bool DebugZoneDrawing { get; set; }
 
+        [Parameter("Log Entry Diagnostics (journal)", DefaultValue = false, Group = "Visual")]
+        public bool LogEntryDiagnostics { get; set; }
+
         [Parameter("Keep Drawings After Stop", DefaultValue = true, Group = "Visual")]
         public bool KeepDrawingsAfterStop { get; set; }
 
@@ -1843,6 +1860,7 @@ namespace cAlgo.Robots
         private readonly List<EntryMarker> _entryMarkers = new List<EntryMarker>();
         private readonly ChartVisualizer _visualizer = new ChartVisualizer();
         private RiskManager _riskManager;
+        private double _effectiveMaxSpreadPips;
         private AverageTrueRange _chartAtr;
         private TimeFrame _resolvedZoneTimeFrame;
         private TimeFrame _resolvedEntryTimeFrame;
@@ -1891,6 +1909,8 @@ namespace cAlgo.Robots
             double riskPercent = _effectiveConfig.PresetActive ? _effectiveConfig.RiskPercent : RiskPercent;
             double maxSpread = _effectiveConfig.PresetActive ? _effectiveConfig.MaxSpreadPips : MaxSpreadPips;
             double stopBuffer = _effectiveConfig.PresetActive ? _effectiveConfig.StopBufferAtr : StopBufferAtr;
+
+            _effectiveMaxSpreadPips = maxSpread;
 
             _riskManager = new RiskManager(
                 RiskModeSetting,
@@ -2035,7 +2055,7 @@ namespace cAlgo.Robots
                 }
 
                 if (_resolvedEntryTimeFrame == TimeFrame || UseChartTimeframeForEntry)
-                    TryExecuteEntries(_chartContext);
+                    MaybeExecuteEntries(_chartContext);
             }
         }
 
@@ -2091,8 +2111,20 @@ namespace cAlgo.Robots
             if (ctx == _chartContext)
                 RefreshChartVisuals(ctx);
 
-            if (!isZoneBarEvent && ctx != _chartContext)
-                TryExecuteEntries(ctx);
+            if (!isZoneBarEvent)
+                MaybeExecuteEntries(ctx);
+        }
+
+        private void MaybeExecuteEntries(SymbolTradingContext ctx)
+        {
+            int entryLast = SymbolTradingContext.GetLastClosedBarIndex(ctx.EntryBars);
+            if (entryLast < 0)
+                return;
+            if (entryLast <= ctx.LastEntryExecutionBarIndex)
+                return;
+
+            ctx.LastEntryExecutionBarIndex = entryLast;
+            TryExecuteEntries(ctx);
         }
 
         private void RefreshChartVisuals(SymbolTradingContext ctx)
@@ -2135,8 +2167,15 @@ namespace cAlgo.Robots
 
         private void TryExecuteEntries(SymbolTradingContext ctx)
         {
+            double spreadPips = ctx.Symbol.Spread / ctx.Symbol.PipSize;
+
             if (!_riskManager.IsSpreadAcceptable(ctx.Symbol))
+            {
+                if (LogEntryDiagnostics)
+                    Print(ctx.Symbol.Name + ": entry blocked — spread " + spreadPips.ToString("F1")
+                        + " pips (max " + _effectiveMaxSpreadPips + ", set 0 to disable).");
                 return;
+            }
 
             if (Positions.Find(BotTradeId, ctx.Symbol.Name) != null)
                 return;
@@ -2146,6 +2185,16 @@ namespace cAlgo.Robots
                 return;
 
             var ready = ctx.SweepEngine.GetReadyEntries(ctx.ActiveSetups);
+
+            if (LogEntryDiagnostics)
+            {
+                int eligibleZones = ctx.LastZones.Count(z => z.IsActive && z.StrengthScore >= _effectiveConfig.MinZoneStrength);
+                int pending = ctx.ActiveSetups.Count(s => s.Phase == SweepPhase.Swept || s.Phase == SweepPhase.Confirmed);
+                Print(ctx.Symbol.Name + " entry check | zones: " + ctx.LastZones.Count + " (eligible " + eligibleZones
+                    + ") | setups pending: " + pending + " | ready: " + ready.Count
+                    + " | spread: " + spreadPips.ToString("F1") + " pips");
+            }
+
             foreach (var setup in ready)
             {
                 if (openForSymbol >= MaxPositionsPerSymbol)
