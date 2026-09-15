@@ -91,15 +91,11 @@ Toggle individually: **Show Zone Labels**, **Show Sweep Markers**, **Show Entry 
 |-----------|-------|-------|
 | Zone Timeframe | H4 | Liquidity map (or enable Use Chart TF) |
 | Entry Timeframe | M15 | Execution (or attach bot to M15 chart) |
-| Pivot Bars | 5 | Swing confirmation |
-| Equal Level Tolerance | 0.15 × ATR | Scales with BTC volatility |
-| Confirmation Bar Delay | 1 | One bar after sweep close |
-| Require MSS | true | Structure shift filter |
-| Risk Mode | Percent Equity | 0.8% challenge-style |
-| Reward:Risk | 2.0 | Standard SMC target |
-| Move to BE at 1R | true | |
-| Partial close at 1R | 50% | |
-| Trailing stop | 0.35% after 1.5R | |
+| SL Type | SweepWick | Stop beyond liquidity sweep wick |
+| TP Type | RiskMultiplier | TP Value = 2.0 → 2R |
+| Trade Risk (USD) | 400 | Same sizing style as UltimateTrader2026 |
+| SL to BE / Trailing SL | Optional | Same types as UltimateTrader (Pips, %, ATR, R-multiple) |
+| Draw Zones On Chart | true | Red BSL / blue SSL boxes + level lines |
 
 ## Multi-pair usage
 

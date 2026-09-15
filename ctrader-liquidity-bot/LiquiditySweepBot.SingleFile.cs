@@ -1026,7 +1026,7 @@ namespace cAlgo.Robots
         private const string Prefix = "LQ_";
         private readonly HashSet<string> _trackedObjects = new HashSet<string>();
 
-        public void DrawZonesAndSetups(
+        public int DrawZonesAndSetups(
             Chart chart,
             Bars chartBars,
             Symbol symbol,
@@ -1044,14 +1044,15 @@ namespace cAlgo.Robots
             Clear(chart);
 
             if (chartBars.Count < 2)
-                return;
+                return 0;
 
-            int startIndex = Math.Max(0, chartBars.Count - lookbackBars);
-            int endIndex = Math.Max(startIndex + 1, chartBars.Count - 1);
+            ResolveDrawRange(chart, chartBars, lookbackBars, out int startIndex, out int endIndex);
 
+            int drawn = 0;
             foreach (var zone in zones.OrderByDescending(z => z.StrengthScore).Take(maxZones))
             {
-                DrawZone(chart, symbol, zone, startIndex, endIndex, showLabels);
+                DrawZone(chart, chartBars, symbol, zone, startIndex, endIndex, showLabels);
+                drawn++;
             }
 
             if (showSweepMarkers && entryBars != null)
@@ -1068,11 +1069,33 @@ namespace cAlgo.Robots
                     DrawEntryMarker(chart, symbol, entry);
             }
 
-            DrawTimeframeBadge(chart, chartBars, zoneTimeFrame);
+            DrawTimeframeBadge(chart, zoneTimeFrame, drawn, zones != null ? zones.Count : 0);
+            return drawn;
+        }
+
+        private static void ResolveDrawRange(Chart chart, Bars chartBars, int lookbackBars, out int startIndex, out int endIndex)
+        {
+            startIndex = Math.Max(0, chartBars.Count - lookbackBars);
+            endIndex = chartBars.Count - 1;
+
+            int visibleStart = chart.FirstVisibleBarIndex;
+            int visibleEnd = chart.LastVisibleBarIndex;
+            if (visibleEnd > visibleStart && visibleEnd > 0)
+            {
+                startIndex = visibleStart;
+                endIndex = visibleEnd;
+            }
+
+            if (endIndex <= startIndex)
+                endIndex = Math.Min(chartBars.Count - 1, startIndex + Math.Max(1, lookbackBars / 4));
+
+            if (endIndex <= startIndex)
+                endIndex = Math.Min(chartBars.Count - 1, startIndex + 1);
         }
 
         private void DrawZone(
             Chart chart,
+            Bars chartBars,
             Symbol symbol,
             LiquidityZone zone,
             int startIndex,
@@ -1081,40 +1104,86 @@ namespace cAlgo.Robots
         {
             string id = ZoneId(zone);
             bool isBsl = zone.Side == LiquiditySide.BuySide;
-            Color fill = isBsl ? Color.FromArgb(45, 231, 76, 60) : Color.FromArgb(45, 52, 152, 219);
-            Color line = isBsl ? Color.FromArgb(200, 231, 76, 60) : Color.FromArgb(200, 52, 152, 219);
-            Color labelColor = isBsl ? Color.FromArgb(255, 192, 57, 43) : Color.FromArgb(255, 41, 128, 185);
+            Color fill = isBsl ? Color.FromArgb(90, 231, 76, 60) : Color.FromArgb(90, 52, 152, 219);
+            Color line = isBsl ? Color.FromArgb(255, 231, 76, 60) : Color.FromArgb(255, 52, 152, 219);
+            Color labelColor = isBsl ? Color.OrangeRed : Color.DeepSkyBlue;
+
+            int zoneStart = FindChartBarIndex(chartBars, zone.FormedAt);
+            if (zoneStart < 0)
+                zoneStart = startIndex;
+            zoneStart = Math.Max(0, Math.Min(zoneStart, endIndex - 1));
+
+            double top = Math.Max(zone.ZoneTop, zone.ZoneBottom);
+            double bottom = Math.Min(zone.ZoneTop, zone.ZoneBottom);
+            double minHeight = Math.Max(symbol.PipSize * 40, zone.LevelPrice * 0.0005);
+            if (top - bottom < minHeight)
+            {
+                double mid = zone.LevelPrice;
+                top = mid + minHeight / 2.0;
+                bottom = mid - minHeight / 2.0;
+            }
 
             TrackDraw(Prefix + "rect_" + id);
-            chart.DrawRectangle(
+            var rect = chart.DrawRectangle(
                 Prefix + "rect_" + id,
-                startIndex,
-                zone.ZoneTop,
+                zoneStart,
+                top,
                 endIndex,
-                zone.ZoneBottom,
+                bottom,
                 fill,
-                1,
+                2,
                 LineStyle.Solid);
+            ConfigureShape(rect, fill);
 
             TrackDraw(Prefix + "lvl_" + id);
-            chart.DrawHorizontalLine(
+            var levelLine = chart.DrawTrendLine(
                 Prefix + "lvl_" + id,
+                zoneStart,
+                zone.LevelPrice,
+                endIndex,
                 zone.LevelPrice,
                 line,
                 2,
                 LineStyle.Solid);
+            ConfigureShape(levelLine, line);
+
+            TrackDraw(Prefix + "hlvl_" + id);
+            var hLine = chart.DrawHorizontalLine(
+                Prefix + "hlvl_" + id,
+                zone.LevelPrice,
+                line,
+                1,
+                LineStyle.Dots);
+            ConfigureShape(hLine, line);
 
             if (showLabels)
             {
                 string sideTag = isBsl ? "BSL" : "SSL";
                 string text = sideTag + " " + ShortSource(zone.Source) + " @ " + Math.Round(zone.LevelPrice, symbol.Digits) + "  [" + zone.StrengthScore + "]";
                 TrackDraw(Prefix + "lbl_" + id);
-                chart.DrawText(
+                var label = chart.DrawText(
                     Prefix + "lbl_" + id,
                     text,
                     endIndex,
                     zone.LevelPrice,
                     labelColor);
+                ConfigureShape(label, labelColor);
+            }
+        }
+
+        private static void ConfigureShape(ChartObject obj, Color color)
+        {
+            if (obj == null)
+                return;
+
+            obj.IsInteractive = true;
+            obj.IsHidden = false;
+
+            var rectangle = obj as ChartRectangle;
+            if (rectangle != null)
+            {
+                rectangle.IsFilled = true;
+                rectangle.Color = color;
             }
         }
 
@@ -1134,20 +1203,22 @@ namespace cAlgo.Robots
             string sweepKey = setup.SweepBarIndex + "_" + setup.Zone.LevelPrice.ToString("F5");
 
             TrackDraw(Prefix + "sweep_" + sweepKey);
-            chart.DrawIcon(
+            var icon = chart.DrawIcon(
                 Prefix + "sweep_" + sweepKey,
                 isLong ? ChartIconType.UpTriangle : ChartIconType.DownTriangle,
                 chartIndex,
                 price,
                 color);
+            ConfigureShape(icon, color);
 
             TrackDraw(Prefix + "sweep_txt_" + sweepKey);
-            chart.DrawText(
+            var label = chart.DrawText(
                 Prefix + "sweep_txt_" + sweepKey,
                 phase,
                 chartIndex,
                 price + (isLong ? -symbol.PipSize * 8 : symbol.PipSize * 8),
                 color);
+            ConfigureShape(label, color);
         }
 
         private static int FindChartBarIndex(Bars chartBars, DateTime time)
@@ -1168,61 +1239,69 @@ namespace cAlgo.Robots
             string entryKey = entry.Time.Ticks.ToString();
 
             TrackDraw(Prefix + "entry_" + entryKey);
-            chart.DrawIcon(
+            var icon = chart.DrawIcon(
                 Prefix + "entry_" + entryKey,
                 isLong ? ChartIconType.UpArrow : ChartIconType.DownArrow,
                 entry.Time,
                 entry.Price,
                 color);
+            ConfigureShape(icon, color);
 
             TrackDraw(Prefix + "entry_txt_" + entryKey);
-            chart.DrawText(
+            var label = chart.DrawText(
                 Prefix + "entry_txt_" + entryKey,
                 "ENTRY " + (isLong ? "LONG" : "SHORT"),
                 entry.Time,
                 entry.Price + (isLong ? symbol.PipSize * 10 : -symbol.PipSize * 10),
                 color);
+            ConfigureShape(label, color);
 
             if (entry.StopLoss > 0)
             {
                 TrackDraw(Prefix + "entry_sl_" + entryKey);
-                chart.DrawHorizontalLine(
+                var slLine = chart.DrawHorizontalLine(
                     Prefix + "entry_sl_" + entryKey,
                     entry.StopLoss,
                     Color.FromArgb(160, 231, 76, 60),
                     1,
                     LineStyle.Dots);
+                ConfigureShape(slLine, Color.FromArgb(160, 231, 76, 60));
             }
 
             if (entry.TakeProfit > 0)
             {
                 TrackDraw(Prefix + "entry_tp_" + entryKey);
-                chart.DrawHorizontalLine(
+                var tpLine = chart.DrawHorizontalLine(
                     Prefix + "entry_tp_" + entryKey,
                     entry.TakeProfit,
                     Color.FromArgb(160, 46, 204, 113),
                     1,
                     LineStyle.Dots);
+                ConfigureShape(tpLine, Color.FromArgb(160, 46, 204, 113));
             }
         }
 
-        private void DrawTimeframeBadge(Chart chart, Bars chartBars, TimeFrame zoneTimeFrame)
+        private void DrawTimeframeBadge(Chart chart, TimeFrame zoneTimeFrame, int zoneCount, int detectedCount)
         {
-            if (chartBars.Count < 1)
-                return;
-
             TrackDraw(Prefix + "tf_badge");
-            chart.DrawStaticText(
+            var badge = chart.DrawStaticText(
                 Prefix + "tf_badge",
-                "Liquidity zones: " + FormatTimeFrame(zoneTimeFrame),
+                "Liquidity " + FormatTimeFrame(zoneTimeFrame) + " | drawn: " + zoneCount + " / detected: " + detectedCount,
                 VerticalAlignment.Top,
                 HorizontalAlignment.Left,
-                Color.FromArgb(220, 44, 62, 80));
+                Color.Gold);
+            ConfigureShape(badge, Color.Gold);
         }
 
         public void Clear(Chart chart)
         {
-            foreach (var name in _trackedObjects.ToList())
+            var toRemove = new List<string>();
+            foreach (var obj in chart.Objects)
+            {
+                if (obj.Name != null && obj.Name.StartsWith(Prefix))
+                    toRemove.Add(obj.Name);
+            }
+            foreach (var name in toRemove)
                 chart.RemoveObject(name);
             _trackedObjects.Clear();
         }
@@ -1322,8 +1401,19 @@ namespace cAlgo.Robots
 
         public void RefreshZones()
         {
+            if (ZoneBars.Count < 5)
+                return;
+
             int zoneLast = GetLastClosedBarIndex(ZoneBars);
-            if (zoneLast < 10)
+            if (zoneLast < 0)
+                zoneLast = ZoneBars.Count - 1;
+            if (zoneLast < 5)
+                return;
+
+            var atr = ToArray(ZoneAtr.Result);
+            if (atr.Length <= zoneLast)
+                zoneLast = Math.Min(zoneLast, atr.Length - 1);
+            if (zoneLast < 5)
                 return;
 
             LastZones = ZoneEngine.BuildZones(
@@ -1331,7 +1421,7 @@ namespace cAlgo.Robots
                 ToArray(ZoneBars.LowPrices),
                 ToArray(ZoneBars.ClosePrices),
                 ToArray(ZoneBars.OpenTimes),
-                ToArray(ZoneAtr.Result),
+                atr,
                 zoneLast);
         }
 
@@ -1517,6 +1607,9 @@ namespace cAlgo.Robots
         [Parameter("Zone Lookback Bars", DefaultValue = 200, MinValue = 50, Group = "Visual")]
         public int ZoneLookbackBars { get; set; }
 
+        [Parameter("Debug Zone Drawing (log)", DefaultValue = true, Group = "Visual")]
+        public bool DebugZoneDrawing { get; set; }
+
         private readonly Dictionary<string, SymbolTradingContext> _contexts = new Dictionary<string, SymbolTradingContext>();
         private readonly List<EntryMarker> _entryMarkers = new List<EntryMarker>();
         private readonly ChartVisualizer _visualizer = new ChartVisualizer();
@@ -1524,6 +1617,11 @@ namespace cAlgo.Robots
         private AverageTrueRange _chartAtr;
         private TimeFrame _resolvedZoneTimeFrame;
         private TimeFrame _resolvedEntryTimeFrame;
+        private SymbolTradingContext _chartContext;
+        private int _lastProcessedBarIndex = -1;
+        private bool _initialDrawDone;
+        private int _timerRefreshCount;
+        private bool _loggedZoneSummary;
 
         protected override void OnStart()
         {
@@ -1539,8 +1637,6 @@ namespace cAlgo.Robots
                 MaxSpreadPips,
                 StopBufferAtr);
 
-            Bars.BarOpened += ChartBars_BarOpened;
-
             foreach (var symbol in ResolveSymbols())
             {
                 RegisterSymbol(symbol);
@@ -1553,41 +1649,80 @@ namespace cAlgo.Robots
                 return;
             }
 
-            Print("Liquidity TF: " + _resolvedZoneTimeFrame + " | Entry TF: " + _resolvedEntryTimeFrame + " | Chart TF: " + TimeFrame);
+            if (!_contexts.TryGetValue(Symbol.Name, out _chartContext))
+                _contexts.TryGetValue(SymbolName, out _chartContext);
 
-            SymbolTradingContext chartCtx;
-            if (_contexts.TryGetValue(SymbolName, out chartCtx))
+            Print("Liquidity TF: " + _resolvedZoneTimeFrame + " | Entry TF: " + _resolvedEntryTimeFrame + " | Chart TF: " + TimeFrame + " | Symbol: " + Symbol.Name);
+
+            if (_chartContext != null)
             {
-                chartCtx.RefreshZones();
-                chartCtx.RefreshEntrySetups();
-                RefreshChartVisuals(chartCtx);
+                _chartContext.RefreshZones();
+                _chartContext.RefreshEntrySetups();
+                RefreshChartVisuals(_chartContext);
             }
+
+            Timer.Start(1);
         }
 
         protected override void OnStop()
         {
-            Bars.BarOpened -= ChartBars_BarOpened;
+            Timer.Stop();
             _visualizer.Clear(Chart);
         }
 
         protected override void OnBar()
         {
-            SymbolTradingContext chartCtx;
-            if (_contexts.TryGetValue(SymbolName, out chartCtx))
-                RefreshChartVisuals(chartCtx);
+            if (_chartContext == null)
+                return;
+
+            _chartContext.RefreshZones();
+            _chartContext.RefreshEntrySetups();
+            RefreshChartVisuals(_chartContext);
         }
 
-        private void ChartBars_BarOpened(BarOpenedEventArgs args)
+        protected override void OnTimer()
         {
-            SymbolTradingContext chartCtx;
-            if (_contexts.TryGetValue(SymbolName, out chartCtx))
-                RefreshChartVisuals(chartCtx);
+            _timerRefreshCount++;
+            if (_chartContext != null)
+            {
+                _chartContext.RefreshZones();
+                _chartContext.RefreshEntrySetups();
+                RefreshChartVisuals(_chartContext);
+            }
+
+            if (_timerRefreshCount < 20)
+                Timer.Start(1);
+            else
+                Timer.Stop();
         }
 
         protected override void OnTick()
         {
             ApplyStopLossToBreakEven();
             ApplyTrailingStopLoss();
+
+            if (_chartContext == null)
+                return;
+
+            if (!_initialDrawDone)
+            {
+                _initialDrawDone = true;
+                _chartContext.RefreshZones();
+                _chartContext.RefreshEntrySetups();
+                RefreshChartVisuals(_chartContext);
+            }
+
+            if (Bars.Count - 1 > _lastProcessedBarIndex)
+            {
+                _lastProcessedBarIndex = Bars.Count - 1;
+
+                _chartContext.RefreshZones();
+                _chartContext.RefreshEntrySetups();
+                RefreshChartVisuals(_chartContext);
+
+                if (_resolvedEntryTimeFrame == TimeFrame || UseChartTimeframeForEntry)
+                    TryExecuteEntries(_chartContext);
+            }
         }
 
         private void RegisterSymbol(Symbol symbol)
@@ -1637,10 +1772,10 @@ namespace cAlgo.Robots
         {
             ctx.EvaluateAtBarOpen(isZoneBarEvent);
 
-            if (ctx.Symbol.Name == SymbolName)
+            if (ctx == _chartContext)
                 RefreshChartVisuals(ctx);
 
-            if (!isZoneBarEvent)
+            if (!isZoneBarEvent && ctx != _chartContext)
                 TryExecuteEntries(ctx);
         }
 
@@ -1652,7 +1787,9 @@ namespace cAlgo.Robots
                 return;
             }
 
-            _visualizer.DrawZonesAndSetups(
+            ctx.RefreshZones();
+
+            int drawn = _visualizer.DrawZonesAndSetups(
                 Chart,
                 Bars,
                 ctx.Symbol,
@@ -1666,6 +1803,17 @@ namespace cAlgo.Robots
                 ShowSweepMarkers,
                 ShowEntryMarkers,
                 _entryMarkers);
+
+            if (DebugZoneDrawing && (!_loggedZoneSummary || drawn > 0 || ctx.LastZones.Count == 0))
+            {
+                string sample = ctx.LastZones.Count > 0
+                    ? " | sample @" + Math.Round(ctx.LastZones[0].LevelPrice, ctx.Symbol.Digits)
+                    : string.Empty;
+                Print("Chart draw: " + drawn + " drawn | " + ctx.LastZones.Count + " detected"
+                    + " | zone TF bars " + ctx.ZoneBars.Count + " | chart bars " + Bars.Count + sample);
+                if (drawn > 0 || ctx.LastZones.Count == 0)
+                    _loggedZoneSummary = true;
+            }
         }
 
         private void TryExecuteEntries(SymbolTradingContext ctx)
