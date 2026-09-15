@@ -52,6 +52,41 @@ namespace cAlgo.Robots
         PercentBalance
     }
 
+    public enum StopLossType
+    {
+        SweepWick,
+        Pips,
+        Percent,
+        ATR
+    }
+
+    public enum TakeProfitType
+    {
+        None,
+        Pips,
+        Percent,
+        ATR,
+        RiskMultiplier
+    }
+
+    public enum SLToBEType
+    {
+        None,
+        Pips,
+        Percent,
+        ATR,
+        RiskMultiplier
+    }
+
+    public enum TrailingSLType
+    {
+        None,
+        Pips,
+        Percent,
+        ATR,
+        RiskMultiplier
+    }
+
     // --- Models ---
 
     public sealed class LiquidityZone
@@ -1012,19 +1047,18 @@ namespace cAlgo.Robots
                 return;
 
             int startIndex = Math.Max(0, chartBars.Count - lookbackBars);
-            DateTime startTime = chartBars.OpenTimes[startIndex];
-            DateTime endTime = chartBars.LastBar.OpenTime;
+            int endIndex = Math.Max(startIndex + 1, chartBars.Count - 1);
 
             foreach (var zone in zones.OrderByDescending(z => z.StrengthScore).Take(maxZones))
             {
-                DrawZone(chart, symbol, zone, startTime, endTime, showLabels);
+                DrawZone(chart, symbol, zone, startIndex, endIndex, showLabels);
             }
 
             if (showSweepMarkers && entryBars != null)
             {
                 foreach (var setup in setups.Where(s => s.Phase == SweepPhase.Swept || s.Phase == SweepPhase.Confirmed))
                 {
-                    DrawSweepMarker(chart, entryBars, symbol, setup);
+                    DrawSweepMarker(chart, chartBars, entryBars, symbol, setup);
                 }
             }
 
@@ -1041,8 +1075,8 @@ namespace cAlgo.Robots
             Chart chart,
             Symbol symbol,
             LiquidityZone zone,
-            DateTime startTime,
-            DateTime endTime,
+            int startIndex,
+            int endIndex,
             bool showLabels)
         {
             string id = ZoneId(zone);
@@ -1054,20 +1088,17 @@ namespace cAlgo.Robots
             TrackDraw(Prefix + "rect_" + id);
             chart.DrawRectangle(
                 Prefix + "rect_" + id,
-                startTime,
+                startIndex,
                 zone.ZoneTop,
-                endTime,
+                endIndex,
                 zone.ZoneBottom,
                 fill,
                 1,
                 LineStyle.Solid);
 
             TrackDraw(Prefix + "lvl_" + id);
-            chart.DrawTrendLine(
+            chart.DrawHorizontalLine(
                 Prefix + "lvl_" + id,
-                startTime,
-                zone.LevelPrice,
-                endTime,
                 zone.LevelPrice,
                 line,
                 2,
@@ -1081,18 +1112,21 @@ namespace cAlgo.Robots
                 chart.DrawText(
                     Prefix + "lbl_" + id,
                     text,
-                    endTime,
+                    endIndex,
                     zone.LevelPrice,
                     labelColor);
             }
         }
 
-        private void DrawSweepMarker(Chart chart, Bars entryBars, Symbol symbol, SweepSetup setup)
+        private void DrawSweepMarker(Chart chart, Bars chartBars, Bars entryBars, Symbol symbol, SweepSetup setup)
         {
             if (setup.SweepBarIndex < 0 || setup.SweepBarIndex >= entryBars.Count)
                 return;
 
-            DateTime time = entryBars.OpenTimes[setup.SweepBarIndex];
+            int chartIndex = FindChartBarIndex(chartBars, entryBars.OpenTimes[setup.SweepBarIndex]);
+            if (chartIndex < 0)
+                return;
+
             double price = setup.SweepWickExtreme;
             bool isLong = setup.Direction == TradeType.Buy;
             Color color = isLong ? Color.LimeGreen : Color.OrangeRed;
@@ -1103,7 +1137,7 @@ namespace cAlgo.Robots
             chart.DrawIcon(
                 Prefix + "sweep_" + sweepKey,
                 isLong ? ChartIconType.UpTriangle : ChartIconType.DownTriangle,
-                time,
+                chartIndex,
                 price,
                 color);
 
@@ -1111,9 +1145,19 @@ namespace cAlgo.Robots
             chart.DrawText(
                 Prefix + "sweep_txt_" + sweepKey,
                 phase,
-                time,
+                chartIndex,
                 price + (isLong ? -symbol.PipSize * 8 : symbol.PipSize * 8),
                 color);
+        }
+
+        private static int FindChartBarIndex(Bars chartBars, DateTime time)
+        {
+            for (int i = chartBars.Count - 1; i >= 0; i--)
+            {
+                if (chartBars.OpenTimes[i] <= time)
+                    return i;
+            }
+            return chartBars.Count > 0 ? 0 : -1;
         }
 
         private void DrawEntryMarker(Chart chart, Symbol symbol, EntryMarker entry)
@@ -1341,6 +1385,10 @@ namespace cAlgo.Robots
     [Robot(TimeZone = TimeZones.UTC, AccessRights = AccessRights.None)]
     public class LiquiditySweepBot : Robot
     {
+        // --- Trade Options ---
+        [Parameter("Bot Trade ID", Group = "Trade Options", DefaultValue = "LQ_Sweep")]
+        public string BotTradeId { get; set; }
+
         // --- Symbols ---
         [Parameter("Trade Chart Symbol Only", DefaultValue = true, Group = "Symbols")]
         public bool TradeChartSymbolOnly { get; set; }
@@ -1402,46 +1450,53 @@ namespace cAlgo.Robots
         [Parameter("Min Wick/Body Ratio", DefaultValue = 0.8, MinValue = 0.1, Group = "Confirmation")]
         public double MinWickBodyRatio { get; set; }
 
-        // --- Risk ---
-        [Parameter("Risk Mode", DefaultValue = RiskMode.PercentEquity, Group = "Risk")]
-        public RiskMode RiskModeSetting { get; set; }
+        // --- Stoploss (UltimateTrader-style) ---
+        [Parameter("SL Type", Group = "Stoploss", DefaultValue = StopLossType.SweepWick)]
+        public StopLossType SLType { get; set; }
 
-        [Parameter("Fixed USD Risk", DefaultValue = 100, MinValue = 1, Group = "Risk")]
-        public double FixedUsdRisk { get; set; }
+        [Parameter("SL Value", Group = "Stoploss", DefaultValue = 0.0)]
+        public double SLValue { get; set; }
 
-        [Parameter("Risk Percent", DefaultValue = 0.8, MinValue = 0.01, Group = "Risk")]
-        public double RiskPercent { get; set; }
-
-        [Parameter("Max Spread (pips, 0=off)", DefaultValue = 0, MinValue = 0, Group = "Risk")]
-        public double MaxSpreadPips { get; set; }
-
-        [Parameter("Stop Buffer (x ATR)", DefaultValue = 0.05, MinValue = 0, Group = "Risk")]
+        [Parameter("Stop Buffer (x ATR, SweepWick only)", Group = "Stoploss", DefaultValue = 0.05, MinValue = 0)]
         public double StopBufferAtr { get; set; }
 
-        [Parameter("ATR Period", DefaultValue = 14, MinValue = 5, Group = "Risk")]
+        [Parameter("SL to BE Type", Group = "Stoploss", DefaultValue = SLToBEType.None)]
+        public SLToBEType SLtoBE { get; set; }
+
+        [Parameter("SL to BE Value", Group = "Stoploss", DefaultValue = 0.0)]
+        public double SLtoBEValue { get; set; }
+
+        [Parameter("Trailing SL Type", Group = "Stoploss", DefaultValue = TrailingSLType.None)]
+        public TrailingSLType TrailingSL { get; set; }
+
+        [Parameter("Trailing SL Value", Group = "Stoploss", DefaultValue = 0.0)]
+        public double TrailingSLValue { get; set; }
+
+        // --- Take Profit (UltimateTrader-style) ---
+        [Parameter("TP Type", Group = "Take Profit", DefaultValue = TakeProfitType.RiskMultiplier)]
+        public TakeProfitType TPType { get; set; }
+
+        [Parameter("TP Value", Group = "Take Profit", DefaultValue = 2.0)]
+        public double TPValue { get; set; }
+
+        // --- Risk Management ---
+        [Parameter("Trade Risk (USD)", Group = "Risk Management", DefaultValue = 0.0)]
+        public double TradeRisk { get; set; }
+
+        [Parameter("Risk Mode (if Trade Risk = 0)", DefaultValue = RiskMode.PercentEquity, Group = "Risk Management")]
+        public RiskMode RiskModeSetting { get; set; }
+
+        [Parameter("Fixed USD Risk", DefaultValue = 100, MinValue = 1, Group = "Risk Management")]
+        public double FixedUsdRisk { get; set; }
+
+        [Parameter("Risk Percent", DefaultValue = 0.8, MinValue = 0.01, Group = "Risk Management")]
+        public double RiskPercent { get; set; }
+
+        [Parameter("Max Spread (pips, 0=off)", DefaultValue = 0, MinValue = 0, Group = "Risk Management")]
+        public double MaxSpreadPips { get; set; }
+
+        [Parameter("ATR Period", DefaultValue = 14, MinValue = 5, Group = "Risk Management")]
         public int AtrPeriod { get; set; }
-
-        // --- Profit ---
-        [Parameter("Reward:Risk Ratio", DefaultValue = 2.0, MinValue = 0.5, Group = "Profit")]
-        public double RewardRiskRatio { get; set; }
-
-        [Parameter("Move SL to Breakeven at 1R", DefaultValue = true, Group = "Profit")]
-        public bool MoveToBreakevenAt1R { get; set; }
-
-        [Parameter("Partial Close at 1R", DefaultValue = true, Group = "Profit")]
-        public bool PartialCloseAt1R { get; set; }
-
-        [Parameter("Partial Close %", DefaultValue = 50, MinValue = 10, MaxValue = 90, Group = "Profit")]
-        public double PartialClosePercent { get; set; }
-
-        [Parameter("Use Trailing Stop", DefaultValue = true, Group = "Profit")]
-        public bool UseTrailingStop { get; set; }
-
-        [Parameter("Trailing Stop %", DefaultValue = 0.35, MinValue = 0.1, Group = "Profit")]
-        public double TrailingStopPercent { get; set; }
-
-        [Parameter("Activate Trail After R", DefaultValue = 1.5, MinValue = 0.5, Group = "Profit")]
-        public double ActivateTrailAfterR { get; set; }
 
         // --- Visual ---
         [Parameter("Draw Zones On Chart", DefaultValue = true, Group = "Visual")]
@@ -1466,7 +1521,7 @@ namespace cAlgo.Robots
         private readonly List<EntryMarker> _entryMarkers = new List<EntryMarker>();
         private readonly ChartVisualizer _visualizer = new ChartVisualizer();
         private RiskManager _riskManager;
-        private ProfitManager _profitManager;
+        private AverageTrueRange _chartAtr;
         private TimeFrame _resolvedZoneTimeFrame;
         private TimeFrame _resolvedEntryTimeFrame;
 
@@ -1475,6 +1530,8 @@ namespace cAlgo.Robots
             _resolvedZoneTimeFrame = UseChartTimeframeForZones ? TimeFrame : ZoneTimeFrame;
             _resolvedEntryTimeFrame = UseChartTimeframeForEntry ? TimeFrame : EntryTimeFrame;
 
+            _chartAtr = Indicators.AverageTrueRange(Bars, AtrPeriod, MovingAverageType.Simple);
+
             _riskManager = new RiskManager(
                 RiskModeSetting,
                 FixedUsdRisk,
@@ -1482,14 +1539,7 @@ namespace cAlgo.Robots
                 MaxSpreadPips,
                 StopBufferAtr);
 
-            _profitManager = new ProfitManager(
-                RewardRiskRatio,
-                MoveToBreakevenAt1R,
-                PartialCloseAt1R,
-                PartialClosePercent,
-                UseTrailingStop,
-                TrailingStopPercent,
-                ActivateTrailAfterR);
+            Bars.BarOpened += ChartBars_BarOpened;
 
             foreach (var symbol in ResolveSymbols())
             {
@@ -1516,13 +1566,28 @@ namespace cAlgo.Robots
 
         protected override void OnStop()
         {
+            Bars.BarOpened -= ChartBars_BarOpened;
             _visualizer.Clear(Chart);
+        }
+
+        protected override void OnBar()
+        {
+            SymbolTradingContext chartCtx;
+            if (_contexts.TryGetValue(SymbolName, out chartCtx))
+                RefreshChartVisuals(chartCtx);
+        }
+
+        private void ChartBars_BarOpened(BarOpenedEventArgs args)
+        {
+            SymbolTradingContext chartCtx;
+            if (_contexts.TryGetValue(SymbolName, out chartCtx))
+                RefreshChartVisuals(chartCtx);
         }
 
         protected override void OnTick()
         {
-            foreach (var ctx in _contexts.Values)
-                _profitManager.ManageOpenPositions(this, ctx.Symbol);
+            ApplyStopLossToBreakEven();
+            ApplyTrailingStopLoss();
         }
 
         private void RegisterSymbol(Symbol symbol)
@@ -1576,10 +1641,7 @@ namespace cAlgo.Robots
                 RefreshChartVisuals(ctx);
 
             if (!isZoneBarEvent)
-            {
-                _profitManager.ManageOpenPositions(this, ctx.Symbol);
                 TryExecuteEntries(ctx);
-            }
         }
 
         private void RefreshChartVisuals(SymbolTradingContext ctx)
@@ -1611,6 +1673,9 @@ namespace cAlgo.Robots
             if (!_riskManager.IsSpreadAcceptable(ctx.Symbol))
                 return;
 
+            if (Positions.Find(BotTradeId, ctx.Symbol.Name) != null)
+                return;
+
             int openForSymbol = Positions.Count(p => p.SymbolName == ctx.Symbol.Name);
             if (openForSymbol >= MaxPositionsPerSymbol)
                 return;
@@ -1630,29 +1695,44 @@ namespace cAlgo.Robots
         private void ExecuteSetup(SymbolTradingContext ctx, SweepSetup setup)
         {
             var symbol = ctx.Symbol;
-            double entry = setup.Direction == TradeType.Buy ? symbol.Ask : symbol.Bid;
+            if (Positions.Find(BotTradeId, symbol.Name) != null)
+                return;
+
             int atrIndex = SymbolTradingContext.GetLastClosedBarIndex(ctx.EntryBars);
             if (atrIndex < 0)
                 atrIndex = 0;
             double atr = ctx.EntryAtr.Result[atrIndex];
 
-            double stopLoss = _riskManager.BuildStopLoss(setup.Direction, setup.SweepWickExtreme, atr, symbol);
-            double takeProfit = SymbolHelper.NormalizePrice(symbol,
-                _profitManager.CalculateTakeProfit(setup.Direction, entry, stopLoss));
+            double? stopLossPips = CalculateStopLossPips(setup, symbol, atr);
+            if (!stopLossPips.HasValue || stopLossPips.Value <= 0)
+            {
+                Print(symbol.Name + ": invalid stop loss — trade skipped.");
+                return;
+            }
 
-            double riskAmount = _riskManager.CalculateRiskAmount(Account);
-            double volume = _riskManager.CalculateVolumeInUnits(symbol, entry, stopLoss, riskAmount);
-
-            if (volume <= 0)
+            double volumeInUnits = CalculateVolumeInUnits(symbol, stopLossPips.Value);
+            if (volumeInUnits <= 0)
             {
                 Print(symbol.Name + ": volume too small for risk settings.");
                 return;
             }
 
-            var result = ExecuteMarketOrder(setup.Direction, symbol.Name, volume, "LQ_Sweep", stopLoss, takeProfit);
+            double? takeProfitPips = CalculateTakeProfitPips(setup.Direction, symbol, atr, stopLossPips);
+
+            var result = ExecuteMarketOrder(setup.Direction, symbol.Name, volumeInUnits, BotTradeId, stopLossPips, takeProfitPips);
             if (result.IsSuccessful)
             {
-                _profitManager.RegisterPosition(result.Position, stopLoss);
+                double entry = setup.Direction == TradeType.Buy ? symbol.Ask : symbol.Bid;
+                double slPrice = setup.Direction == TradeType.Buy
+                    ? entry - stopLossPips.Value * symbol.PipSize
+                    : entry + stopLossPips.Value * symbol.PipSize;
+                double? tpPrice = null;
+                if (takeProfitPips.HasValue)
+                {
+                    tpPrice = setup.Direction == TradeType.Buy
+                        ? entry + takeProfitPips.Value * symbol.PipSize
+                        : entry - takeProfitPips.Value * symbol.PipSize;
+                }
 
                 if (ShowEntryMarkers && symbol.Name == SymbolName)
                 {
@@ -1660,8 +1740,8 @@ namespace cAlgo.Robots
                     {
                         Time = ctx.EntryBars.OpenTimes[atrIndex],
                         Price = entry,
-                        StopLoss = stopLoss,
-                        TakeProfit = takeProfit,
+                        StopLoss = slPrice,
+                        TakeProfit = tpPrice ?? 0,
                         Direction = setup.Direction
                     });
 
@@ -1671,11 +1751,178 @@ namespace cAlgo.Robots
                     RefreshChartVisuals(ctx);
                 }
 
-                Print(symbol.Name + " " + setup.Direction + " | Zone: " + setup.Zone.Label + " @ " + setup.Zone.LevelPrice.ToString("F2") + " | SL " + stopLoss.ToString("F2") + " | TP " + takeProfit.ToString("F2") + " | R:R " + RewardRiskRatio);
+                Print(symbol.Name + " " + setup.Direction + " | Zone: " + setup.Zone.Label + " @ " + setup.Zone.LevelPrice.ToString("F2")
+                    + " | SL: " + stopLossPips.Value.ToString("F1") + " pips | TP: " + (takeProfitPips.HasValue ? takeProfitPips.Value.ToString("F1") + " pips" : "none")
+                    + " | Vol: " + volumeInUnits);
             }
             else
             {
                 Print(symbol.Name + " order failed: " + result.Error);
+            }
+        }
+
+        private double? CalculateStopLossPips(SweepSetup setup, Symbol symbol, double atr)
+        {
+            if (SLType == StopLossType.SweepWick)
+            {
+                double buffer = atr * StopBufferAtr;
+                double stopPrice = setup.Direction == TradeType.Buy
+                    ? setup.SweepWickExtreme - buffer
+                    : setup.SweepWickExtreme + buffer;
+                double entry = setup.Direction == TradeType.Buy ? symbol.Ask : symbol.Bid;
+                stopPrice = SymbolHelper.NormalizePrice(symbol, stopPrice);
+                return Math.Abs(entry - stopPrice) / symbol.PipSize;
+            }
+
+            if (SLValue <= 0)
+                return null;
+
+            switch (SLType)
+            {
+                case StopLossType.Pips:
+                    return SLValue;
+                case StopLossType.Percent:
+                    {
+                        double referencePrice = setup.Direction == TradeType.Buy ? symbol.Ask : symbol.Bid;
+                        return (referencePrice * (SLValue / 100.0)) / symbol.PipSize;
+                    }
+                case StopLossType.ATR:
+                    return (_chartAtr.Result.Last(1) * SLValue) / symbol.PipSize;
+                default:
+                    return null;
+            }
+        }
+
+        private double? CalculateTakeProfitPips(TradeType tradeType, Symbol symbol, double atr, double? stopLossPips)
+        {
+            if (TPType == TakeProfitType.None || TPValue <= 0)
+                return null;
+
+            switch (TPType)
+            {
+                case TakeProfitType.Pips:
+                    return TPValue;
+                case TakeProfitType.Percent:
+                    {
+                        double referencePrice = tradeType == TradeType.Buy ? symbol.Ask : symbol.Bid;
+                        return (referencePrice * (TPValue / 100.0)) / symbol.PipSize;
+                    }
+                case TakeProfitType.ATR:
+                    return (_chartAtr.Result.Last(1) * TPValue) / symbol.PipSize;
+                case TakeProfitType.RiskMultiplier:
+                    if (stopLossPips.HasValue)
+                        return stopLossPips.Value * TPValue;
+                    return null;
+                default:
+                    return null;
+            }
+        }
+
+        private double CalculateVolumeInUnits(Symbol symbol, double stopLossPips)
+        {
+            if (TradeRisk > 0 && stopLossPips > 0)
+            {
+                double riskPerPip = symbol.PipValue;
+                double volumeInLots = TradeRisk / ((stopLossPips * riskPerPip) * symbol.LotSize);
+                double volumeInUnits = symbol.QuantityToVolumeInUnits(volumeInLots);
+                if (volumeInUnits < symbol.VolumeInUnitsMin)
+                    volumeInUnits = symbol.VolumeInUnitsMin;
+                return symbol.NormalizeVolumeInUnits(volumeInUnits);
+            }
+
+            double riskAmount = _riskManager.CalculateRiskAmount(Account);
+            double amountRiskedPerUnit = stopLossPips * symbol.PipSize * symbol.TickValue / symbol.TickSize;
+            if (amountRiskedPerUnit <= 0)
+                return symbol.VolumeInUnitsMin;
+
+            double rawVolume = riskAmount / amountRiskedPerUnit;
+            rawVolume = symbol.NormalizeVolumeInUnits(rawVolume, RoundingMode.Down);
+            if (rawVolume < symbol.VolumeInUnitsMin)
+                return 0;
+            if (rawVolume > symbol.VolumeInUnitsMax)
+                rawVolume = symbol.VolumeInUnitsMax;
+            return rawVolume;
+        }
+
+        private void ApplyStopLossToBreakEven()
+        {
+            var position = Positions.Find(BotTradeId, Symbol.Name);
+            if (position == null || SLtoBE == SLToBEType.None || SLtoBEValue <= 0)
+                return;
+
+            if (position.StopLoss.HasValue && position.StopLoss.Value == position.EntryPrice)
+                return;
+
+            double thresholdPips;
+            switch (SLtoBE)
+            {
+                case SLToBEType.Pips:
+                    thresholdPips = SLtoBEValue;
+                    break;
+                case SLToBEType.Percent:
+                    thresholdPips = (position.EntryPrice * SLtoBEValue / 100.0) / Symbol.PipSize;
+                    break;
+                case SLToBEType.ATR:
+                    thresholdPips = (_chartAtr.Result.Last(1) * SLtoBEValue) / Symbol.PipSize;
+                    break;
+                case SLToBEType.RiskMultiplier:
+                    if (!position.StopLoss.HasValue)
+                        return;
+                    thresholdPips = Math.Abs((position.EntryPrice - position.StopLoss.Value) / Symbol.PipSize) * SLtoBEValue;
+                    break;
+                default:
+                    return;
+            }
+
+            if (position.Pips >= thresholdPips)
+                position.ModifyStopLossPrice(position.EntryPrice);
+        }
+
+        private void ApplyTrailingStopLoss()
+        {
+            var position = Positions.Find(BotTradeId, Symbol.Name);
+            if (position == null || TrailingSL == TrailingSLType.None || TrailingSLValue <= 0)
+                return;
+
+            double trailingPips;
+            switch (TrailingSL)
+            {
+                case TrailingSLType.Pips:
+                    trailingPips = TrailingSLValue;
+                    break;
+                case TrailingSLType.Percent:
+                    trailingPips = (position.EntryPrice * TrailingSLValue / 100.0) / Symbol.PipSize;
+                    break;
+                case TrailingSLType.ATR:
+                    trailingPips = (_chartAtr.Result.Last(1) * TrailingSLValue) / Symbol.PipSize;
+                    break;
+                case TrailingSLType.RiskMultiplier:
+                    if (!position.StopLoss.HasValue)
+                        return;
+                    trailingPips = Math.Abs((position.EntryPrice - position.StopLoss.Value) / Symbol.PipSize) * TrailingSLValue;
+                    break;
+                default:
+                    return;
+            }
+
+            if (trailingPips <= 0)
+                return;
+
+            double newStopPrice = position.TradeType == TradeType.Buy
+                ? Symbol.Bid - trailingPips * Symbol.PipSize
+                : Symbol.Ask + trailingPips * Symbol.PipSize;
+
+            newStopPrice = SymbolHelper.NormalizePrice(Symbol, newStopPrice);
+
+            if (position.TradeType == TradeType.Buy)
+            {
+                if (!position.StopLoss.HasValue || newStopPrice > position.StopLoss.Value)
+                    position.ModifyStopLossPrice(newStopPrice);
+            }
+            else
+            {
+                if (!position.StopLoss.HasValue || newStopPrice < position.StopLoss.Value)
+                    position.ModifyStopLossPrice(newStopPrice);
             }
         }
 
