@@ -1083,6 +1083,33 @@ namespace cAlgo.Robots
             return drawn;
         }
 
+        public void DrawTestPattern(Chart chart, Bars chartBars, Symbol symbol)
+        {
+            if (chartBars.Count < 3)
+                return;
+
+            int end = chartBars.Count - 1;
+            int start = Math.Max(0, end - 30);
+            double mid = symbol.Bid > 0 ? symbol.Bid : chartBars.ClosePrices[end];
+            double half = Math.Max(symbol.PipSize * 100, mid * 0.002);
+
+            TrackDraw(Prefix + "test_rect");
+            var testRect = chart.DrawRectangle(
+                Prefix + "test_rect",
+                start,
+                mid + half,
+                end,
+                mid - half,
+                Color.FromArgb(60, 255, 255, 0),
+                2,
+                LineStyle.Solid);
+            ConfigureShape(testRect, Color.FromArgb(60, 255, 255, 0), 3000);
+
+            TrackDraw(Prefix + "test_line");
+            var testLine = chart.DrawHorizontalLine(Prefix + "test_line", mid, Color.Yellow, 2, LineStyle.Solid);
+            ConfigureShape(testLine, Color.Yellow, 3000);
+        }
+
         public void DrawHeartbeat(Chart chart, TimeFrame zoneTimeFrame, int zoneBarCount)
         {
             Clear(chart);
@@ -1313,11 +1340,20 @@ namespace cAlgo.Robots
             TrackDraw(Prefix + "tf_badge");
             var badge = chart.DrawStaticText(
                 Prefix + "tf_badge",
-                "Liquidity " + FormatTimeFrame(zoneTimeFrame) + " | drawn: " + zoneCount + " / detected: " + detectedCount + "\n" + statusLine,
+                "Liquidity " + FormatTimeFrame(zoneTimeFrame) + " | drawn: " + zoneCount + " / detected: " + detectedCount,
                 VerticalAlignment.Top,
                 HorizontalAlignment.Left,
                 Color.Gold);
             ConfigureShape(badge, Color.Gold, 2000);
+
+            TrackDraw(Prefix + "tf_status");
+            var status = chart.DrawStaticText(
+                Prefix + "tf_status",
+                statusLine,
+                VerticalAlignment.Top,
+                HorizontalAlignment.Right,
+                Color.Gold);
+            ConfigureShape(status, Color.Gold, 2000);
 
             TrackDraw(Prefix + "tf_badge2");
             var badge2 = chart.DrawStaticText(
@@ -1646,6 +1682,9 @@ namespace cAlgo.Robots
         [Parameter("Debug Zone Drawing (log)", DefaultValue = true, Group = "Visual")]
         public bool DebugZoneDrawing { get; set; }
 
+        [Parameter("Keep Drawings After Stop", DefaultValue = true, Group = "Visual")]
+        public bool KeepDrawingsAfterStop { get; set; }
+
         private readonly Dictionary<string, SymbolTradingContext> _contexts = new Dictionary<string, SymbolTradingContext>();
         private readonly List<EntryMarker> _entryMarkers = new List<EntryMarker>();
         private readonly ChartVisualizer _visualizer = new ChartVisualizer();
@@ -1713,13 +1752,26 @@ namespace cAlgo.Robots
                 RefreshChartVisuals(_chartContext);
             }
 
+            Bars.BarOpened += OnChartBarOpened;
             Timer.Start(1);
         }
 
         protected override void OnStop()
         {
             Timer.Stop();
-            _visualizer.Clear(Chart);
+            Bars.BarOpened -= OnChartBarOpened;
+            if (!KeepDrawingsAfterStop)
+                _visualizer.Clear(Chart);
+        }
+
+        private void OnChartBarOpened(BarOpenedEventArgs args)
+        {
+            if (_chartContext == null || args.Bars != Bars)
+                return;
+
+            _chartContext.RefreshZones();
+            _chartContext.RefreshEntrySetups();
+            RefreshChartVisuals(_chartContext);
         }
 
         protected override void OnBar()
@@ -1764,13 +1816,23 @@ namespace cAlgo.Robots
                 RefreshChartVisuals(_chartContext);
             }
 
+            if (IsBacktesting)
+            {
+                _chartContext.RefreshZones();
+                _chartContext.RefreshEntrySetups();
+                RefreshChartVisuals(_chartContext);
+            }
+
             if (Bars.Count - 1 > _lastProcessedBarIndex)
             {
                 _lastProcessedBarIndex = Bars.Count - 1;
 
-                _chartContext.RefreshZones();
-                _chartContext.RefreshEntrySetups();
-                RefreshChartVisuals(_chartContext);
+                if (!IsBacktesting)
+                {
+                    _chartContext.RefreshZones();
+                    _chartContext.RefreshEntrySetups();
+                    RefreshChartVisuals(_chartContext);
+                }
 
                 if (_resolvedEntryTimeFrame == TimeFrame || UseChartTimeframeForEntry)
                     TryExecuteEntries(_chartContext);
@@ -1855,6 +1917,9 @@ namespace cAlgo.Robots
                 ShowSweepMarkers,
                 ShowEntryMarkers,
                 _entryMarkers);
+
+            if (drawn == 0)
+                _visualizer.DrawTestPattern(Chart, Bars, ctx.Symbol);
 
             if (DebugZoneDrawing)
             {
