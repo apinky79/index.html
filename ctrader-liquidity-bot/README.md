@@ -43,18 +43,49 @@ ctrader-liquidity-bot/
 │   ├── SwingPointDetector.cs
 │   ├── LiquidityZoneEngine.cs
 │   ├── SweepConfirmationEngine.cs
+│   ├── ChartVisualizer.cs
 │   ├── RiskManager.cs
 │   ├── ProfitManager.cs
 │   └── SymbolTradingContext.cs
 └── README.md
 ```
 
+## Timeframe settings (set any TF you want)
+
+| Parameter | What it does |
+|-----------|--------------|
+| **Use Chart Timeframe for Zones** | When `true`, liquidity zones use whatever chart you attach the bot to (e.g. M15, H1, H4, D1) |
+| **Liquidity Zone Timeframe** | Used when the above is `false` — pick any cTrader TF (M1, M15, H1, H4, D1, W1, etc.) |
+| **Use Chart Timeframe for Entry** | When `true` (default), entries/sweeps run on the chart TF |
+| **Entry Timeframe** | Used when the above is `false` — e.g. zones on H4, entries on M15 |
+
+**Examples:**
+- Zones + entries both on **M15** → attach to M15, enable both “Use Chart Timeframe” toggles
+- Zones on **H4**, entries on **M15** → attach to M15, zone toggle off + set H4, entry toggle off + set M15
+- Zones on **D1**, entries on chart → attach to M15, zone TF = Daily, entry uses chart
+
+A badge in the top-left of the chart shows the active liquidity timeframe.
+
+## Chart visuals
+
+When **Draw Zones On Chart** is enabled (default):
+
+| Element | Meaning |
+|---------|---------|
+| Red zone + line | **BSL** (buy-side liquidity) — equal highs, swing high, PDH/PWH |
+| Blue zone + line | **SSL** (sell-side liquidity) — equal lows, swing low, PDL/PWL |
+| Label | Side, source (EQH/EQL/PDH…), price, strength score |
+| ▲ / ▼ triangle | Sweep detected (`SWEEP` → `SWEEP OK` when confirmed) |
+| ↑ / ↓ arrow | Trade entry with dotted SL/TP lines |
+
+Toggle individually: **Show Zone Labels**, **Show Sweep Markers**, **Show Entry Markers**.
+
 ## Recommended starting settings (BTCUSD)
 
 | Parameter | Value | Notes |
 |-----------|-------|-------|
-| Zone Timeframe | H4 | Liquidity map |
-| Entry Timeframe | M15 | Execution (matches your existing rules doc) |
+| Zone Timeframe | H4 | Liquidity map (or enable Use Chart TF) |
+| Entry Timeframe | M15 | Execution (or attach bot to M15 chart) |
 | Pivot Bars | 5 | Swing confirmation |
 | Equal Level Tolerance | 0.15 × ATR | Scales with BTC volatility |
 | Confirmation Bar Delay | 1 | One bar after sweep close |

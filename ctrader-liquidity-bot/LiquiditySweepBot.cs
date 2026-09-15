@@ -10,7 +10,7 @@ namespace cAlgo.Robots
 {
     /// <summary>
     /// Liquidity Sweep cBot for cTrader.
-    /// Identifies liquidity on a higher timeframe, waits for sweep + price-action confirmation on the entry timeframe,
+    /// Identifies liquidity on a configurable timeframe, waits for sweep + price-action confirmation,
     /// then manages risk and profit using USD/percent sizing and R-multiple targets.
     /// </summary>
     [Robot(TimeZone = TimeZones.UTC, AccessRights = AccessRights.None)]
@@ -27,8 +27,14 @@ namespace cAlgo.Robots
         public int MaxPositionsPerSymbol { get; set; }
 
         // --- Timeframes ---
+        [Parameter("Use Chart Timeframe for Zones", DefaultValue = false, Group = "Timeframes")]
+        public bool UseChartTimeframeForZones { get; set; }
+
         [Parameter("Liquidity Zone Timeframe", DefaultValue = "Hour4", Group = "Timeframes")]
         public TimeFrame ZoneTimeFrame { get; set; }
+
+        [Parameter("Use Chart Timeframe for Entry", DefaultValue = true, Group = "Timeframes")]
+        public bool UseChartTimeframeForEntry { get; set; }
 
         [Parameter("Entry Timeframe", DefaultValue = "Minute15", Group = "Timeframes")]
         public TimeFrame EntryTimeFrame { get; set; }
@@ -112,15 +118,38 @@ namespace cAlgo.Robots
         [Parameter("Activate Trail After R", DefaultValue = 1.5, MinValue = 0.5, Group = "Profit")]
         public double ActivateTrailAfterR { get; set; }
 
+        // --- Visual ---
         [Parameter("Draw Zones On Chart", DefaultValue = true, Group = "Visual")]
         public bool DrawZonesOnChart { get; set; }
 
+        [Parameter("Show Zone Labels", DefaultValue = true, Group = "Visual")]
+        public bool ShowZoneLabels { get; set; }
+
+        [Parameter("Show Sweep Markers", DefaultValue = true, Group = "Visual")]
+        public bool ShowSweepMarkers { get; set; }
+
+        [Parameter("Show Entry Markers", DefaultValue = true, Group = "Visual")]
+        public bool ShowEntryMarkers { get; set; }
+
+        [Parameter("Max Zones Drawn", DefaultValue = 10, MinValue = 1, MaxValue = 20, Group = "Visual")]
+        public int MaxZonesDrawn { get; set; }
+
+        [Parameter("Zone Lookback Bars", DefaultValue = 200, MinValue = 50, Group = "Visual")]
+        public int ZoneLookbackBars { get; set; }
+
         private readonly Dictionary<string, SymbolTradingContext> _contexts = new Dictionary<string, SymbolTradingContext>();
+        private readonly List<EntryMarker> _entryMarkers = new List<EntryMarker>();
+        private readonly ChartVisualizer _visualizer = new ChartVisualizer();
         private RiskManager _riskManager;
         private ProfitManager _profitManager;
+        private TimeFrame _resolvedZoneTimeFrame;
+        private TimeFrame _resolvedEntryTimeFrame;
 
         protected override void OnStart()
         {
+            _resolvedZoneTimeFrame = UseChartTimeframeForZones ? TimeFrame : ZoneTimeFrame;
+            _resolvedEntryTimeFrame = UseChartTimeframeForEntry ? TimeFrame : EntryTimeFrame;
+
             _riskManager = new RiskManager(
                 RiskModeSetting,
                 FixedUsdRisk,
@@ -146,7 +175,22 @@ namespace cAlgo.Robots
             {
                 Print("No tradable symbols resolved. Attach bot to BTCUSD chart or set Extra Symbols.");
                 Stop();
+                return;
             }
+
+            Print($"Liquidity TF: {_resolvedZoneTimeFrame} | Entry TF: {_resolvedEntryTimeFrame} | Chart TF: {TimeFrame}");
+
+            if (_contexts.TryGetValue(SymbolName, out var chartCtx))
+            {
+                chartCtx.RefreshZones();
+                chartCtx.RefreshEntrySetups();
+                RefreshChartVisuals(chartCtx);
+            }
+        }
+
+        protected override void OnStop()
+        {
+            _visualizer.Clear(Chart);
         }
 
         protected override void OnTick()
@@ -157,9 +201,10 @@ namespace cAlgo.Robots
 
         private void RegisterSymbol(Symbol symbol)
         {
-            var zoneBars = MarketData.GetBars(ZoneTimeFrame, symbol.Name);
-            var entryBars = MarketData.GetBars(EntryTimeFrame, symbol.Name);
-            var atr = Indicators.AverageTrueRange(entryBars, AtrPeriod, MovingAverageType.Simple);
+            var zoneBars = MarketData.GetBars(_resolvedZoneTimeFrame, symbol.Name);
+            var entryBars = MarketData.GetBars(_resolvedEntryTimeFrame, symbol.Name);
+            var zoneAtr = Indicators.AverageTrueRange(zoneBars, AtrPeriod, MovingAverageType.Simple);
+            var entryAtr = Indicators.AverageTrueRange(entryBars, AtrPeriod, MovingAverageType.Simple);
 
             var zoneEngine = new LiquidityZoneEngine(
                 PivotBars,
@@ -177,7 +222,7 @@ namespace cAlgo.Robots
                 MinWickBodyRatio,
                 MinZoneStrength);
 
-            var ctx = new SymbolTradingContext(symbol, zoneBars, entryBars, atr, zoneEngine, sweepEngine);
+            var ctx = new SymbolTradingContext(symbol, zoneBars, entryBars, zoneAtr, entryAtr, zoneEngine, sweepEngine);
             _contexts[symbol.Name] = ctx;
 
             zoneBars.BarClosed += args =>
@@ -194,21 +239,45 @@ namespace cAlgo.Robots
                 ProcessSymbol(ctx, isZoneBarEvent: false);
             };
 
-            Print($"Registered {symbol.Name} | Zone TF: {ZoneTimeFrame} | Entry TF: {EntryTimeFrame}");
+            Print($"Registered {symbol.Name} | Zone TF: {_resolvedZoneTimeFrame} | Entry TF: {_resolvedEntryTimeFrame}");
         }
 
         private void ProcessSymbol(SymbolTradingContext ctx, bool isZoneBarEvent)
         {
-            ctx.EvaluateAtBarClose();
+            ctx.EvaluateAtBarClose(isZoneBarEvent);
 
-            if (DrawZonesOnChart && isZoneBarEvent)
-                DrawZones(ctx);
+            if (ctx.Symbol.Name == SymbolName)
+                RefreshChartVisuals(ctx);
 
             if (!isZoneBarEvent)
             {
                 _profitManager.ManageOpenPositions(this, ctx.Symbol);
                 TryExecuteEntries(ctx);
             }
+        }
+
+        private void RefreshChartVisuals(SymbolTradingContext ctx)
+        {
+            if (!DrawZonesOnChart)
+            {
+                _visualizer.Clear(Chart);
+                return;
+            }
+
+            _visualizer.DrawZonesAndSetups(
+                Chart,
+                Bars,
+                ctx.Symbol,
+                _resolvedZoneTimeFrame,
+                ctx.LastZones,
+                ctx.EntryBars,
+                ctx.ActiveSetups,
+                MaxZonesDrawn,
+                ZoneLookbackBars,
+                ShowZoneLabels,
+                ShowSweepMarkers,
+                ShowEntryMarkers,
+                _entryMarkers);
         }
 
         private void TryExecuteEntries(SymbolTradingContext ctx)
@@ -237,7 +306,7 @@ namespace cAlgo.Robots
             var symbol = ctx.Symbol;
             double entry = setup.Direction == TradeType.Buy ? symbol.Ask : symbol.Bid;
             int atrIndex = Math.Max(0, ctx.EntryBars.Count - 1);
-            double atr = ctx.Atr.Result[atrIndex];
+            double atr = ctx.EntryAtr.Result[atrIndex];
 
             double stopLoss = _riskManager.BuildStopLoss(setup.Direction, setup.SweepWickExtreme, atr, symbol);
             double takeProfit = symbol.NormalizePrice(
@@ -256,30 +325,29 @@ namespace cAlgo.Robots
             if (result.IsSuccessful)
             {
                 _profitManager.RegisterPosition(result.Position, stopLoss);
+
+                if (ShowEntryMarkers && symbol.Name == SymbolName)
+                {
+                    _entryMarkers.Add(new EntryMarker
+                    {
+                        Time = ctx.EntryBars.OpenTimes[atrIndex],
+                        Price = entry,
+                        StopLoss = stopLoss,
+                        TakeProfit = takeProfit,
+                        Direction = setup.Direction
+                    });
+
+                    if (_entryMarkers.Count > 30)
+                        _entryMarkers.RemoveAt(0);
+
+                    RefreshChartVisuals(ctx);
+                }
+
                 Print($"{symbol.Name} {setup.Direction} | Zone: {setup.Zone.Label} @ {setup.Zone.LevelPrice:F2} | SL {stopLoss:F2} | TP {takeProfit:F2} | R:R {RewardRiskRatio}");
             }
             else
             {
                 Print($"{symbol.Name} order failed: {result.Error}");
-            }
-        }
-
-        private void DrawZones(SymbolTradingContext ctx)
-        {
-            Chart.RemoveAllObjects();
-
-            foreach (var zone in ctx.LastZones.Take(8))
-            {
-                var color = zone.Side == LiquiditySide.BuySide ? Color.FromArgb(60, 220, 80, 80) : Color.FromArgb(60, 80, 160, 255);
-                Chart.DrawRectangle(
-                    $"zone_{zone.Source}_{zone.LevelPrice}",
-                    ctx.ZoneBars.OpenTimes[Math.Max(0, ctx.ZoneBars.Count - 120)],
-                    zone.ZoneTop,
-                    ctx.ZoneBars.LastBar.OpenTime,
-                    zone.ZoneBottom,
-                    color,
-                    1,
-                    LineStyle.Solid);
             }
         }
 

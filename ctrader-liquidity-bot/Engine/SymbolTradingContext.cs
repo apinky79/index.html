@@ -12,14 +12,16 @@ namespace cAlgo.Robots.LiquiditySweep.Engine
             Symbol symbol,
             Bars zoneBars,
             Bars entryBars,
-            AverageTrueRange atr,
+            AverageTrueRange zoneAtr,
+            AverageTrueRange entryAtr,
             LiquidityZoneEngine zoneEngine,
             SweepConfirmationEngine sweepEngine)
         {
             Symbol = symbol;
             ZoneBars = zoneBars;
             EntryBars = entryBars;
-            Atr = atr;
+            ZoneAtr = zoneAtr;
+            EntryAtr = entryAtr;
             ZoneEngine = zoneEngine;
             SweepEngine = sweepEngine;
             ActiveSetups = new List<SweepSetup>();
@@ -28,17 +30,14 @@ namespace cAlgo.Robots.LiquiditySweep.Engine
         public Symbol Symbol { get; }
         public Bars ZoneBars { get; }
         public Bars EntryBars { get; }
-        public AverageTrueRange Atr { get; }
+        public AverageTrueRange ZoneAtr { get; }
+        public AverageTrueRange EntryAtr { get; }
         public LiquidityZoneEngine ZoneEngine { get; }
         public SweepConfirmationEngine SweepEngine { get; }
         public List<SweepSetup> ActiveSetups { get; }
         public IReadOnlyList<LiquidityZone> LastZones { get; private set; } = Array.Empty<LiquidityZone>();
 
-        /// <summary>
-        /// Evaluate using the most recently closed bar.
-        /// Called from Bars.BarClosed handlers where the forming bar is omitted from the collection.
-        /// </summary>
-        public void EvaluateAtBarClose()
+        public void RefreshZones()
         {
             int zoneLast = ZoneBars.Count - 1;
             if (zoneLast < 10)
@@ -49,11 +48,14 @@ namespace cAlgo.Robots.LiquiditySweep.Engine
                 ToArray(ZoneBars.LowPrices),
                 ToArray(ZoneBars.ClosePrices),
                 ToArray(ZoneBars.OpenTimes),
-                ToArray(Atr.Result),
+                ToArray(ZoneAtr.Result),
                 zoneLast);
+        }
 
+        public void RefreshEntrySetups()
+        {
             int entryLast = EntryBars.Count - 1;
-            if (entryLast < 5)
+            if (entryLast < 5 || LastZones.Count == 0)
                 return;
 
             ActiveSetups = SweepEngine.UpdateSetups(
@@ -64,6 +66,13 @@ namespace cAlgo.Robots.LiquiditySweep.Engine
                 ToArray(EntryBars.ClosePrices),
                 entryLast,
                 ActiveSetups);
+        }
+
+        public void EvaluateAtBarClose(bool isZoneBarEvent)
+        {
+            if (isZoneBarEvent)
+                RefreshZones();
+            RefreshEntrySetups();
         }
 
         private static double[] ToArray(DataSeries series)
