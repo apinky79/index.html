@@ -611,19 +611,20 @@ namespace cAlgo.Robots
             double close = closes[bar];
             double body = Math.Abs(close - open);
 
-            foreach (var zone in zones.Where(z => z.IsActive && z.StrengthScore >= _minZoneStrength && ZoneTouchesLevel(z, high, low)))
+            foreach (var zone in zones)
             {
+                if (!zone.IsActive || zone.StrengthScore < _minZoneStrength)
+                    continue;
+                if (!ZoneTouchesLevel(zone, high, low))
+                    continue;
+
                 if (setups.Any(s => s.Zone.LevelPrice == zone.LevelPrice && s.Zone.Source == zone.Source && s.Phase != SweepPhase.Invalidated))
                     continue;
 
                 if (zone.Side == LiquiditySide.SellSide)
-                {
                     TryDetectBullishSweep(zone, open, high, low, close, body, bar, setups, highs, lows, closes);
-                }
                 else
-                {
                     TryDetectBearishSweep(zone, open, high, low, close, body, bar, setups, highs, lows, closes);
-                }
             }
 
             AdvanceConfirmation(setups, opens, highs, lows, closes, lastClosedBarIndex);
