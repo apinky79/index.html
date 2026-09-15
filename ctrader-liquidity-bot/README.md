@@ -214,10 +214,18 @@ During optimisation the bot logs `Optimisation mode — sweeping parameter value
 
 Full parameter list: [`LiquiditySweepBot.optimisation.json`](LiquiditySweepBot.optimisation.json)
 
+## No trades in backtest?
+
+1. **Timeframes** — Attach to **M15**. Set *Use Chart TF for Zones/Entry* = **No**, *Apply Algo Preset* = **Yes** (H4 zones → M15 sweeps).
+2. **Spread** — If journal never shows orders, set **Max Spread (pips) = 0** to disable the filter (BTC spreads vary by broker pip definition).
+3. **Filters** — Preset uses **MSS off** and **min wick/body 0.6** for more signals. Stricter manual settings (MSS on, min strength 65+, wick 0.8) can yield zero trades over short samples.
+4. **Diagnostics** — Enable **Log Entry Diagnostics** and read the journal each entry bar: `ready: 0` with `setups pending > 0` means sweeps detected but not confirmed yet; `eligible zones: 0` means loosen *Min Zone Strength* (try 50).
+5. **History** — Need enough **H4 + M15** history loaded (months, not days).
+
 ## Backtesting notes
 
 - Use **M15** chart with bot attached; zone logic runs on H4 via `MarketData.GetBars`.
-- Model **realistic spread** — BTC CFD spread varies widely by broker; set `Max Spread (pips)` if needed.
+- Model **realistic spread** — BTC CFD spread varies widely by broker; set `Max Spread (pips)` to **0** first if unsure, then tighten for live.
 - Session levels (PDH/L) work on **UTC** bar timestamps (`TimeZone = UTC`).
 - Optimise **few** parameters at a time — see table above.
 
