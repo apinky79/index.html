@@ -97,15 +97,49 @@ A **gold badge** in the top-left shows `drawn: N / detected: M`. If you see the 
    - `detected N, drawn N` but nothing visible → zoom out on price; BTC zones may be off-screen.
 5. Wait ~20 seconds after start — the bot retries drawing while H4 bars load.
 
+## Algo trader preset (recommended)
+
+**Default setup for systematic trading:** leave both timeframe boxes **unchecked** and keep **Apply Algo Preset = Yes**.
+
+| Toggle | Default | Algo behaviour |
+|--------|---------|----------------|
+| Use Chart TF for Zones | **No** | Liquidity map on **H4** |
+| Use Chart TF for Entry | **No** | Sweeps/entries on **M15** |
+| Apply Algo Preset | **Yes** | Applies research-backed values below |
+
+When the preset is active, the log prints `=== ALGO TRADER PRESET ACTIVE ===` with the full config.
+
+**Preset values (HTF/LTF liquidity sweep model for BTCUSD):**
+
+| Setting | Value | Rationale |
+|---------|-------|-----------|
+| Zone TF | H4 | Structural liquidity; filters M15 noise |
+| Entry TF | M15 | Clean sweep confirmation without M1 overtrading |
+| Pivot bars | 5 | Standard confirmed swing on H4 (~20h each side) |
+| Min zone strength | 65 | Prefer EQH/EQL and session levels over weak swings |
+| Confirmation delay | 1 bar | No lookahead; one closed M15 bar after sweep |
+| MSS required | Yes | Cuts false sweeps in strong trends |
+| Max sweep age | 10 M15 bars | ~2.5h; stale setups discarded |
+| SL | Sweep wick + 0.05 ATR | Stop beyond liquidity grab |
+| TP | 2R | Baseline systematic reward:risk |
+| Risk | 0.5% equity | Conservative prop-style default (or set Trade Risk USD) |
+| Max spread | 30 pips | Skip wide BTC CFD spreads |
+| Session levels | On | PDH/L and PWH/L — validated on crypto |
+
+**Attach the bot to a BTCUSD M15 chart** for best alignment with entry TF.
+
+Check **Use Chart TF** boxes only for experimentation (zones/entries follow whatever chart you attach to).
+
 ## Recommended starting settings (BTCUSD)
 
 | Parameter | Value | Notes |
 |-----------|-------|-------|
-| Zone Timeframe | H4 | Liquidity map (or enable Use Chart TF) |
-| Entry Timeframe | M15 | Execution (or attach bot to M15 chart) |
+| Apply Algo Preset | Yes | When TF boxes unchecked |
+| Zone Timeframe | H4 | Auto-applied by preset |
+| Entry Timeframe | M15 | Auto-applied by preset |
 | SL Type | SweepWick | Stop beyond liquidity sweep wick |
 | TP Type | RiskMultiplier | TP Value = 2.0 → 2R |
-| Trade Risk (USD) | 400 | Same sizing style as UltimateTrader2026 |
+| Trade Risk (USD) | 400 | Optional; overrides % risk when > 0 |
 | SL to BE / Trailing SL | Optional | Same types as UltimateTrader (Pips, %, ATR, R-multiple) |
 | Draw Zones On Chart | true | Red BSL / blue SSL boxes + level lines |
 

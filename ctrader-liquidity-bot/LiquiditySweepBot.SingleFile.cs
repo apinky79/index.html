@@ -2206,7 +2206,7 @@ namespace cAlgo.Robots
         {
             if (SLType == StopLossType.SweepWick)
             {
-                double buffer = atr * StopBufferAtr;
+                double buffer = atr * _effectiveConfig.StopBufferAtr;
                 double stopPrice = setup.Direction == TradeType.Buy
                     ? setup.SweepWickExtreme - buffer
                     : setup.SweepWickExtreme + buffer;
