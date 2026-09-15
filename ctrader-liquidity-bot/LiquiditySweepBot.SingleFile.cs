@@ -2400,9 +2400,9 @@ namespace cAlgo.Robots
             if (pf <= 0 || double.IsNaN(pf) || double.IsInfinity(pf))
                 return 0;
 
-            double dd = args.MaxEquityDrawdownPercentages;
-            if (dd < 0.5)
-                dd = 0.5;
+            double dd = args.MaxEquityDrawdown;
+            if (dd < 1)
+                dd = 1;
 
             return pf * args.NetProfit / dd;
         }
