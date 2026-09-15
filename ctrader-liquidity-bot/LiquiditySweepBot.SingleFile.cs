@@ -1657,7 +1657,6 @@ namespace cAlgo.Robots
         private int _lastProcessedBarIndex = -1;
         private bool _initialDrawDone;
         private int _timerRefreshCount;
-        private bool _loggedZoneSummary;
 
         protected override void OnStart()
         {
@@ -1864,7 +1863,6 @@ namespace cAlgo.Robots
                     : string.Empty;
                 Print("Chart draw: " + drawn + " drawn | " + ctx.LastZones.Count + " detected"
                     + " | zone TF bars " + ctx.ZoneBars.Count + " | chart bars " + Bars.Count + sample);
-                _loggedZoneSummary = true;
             }
         }
 
