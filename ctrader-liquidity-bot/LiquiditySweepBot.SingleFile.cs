@@ -1570,6 +1570,7 @@ namespace cAlgo.Robots
     {
         public static AlgoEffectiveConfig Resolve(
             bool applyPreset,
+            bool isOptimizing,
             bool useChartForZones,
             bool useChartForEntry,
             TimeFrame chartTimeFrame,
@@ -1614,6 +1615,20 @@ namespace cAlgo.Robots
             };
 
             bool algoTimeframeMode = !useChartForZones || !useChartForEntry;
+
+            // During optimisation each pass sets parameters — never override them with the live preset.
+            if (isOptimizing)
+            {
+                if (applyPreset && algoTimeframeMode)
+                {
+                    if (!useChartForZones)
+                        config.ZoneTimeFrame = TimeFrame.Hour4;
+                    if (!useChartForEntry)
+                        config.EntryTimeFrame = TimeFrame.Minute15;
+                }
+                return config;
+            }
+
             if (!applyPreset || !algoTimeframeMode)
                 return config;
 
@@ -1713,42 +1728,42 @@ namespace cAlgo.Robots
         [Parameter("Entry Timeframe", DefaultValue = "Minute15", Group = "Timeframes")]
         public TimeFrame EntryTimeFrame { get; set; }
 
-        // --- Liquidity detection ---
-        [Parameter("Pivot Bars (swing confirmation)", DefaultValue = 5, MinValue = 2, Group = "Liquidity")]
+        // --- Liquidity detection (Min/Max/Step = optimisation ranges in cTrader) ---
+        [Parameter("Pivot Bars (swing confirmation)", DefaultValue = 5, MinValue = 3, MaxValue = 8, Step = 1, Group = "Liquidity")]
         public int PivotBars { get; set; }
 
-        [Parameter("Equal Level Tolerance (x ATR)", DefaultValue = 0.15, MinValue = 0.05, Group = "Liquidity")]
+        [Parameter("Equal Level Tolerance (x ATR)", DefaultValue = 0.15, MinValue = 0.10, MaxValue = 0.25, Step = 0.05, Group = "Liquidity")]
         public double EqualLevelToleranceAtr { get; set; }
 
-        [Parameter("Min Equal Touches", DefaultValue = 2, MinValue = 2, Group = "Liquidity")]
+        [Parameter("Min Equal Touches", DefaultValue = 2, MinValue = 2, MaxValue = 2, Step = 1, Group = "Liquidity")]
         public int MinEqualTouches { get; set; }
 
-        [Parameter("Zone Padding (x ATR)", DefaultValue = 0.10, MinValue = 0.01, Group = "Liquidity")]
+        [Parameter("Zone Padding (x ATR)", DefaultValue = 0.10, MinValue = 0.05, MaxValue = 0.20, Step = 0.05, Group = "Liquidity")]
         public double ZonePaddingAtr { get; set; }
 
         [Parameter("Use Session Levels (PDH/L, PWH/L)", DefaultValue = true, Group = "Liquidity")]
         public bool UseSessionLevels { get; set; }
 
-        [Parameter("Min Zone Strength (0-100)", DefaultValue = 65, MinValue = 0, MaxValue = 100, Group = "Liquidity")]
+        [Parameter("Min Zone Strength (0-100)", DefaultValue = 65, MinValue = 50, MaxValue = 80, Step = 5, Group = "Liquidity")]
         public int MinZoneStrength { get; set; }
 
-        [Parameter("Max Active Zones", DefaultValue = 10, MinValue = 5, Group = "Liquidity")]
+        [Parameter("Max Active Zones", DefaultValue = 10, MinValue = 8, MaxValue = 12, Step = 1, Group = "Liquidity")]
         public int MaxActiveZones { get; set; }
 
         // --- Sweep confirmation ---
-        [Parameter("Confirmation Bar Delay", DefaultValue = 1, MinValue = 0, Group = "Confirmation")]
+        [Parameter("Confirmation Bar Delay", DefaultValue = 1, MinValue = 0, MaxValue = 3, Step = 1, Group = "Confirmation")]
         public int ConfirmationBarDelay { get; set; }
 
-        [Parameter("Max Sweep Age (entry bars)", DefaultValue = 10, MinValue = 3, Group = "Confirmation")]
+        [Parameter("Max Sweep Age (entry bars)", DefaultValue = 10, MinValue = 6, MaxValue = 16, Step = 2, Group = "Confirmation")]
         public int MaxSweepAgeBars { get; set; }
 
         [Parameter("Require Structure Shift (MSS)", DefaultValue = true, Group = "Confirmation")]
         public bool RequireStructureShift { get; set; }
 
-        [Parameter("Structure Pivot Bars", DefaultValue = 3, MinValue = 2, Group = "Confirmation")]
+        [Parameter("Structure Pivot Bars", DefaultValue = 3, MinValue = 2, MaxValue = 5, Step = 1, Group = "Confirmation")]
         public int StructurePivotBars { get; set; }
 
-        [Parameter("Min Wick/Body Ratio", DefaultValue = 0.8, MinValue = 0.1, Group = "Confirmation")]
+        [Parameter("Min Wick/Body Ratio", DefaultValue = 0.8, MinValue = 0.5, MaxValue = 1.2, Step = 0.1, Group = "Confirmation")]
         public double MinWickBodyRatio { get; set; }
 
         // --- Stoploss (UltimateTrader-style) ---
@@ -1758,7 +1773,7 @@ namespace cAlgo.Robots
         [Parameter("SL Value", Group = "Stoploss", DefaultValue = 0.0)]
         public double SLValue { get; set; }
 
-        [Parameter("Stop Buffer (x ATR, SweepWick only)", Group = "Stoploss", DefaultValue = 0.05, MinValue = 0)]
+        [Parameter("Stop Buffer (x ATR, SweepWick only)", Group = "Stoploss", DefaultValue = 0.05, MinValue = 0.02, MaxValue = 0.10, Step = 0.01)]
         public double StopBufferAtr { get; set; }
 
         [Parameter("SL to BE Type", Group = "Stoploss", DefaultValue = SLToBEType.None)]
@@ -1777,7 +1792,7 @@ namespace cAlgo.Robots
         [Parameter("TP Type", Group = "Take Profit", DefaultValue = TakeProfitType.RiskMultiplier)]
         public TakeProfitType TPType { get; set; }
 
-        [Parameter("TP Value", Group = "Take Profit", DefaultValue = 2.0)]
+        [Parameter("TP Value", Group = "Take Profit", DefaultValue = 2.0, MinValue = 1.5, MaxValue = 3.0, Step = 0.25)]
         public double TPValue { get; set; }
 
         // --- Risk Management ---
@@ -1790,13 +1805,13 @@ namespace cAlgo.Robots
         [Parameter("Fixed USD Risk", DefaultValue = 100, MinValue = 1, Group = "Risk Management")]
         public double FixedUsdRisk { get; set; }
 
-        [Parameter("Risk Percent", DefaultValue = 0.5, MinValue = 0.01, Group = "Risk Management")]
+        [Parameter("Risk Percent", DefaultValue = 0.5, MinValue = 0.25, MaxValue = 1.0, Step = 0.25, Group = "Risk Management")]
         public double RiskPercent { get; set; }
 
-        [Parameter("Max Spread (pips, 0=off)", DefaultValue = 30, MinValue = 0, Group = "Risk Management")]
+        [Parameter("Max Spread (pips, 0=off)", DefaultValue = 30, MinValue = 15, MaxValue = 50, Step = 5, Group = "Risk Management")]
         public double MaxSpreadPips { get; set; }
 
-        [Parameter("ATR Period", DefaultValue = 14, MinValue = 5, Group = "Risk Management")]
+        [Parameter("ATR Period", DefaultValue = 14, MinValue = 10, MaxValue = 20, Step = 2, Group = "Risk Management")]
         public int AtrPeriod { get; set; }
 
         // --- Visual ---
@@ -1841,6 +1856,7 @@ namespace cAlgo.Robots
         {
             _effectiveConfig = AlgoTraderPresets.Resolve(
                 ApplyAlgoTraderPreset,
+                IsOptimizing,
                 UseChartTimeframeForZones,
                 UseChartTimeframeForEntry,
                 TimeFrame,
@@ -1906,7 +1922,10 @@ namespace cAlgo.Robots
             Print("Liquidity TF: " + AlgoTraderPresets.FormatTimeFrame(_resolvedZoneTimeFrame)
                 + " | Entry TF: " + AlgoTraderPresets.FormatTimeFrame(_resolvedEntryTimeFrame)
                 + " | Chart TF: " + AlgoTraderPresets.FormatTimeFrame(TimeFrame) + " | Symbol: " + Symbol.Name);
-            Print("DrawZonesOnChart: " + DrawZonesOnChart + " | Backtesting: " + IsBacktesting);
+            Print("DrawZonesOnChart: " + DrawZonesOnChart + " | Backtesting: " + IsBacktesting + " | Optimizing: " + IsOptimizing);
+
+            if (IsOptimizing)
+                Print("Optimisation mode — sweeping parameter values (live algo preset overrides disabled).");
 
             if (_effectiveConfig.PresetActive)
                 AlgoTraderPresets.PrintBanner(this, _effectiveConfig, UseChartTimeframeForZones, UseChartTimeframeForEntry);
@@ -2365,6 +2384,27 @@ namespace cAlgo.Robots
                 if (!position.StopLoss.HasValue || newStopPrice < position.StopLoss.Value)
                     position.ModifyStopLossPrice(newStopPrice);
             }
+        }
+
+        /// <summary>
+        /// Custom fitness for Optimisation → Criteria → Custom.
+        /// Rewards profit factor and net profit, penalises drawdown; ignores passes with too few trades.
+        /// </summary>
+        protected override double GetFitness(GetFitnessArgs args)
+        {
+            const int minTrades = 15;
+            if (args.Trades < minTrades)
+                return 0;
+
+            double pf = args.ProfitFactor;
+            if (pf <= 0 || double.IsNaN(pf) || double.IsInfinity(pf))
+                return 0;
+
+            double dd = args.MaxEquityDrawdownPercentages;
+            if (dd < 0.5)
+                dd = 0.5;
+
+            return pf * args.NetProfit / dd;
         }
 
         private IEnumerable<Symbol> ResolveSymbols()

@@ -167,12 +167,59 @@ Volume is calculated from **stop distance** (beyond sweep wick + ATR buffer), no
 - Optional **partial close** at 1R.
 - Optional **trailing stop** (% of price) activated after a minimum R profit.
 
+## Optimisation (cTrader default ranges)
+
+When you open **Optimisation → Parameters**, Min / Max / Step are pre-filled from the code. Use these as a pro algo starting point.
+
+### Pin these (do NOT optimise)
+
+Keeps structure and risk model fixed so you measure **edge**, not curve-fit:
+
+| Parameter | Fixed value |
+|-----------|-------------|
+| Use Chart TF for Zones / Entry | **No** (H4 / M15 via preset) |
+| Apply Algo Preset | **Yes** |
+| Use Session Levels | **Yes** |
+| SL Type | **SweepWick** |
+| TP Type | **RiskMultiplier** |
+| Trade Risk (USD) | **0** (use 0.5% equity) |
+| Draw Zones On Chart | **No** (faster optimisation) |
+| Min Equal Touches | **2** |
+
+### Tick these to optimise (pass 1 — core edge)
+
+| Parameter | Default | Range | Step |
+|-----------|---------|-------|------|
+| Pivot Bars | 5 | 3 – 8 | 1 |
+| Min Zone Strength | 65 | 50 – 80 | 5 |
+| Confirmation Bar Delay | 1 | 0 – 3 | 1 |
+| TP Value (R-multiple) | 2.0 | 1.5 – 3.0 | 0.25 |
+| Require MSS | Yes | True / False | — |
+
+### Optional pass 2 (after pass 1 winner is fixed)
+
+Max Sweep Age, Min Wick/Body Ratio, Stop Buffer ATR — see `LiquiditySweepBot.optimisation.json`.
+
+### Optimisation settings
+
+| Setting | Recommendation |
+|---------|----------------|
+| Chart | **BTCUSD M15** |
+| Method | **Genetic Algorithm** |
+| Criteria | **Custom** (uses built-in `GetFitness`) *or* Max **Profit Factor** + Min **Max Equity DD %** |
+| Period | ≥ 6 months BTC data |
+| Min trades | Ignore passes with &lt; 15 trades |
+
+During optimisation the bot logs `Optimisation mode — sweeping parameter values` and **does not** override swept params with the live algo preset.
+
+Full parameter list: [`LiquiditySweepBot.optimisation.json`](LiquiditySweepBot.optimisation.json)
+
 ## Backtesting notes
 
 - Use **M15** chart with bot attached; zone logic runs on H4 via `MarketData.GetBars`.
 - Model **realistic spread** — BTC CFD spread varies widely by broker; set `Max Spread (pips)` if needed.
 - Session levels (PDH/L) work on **UTC** bar timestamps (`TimeZone = UTC`).
-- Optimize **few** parameters: pivot bars, confirmation delay, R:R, min zone strength — not every filter at once.
+- Optimise **few** parameters at a time — see table above.
 
 ## Limitations
 
