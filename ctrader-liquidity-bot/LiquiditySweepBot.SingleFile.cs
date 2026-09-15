@@ -1808,7 +1808,7 @@ namespace cAlgo.Robots
         [Parameter("Risk Percent", DefaultValue = 0.5, MinValue = 0.25, MaxValue = 1.0, Step = 0.25, Group = "Risk Management")]
         public double RiskPercent { get; set; }
 
-        [Parameter("Max Spread (pips, 0=off)", DefaultValue = 30, MinValue = 15, MaxValue = 50, Step = 5, Group = "Risk Management")]
+        [Parameter("Max Spread (pips, 0=off)", DefaultValue = 30, MinValue = 0, MaxValue = 500, Step = 5, Group = "Risk Management")]
         public double MaxSpreadPips { get; set; }
 
         [Parameter("ATR Period", DefaultValue = 14, MinValue = 10, MaxValue = 20, Step = 2, Group = "Risk Management")]
