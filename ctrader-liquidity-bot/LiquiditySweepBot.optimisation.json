@@ -1,0 +1,44 @@
+{
+  "comment": "Recommended cTrader optimisation ranges for LiquiditySweepBot. In desktop: Optimisation → Parameters — tick the same fields. Min/Max/Step are also baked into [Parameter] attributes in code.",
+  "method": "Genetic Algorithm",
+  "criteria": "Custom (GetFitness) OR Maximize Profit Factor + Minimize Max Equity Drawdown %",
+  "chart": {
+    "symbol": "BTCUSD",
+    "period": "m15",
+    "note": "Attach bot to M15; keep Use Chart TF for Zones/Entry OFF; Apply Algo Preset ON for H4/M15 structure"
+  },
+  "pinTheseParameters": [
+    "ApplyAlgoTraderPreset",
+    "UseChartTimeframeForZones",
+    "UseChartTimeframeForEntry",
+    "ZoneTimeFrame",
+    "EntryTimeFrame",
+    "UseSessionLevels",
+    "SLType",
+    "TPType",
+    "TradeRisk",
+    "RiskModeSetting",
+    "DrawZonesOnChart",
+    "DebugZoneDrawing",
+    "MinEqualTouches"
+  ],
+  "parameters": [
+    { "Name": "PivotBars", "Optimize": true, "Min": "3", "Max": "8", "Step": "1", "Default": "5" },
+    { "Name": "MinZoneStrength", "Optimize": true, "Min": "50", "Max": "80", "Step": "5", "Default": "65" },
+    { "Name": "ConfirmationBarDelay", "Optimize": true, "Min": "0", "Max": "3", "Step": "1", "Default": "1" },
+    { "Name": "TPValue", "Optimize": true, "Min": "1.5", "Max": "3.0", "Step": "0.25", "Default": "2.0" },
+    { "Name": "RequireStructureShift", "Optimize": true, "Values": ["True", "False"], "Default": "True" },
+    { "Name": "MaxSweepAgeBars", "Optimize": false, "Min": "10", "Max": "10", "Step": "2", "Default": "10" },
+    { "Name": "MinWickBodyRatio", "Optimize": false, "Min": "0.8", "Max": "0.8", "Step": "0.1", "Default": "0.8" },
+    { "Name": "StopBufferAtr", "Optimize": false, "Min": "0.05", "Max": "0.05", "Step": "0.01", "Default": "0.05" },
+    { "Name": "EqualLevelToleranceAtr", "Optimize": false, "Min": "0.15", "Max": "0.15", "Step": "0.05", "Default": "0.15" },
+    { "Name": "StructurePivotBars", "Optimize": false, "Min": "3", "Max": "3", "Step": "1", "Default": "3" },
+    { "Name": "RiskPercent", "Optimize": false, "Min": "0.5", "Max": "0.5", "Step": "0.25", "Default": "0.5" },
+    { "Name": "MaxSpreadPips", "Optimize": false, "Min": "30", "Max": "30", "Step": "5", "Default": "30" }
+  ],
+  "secondPassOptional": [
+    { "Name": "MaxSweepAgeBars", "Optimize": true, "Min": "6", "Max": "16", "Step": "2" },
+    { "Name": "MinWickBodyRatio", "Optimize": true, "Min": "0.5", "Max": "1.2", "Step": "0.1" },
+    { "Name": "StopBufferAtr", "Optimize": true, "Min": "0.02", "Max": "0.10", "Step": "0.01" }
+  ]
+}
