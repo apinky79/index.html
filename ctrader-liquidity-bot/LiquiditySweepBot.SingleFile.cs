@@ -1,0 +1,1701 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using cAlgo.API;
+using cAlgo.API.Internals;
+
+namespace cAlgo.Robots
+{
+    // --- Enums ---
+
+    public enum LiquiditySide
+    {
+        BuySide,
+        SellSide
+    }
+
+    public enum LiquiditySource
+    {
+        SwingHigh,
+        SwingLow,
+        EqualHigh,
+        EqualLow,
+        PreviousDayHigh,
+        PreviousDayLow,
+        PreviousWeekHigh,
+        PreviousWeekLow
+    }
+
+    public enum SweepPhase
+    {
+        None,
+        Swept,
+        Confirmed,
+        Invalidated
+    }
+
+    public enum RiskMode
+    {
+        FixedUsd,
+        PercentEquity,
+        PercentBalance
+    }
+
+    // --- Models ---
+
+    public sealed class LiquidityZone
+    {
+        public double LevelPrice { get; set; }
+        public double ZoneTop { get; set; }
+        public double ZoneBottom { get; set; }
+        public LiquiditySide Side { get; set; }
+        public LiquiditySource Source { get; set; }
+        public int TouchCount { get; set; }
+        public int StrengthScore { get; set; }
+        public DateTime FormedAt { get; set; }
+        public int FormedBarIndex { get; set; }
+        public bool IsActive { get; set; }
+        public string Label { get; set; }
+
+        public LiquidityZone()
+        {
+            IsActive = true;
+        }
+    }
+
+    public sealed class SweepSetup
+    {
+        public LiquidityZone Zone { get; set; }
+        public TradeType Direction { get; set; }
+        public SweepPhase Phase { get; set; }
+        public int SweepBarIndex { get; set; }
+        public double SweepWickExtreme { get; set; }
+        public int ConfirmationBarsRemaining { get; set; }
+        public bool StructureShiftConfirmed { get; set; }
+        public DateTime DetectedAt { get; set; }
+    }
+
+    public sealed class ManagedTradeState
+    {
+        public long PositionId { get; set; }
+        public double EntryPrice { get; set; }
+        public double InitialStopLoss { get; set; }
+        public double RiskDistance { get; set; }
+        public bool MovedToBreakeven { get; set; }
+        public bool PartialTaken { get; set; }
+        public double HighestPrice { get; set; }
+        public double LowestPrice { get; set; }
+    }
+
+    public sealed class SwingPoint
+    {
+        public int BarIndex { get; set; }
+        public double Price { get; set; }
+        public bool IsHigh { get; set; }
+        public DateTime OpenTime { get; set; }
+    }
+
+    public sealed class EntryMarker
+    {
+        public DateTime Time { get; set; }
+        public double Price { get; set; }
+        public double StopLoss { get; set; }
+        public double TakeProfit { get; set; }
+        public TradeType Direction { get; set; }
+    }
+
+    public sealed class DayGroup
+    {
+        public double High { get; set; }
+        public double Low { get; set; }
+        public int LastBar { get; set; }
+    }
+
+    public sealed class WeekKey
+    {
+        public int Year { get; set; }
+        public int Week { get; set; }
+
+        public WeekKey(int year, int week)
+        {
+            Year = year;
+            Week = week;
+        }
+
+        public int CompareTo(WeekKey other)
+        {
+            if (other == null)
+                return 1;
+            int yearCompare = Year.CompareTo(other.Year);
+            if (yearCompare != 0)
+                return yearCompare;
+            return Week.CompareTo(other.Week);
+        }
+
+        public override bool Equals(object obj)
+        {
+            var other = obj as WeekKey;
+            if (other == null)
+                return false;
+            return Year == other.Year && Week == other.Week;
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                return (Year * 397) ^ Week;
+            }
+        }
+    }
+
+    public sealed class WeekGroup
+    {
+        public double High { get; set; }
+        public double Low { get; set; }
+        public int LastBar { get; set; }
+    }
+
+    // --- SwingPointDetector ---
+
+    public static class SwingPointDetector
+    {
+        public static List<SwingPoint> DetectConfirmedSwings(
+            double[] highs,
+            double[] lows,
+            DateTime[] openTimes,
+            int pivotBars,
+            int upToBarIndexInclusive)
+        {
+            var swings = new List<SwingPoint>();
+            if (highs == null || lows == null || highs.Length != lows.Length)
+                return swings;
+
+            int lastConfirmable = upToBarIndexInclusive - pivotBars;
+            for (int i = pivotBars; i <= lastConfirmable; i++)
+            {
+                if (IsSwingHigh(highs, i, pivotBars))
+                {
+                    swings.Add(new SwingPoint
+                    {
+                        BarIndex = i,
+                        Price = highs[i],
+                        IsHigh = true,
+                        OpenTime = openTimes != null && i < openTimes.Length ? openTimes[i] : DateTime.MinValue
+                    });
+                }
+
+                if (IsSwingLow(lows, i, pivotBars))
+                {
+                    swings.Add(new SwingPoint
+                    {
+                        BarIndex = i,
+                        Price = lows[i],
+                        IsHigh = false,
+                        OpenTime = openTimes != null && i < openTimes.Length ? openTimes[i] : DateTime.MinValue
+                    });
+                }
+            }
+
+            swings.Sort((a, b) => a.BarIndex.CompareTo(b.BarIndex));
+            return swings;
+        }
+
+        public static bool IsSwingHigh(double[] highs, int index, int pivotBars)
+        {
+            double pivot = highs[index];
+            for (int j = index - pivotBars; j <= index + pivotBars; j++)
+            {
+                if (j == index)
+                    continue;
+                if (highs[j] >= pivot)
+                    return false;
+            }
+            return true;
+        }
+
+        public static bool IsSwingLow(double[] lows, int index, int pivotBars)
+        {
+            double pivot = lows[index];
+            for (int j = index - pivotBars; j <= index + pivotBars; j++)
+            {
+                if (j == index)
+                    continue;
+                if (lows[j] <= pivot)
+                    return false;
+            }
+            return true;
+        }
+    }
+
+    // --- LiquidityZoneEngine ---
+
+    public sealed class LiquidityZoneEngine
+    {
+        private readonly double _equalLevelToleranceAtrMultiplier;
+        private readonly int _minEqualTouches;
+        private readonly int _pivotBars;
+        private readonly double _zonePaddingAtrMultiplier;
+        private readonly bool _useSessionLevels;
+        private readonly int _maxActiveZones;
+
+        public LiquidityZoneEngine(
+            int pivotBars,
+            double equalLevelToleranceAtrMultiplier,
+            int minEqualTouches,
+            double zonePaddingAtrMultiplier,
+            bool useSessionLevels,
+            int maxActiveZones)
+        {
+            _pivotBars = Math.Max(2, pivotBars);
+            _equalLevelToleranceAtrMultiplier = equalLevelToleranceAtrMultiplier;
+            _minEqualTouches = Math.Max(2, minEqualTouches);
+            _zonePaddingAtrMultiplier = zonePaddingAtrMultiplier;
+            _useSessionLevels = useSessionLevels;
+            _maxActiveZones = Math.Max(5, maxActiveZones);
+        }
+
+        public IReadOnlyList<LiquidityZone> BuildZones(
+            double[] highs,
+            double[] lows,
+            double[] closes,
+            DateTime[] openTimes,
+            double[] atrValues,
+            int lastClosedBarIndex)
+        {
+            if (lastClosedBarIndex < _pivotBars * 2 + 2)
+                return new List<LiquidityZone>();
+
+            var swings = SwingPointDetector.DetectConfirmedSwings(
+                highs, lows, openTimes, _pivotBars, lastClosedBarIndex);
+
+            double atr = atrValues[lastClosedBarIndex];
+            if (atr <= 0)
+                atr = EstimateAtr(highs, lows, closes, lastClosedBarIndex);
+
+            double tolerance = atr * _equalLevelToleranceAtrMultiplier;
+            double padding = atr * _zonePaddingAtrMultiplier;
+
+            var zones = new List<LiquidityZone>();
+
+            foreach (var swing in swings.Where(s => s.IsHigh))
+            {
+                zones.Add(CreateSwingZone(swing, LiquiditySide.BuySide, LiquiditySource.SwingHigh, padding, 1));
+            }
+
+            foreach (var swing in swings.Where(s => !s.IsHigh))
+            {
+                zones.Add(CreateSwingZone(swing, LiquiditySide.SellSide, LiquiditySource.SwingLow, padding, 1));
+            }
+
+            AddEqualLevelZones(swings.Where(s => s.IsHigh).ToList(), tolerance, padding, zones, true);
+            AddEqualLevelZones(swings.Where(s => !s.IsHigh).ToList(), tolerance, padding, zones, false);
+
+            if (_useSessionLevels)
+                AddSessionLevels(highs, lows, openTimes, lastClosedBarIndex, padding, zones);
+
+            return zones
+                .Where(z => z.FormedBarIndex <= lastClosedBarIndex)
+                .GroupBy(z => z.Source + ":" + Math.Round(z.LevelPrice, 5))
+                .Select(g => g.OrderByDescending(z => z.StrengthScore).First())
+                .OrderByDescending(z => z.StrengthScore)
+                .ThenByDescending(z => z.FormedBarIndex)
+                .Take(_maxActiveZones)
+                .ToList();
+        }
+
+        private static LiquidityZone CreateSwingZone(
+            SwingPoint swing,
+            LiquiditySide side,
+            LiquiditySource source,
+            double padding,
+            int touchCount)
+        {
+            return new LiquidityZone
+            {
+                LevelPrice = swing.Price,
+                ZoneTop = swing.Price + padding,
+                ZoneBottom = swing.Price - padding,
+                Side = side,
+                Source = source,
+                TouchCount = touchCount,
+                StrengthScore = ScoreStrength(source, touchCount),
+                FormedAt = swing.OpenTime,
+                FormedBarIndex = swing.BarIndex,
+                Label = source.ToString()
+            };
+        }
+
+        private void AddEqualLevelZones(
+            List<SwingPoint> swings,
+            double tolerance,
+            double padding,
+            List<LiquidityZone> zones,
+            bool isHigh)
+        {
+            if (swings.Count < _minEqualTouches)
+                return;
+
+            var assigned = new bool[swings.Count];
+            for (int i = 0; i < swings.Count; i++)
+            {
+                if (assigned[i])
+                    continue;
+
+                var cluster = new List<int> { i };
+                for (int j = i + 1; j < swings.Count; j++)
+                {
+                    if (assigned[j])
+                        continue;
+
+                    if (Math.Abs(swings[j].Price - swings[i].Price) <= tolerance)
+                        cluster.Add(j);
+                }
+
+                if (cluster.Count < _minEqualTouches)
+                    continue;
+
+                foreach (var idx in cluster)
+                    assigned[idx] = true;
+
+                double avg = cluster.Average(idx => swings[idx].Price);
+                var last = swings[cluster[cluster.Count - 1]];
+
+                zones.Add(new LiquidityZone
+                {
+                    LevelPrice = avg,
+                    ZoneTop = avg + padding,
+                    ZoneBottom = avg - padding,
+                    Side = isHigh ? LiquiditySide.BuySide : LiquiditySide.SellSide,
+                    Source = isHigh ? LiquiditySource.EqualHigh : LiquiditySource.EqualLow,
+                    TouchCount = cluster.Count,
+                    StrengthScore = ScoreStrength(isHigh ? LiquiditySource.EqualHigh : LiquiditySource.EqualLow, cluster.Count),
+                    FormedAt = last.OpenTime,
+                    FormedBarIndex = last.BarIndex,
+                    Label = isHigh ? "Equal Highs" : "Equal Lows"
+                });
+            }
+        }
+
+        private static void AddSessionLevels(
+            double[] highs,
+            double[] lows,
+            DateTime[] openTimes,
+            int lastClosedBarIndex,
+            double padding,
+            List<LiquidityZone> zones)
+        {
+            if (openTimes == null || openTimes.Length == 0)
+                return;
+
+            var dayGroups = new Dictionary<DateTime, DayGroup>();
+            var weekGroups = new Dictionary<WeekKey, WeekGroup>();
+
+            for (int i = 0; i <= lastClosedBarIndex; i++)
+            {
+                var day = openTimes[i].Date;
+                DayGroup dayVal;
+                if (!dayGroups.TryGetValue(day, out dayVal))
+                {
+                    dayVal = new DayGroup { High = highs[i], Low = lows[i], LastBar = i };
+                }
+                else
+                {
+                    dayVal.High = Math.Max(dayVal.High, highs[i]);
+                    dayVal.Low = Math.Min(dayVal.Low, lows[i]);
+                    dayVal.LastBar = i;
+                }
+                dayGroups[day] = dayVal;
+
+                var weekKey = GetIsoWeekKey(openTimes[i]);
+                WeekGroup weekVal;
+                if (!weekGroups.TryGetValue(weekKey, out weekVal))
+                {
+                    weekVal = new WeekGroup { High = highs[i], Low = lows[i], LastBar = i };
+                }
+                else
+                {
+                    weekVal.High = Math.Max(weekVal.High, highs[i]);
+                    weekVal.Low = Math.Min(weekVal.Low, lows[i]);
+                    weekVal.LastBar = i;
+                }
+                weekGroups[weekKey] = weekVal;
+            }
+
+            var currentDay = openTimes[lastClosedBarIndex].Date;
+            var priorDays = dayGroups.Keys.Where(d => d < currentDay).OrderByDescending(d => d).Take(1).ToList();
+            foreach (var day in priorDays)
+            {
+                var d = dayGroups[day];
+                zones.Add(SessionZone(d.High, LiquiditySide.BuySide, LiquiditySource.PreviousDayHigh, padding, d.LastBar, openTimes[d.LastBar]));
+                zones.Add(SessionZone(d.Low, LiquiditySide.SellSide, LiquiditySource.PreviousDayLow, padding, d.LastBar, openTimes[d.LastBar]));
+            }
+
+            var currentWeek = GetIsoWeekKey(openTimes[lastClosedBarIndex]);
+            var priorWeeks = weekGroups.Keys.Where(w => w.CompareTo(currentWeek) < 0).OrderByDescending(w => w.Year).ThenByDescending(w => w.Week).Take(1).ToList();
+            foreach (var week in priorWeeks)
+            {
+                var w = weekGroups[week];
+                zones.Add(SessionZone(w.High, LiquiditySide.BuySide, LiquiditySource.PreviousWeekHigh, padding, w.LastBar, openTimes[w.LastBar]));
+                zones.Add(SessionZone(w.Low, LiquiditySide.SellSide, LiquiditySource.PreviousWeekLow, padding, w.LastBar, openTimes[w.LastBar]));
+            }
+        }
+
+        private static LiquidityZone SessionZone(
+            double level,
+            LiquiditySide side,
+            LiquiditySource source,
+            double padding,
+            int barIndex,
+            DateTime openTime)
+        {
+            return new LiquidityZone
+            {
+                LevelPrice = level,
+                ZoneTop = level + padding,
+                ZoneBottom = level - padding,
+                Side = side,
+                Source = source,
+                TouchCount = 1,
+                StrengthScore = ScoreStrength(source, 1),
+                FormedBarIndex = barIndex,
+                FormedAt = openTime,
+                Label = source.ToString()
+            };
+        }
+
+        private static int ScoreStrength(LiquiditySource source, int touchCount)
+        {
+            int baseScore;
+            switch (source)
+            {
+                case LiquiditySource.EqualHigh:
+                case LiquiditySource.EqualLow:
+                    baseScore = 75;
+                    break;
+                case LiquiditySource.PreviousWeekHigh:
+                case LiquiditySource.PreviousWeekLow:
+                    baseScore = 70;
+                    break;
+                case LiquiditySource.PreviousDayHigh:
+                case LiquiditySource.PreviousDayLow:
+                    baseScore = 65;
+                    break;
+                case LiquiditySource.SwingHigh:
+                case LiquiditySource.SwingLow:
+                    baseScore = 50;
+                    break;
+                default:
+                    baseScore = 40;
+                    break;
+            }
+
+            return Math.Min(100, baseScore + (touchCount - 1) * 8);
+        }
+
+        private static WeekKey GetIsoWeekKey(DateTime date)
+        {
+            var cal = System.Globalization.CultureInfo.InvariantCulture.Calendar;
+            int week = cal.GetWeekOfYear(date, System.Globalization.CalendarWeekRule.FirstFourDayWeek, DayOfWeek.Monday);
+            return new WeekKey(date.Year, week);
+        }
+
+        private static double EstimateAtr(double[] highs, double[] lows, double[] closes, int index)
+        {
+            int start = Math.Max(1, index - 14);
+            double sum = 0;
+            int count = 0;
+            for (int i = start; i <= index; i++)
+            {
+                double tr = Math.Max(highs[i] - lows[i],
+                    Math.Max(Math.Abs(highs[i] - closes[i - 1]), Math.Abs(lows[i] - closes[i - 1])));
+                sum += tr;
+                count++;
+            }
+            return count > 0 ? sum / count : highs[index] - lows[index];
+        }
+    }
+
+    // --- SweepConfirmationEngine ---
+
+    public sealed class SweepConfirmationEngine
+    {
+        private readonly int _confirmationBarDelay;
+        private readonly int _maxSweepAgeBars;
+        private readonly bool _requireStructureShift;
+        private readonly int _structurePivotBars;
+        private readonly double _minWickToBodyRatio;
+        private readonly int _minZoneStrength;
+
+        public SweepConfirmationEngine(
+            int confirmationBarDelay,
+            int maxSweepAgeBars,
+            bool requireStructureShift,
+            int structurePivotBars,
+            double minWickToBodyRatio,
+            int minZoneStrength)
+        {
+            _confirmationBarDelay = Math.Max(0, confirmationBarDelay);
+            _maxSweepAgeBars = Math.Max(3, maxSweepAgeBars);
+            _requireStructureShift = requireStructureShift;
+            _structurePivotBars = Math.Max(2, structurePivotBars);
+            _minWickToBodyRatio = minWickToBodyRatio;
+            _minZoneStrength = minZoneStrength;
+        }
+
+        public List<SweepSetup> UpdateSetups(
+            IReadOnlyList<LiquidityZone> zones,
+            double[] opens,
+            double[] highs,
+            double[] lows,
+            double[] closes,
+            int lastClosedBarIndex,
+            List<SweepSetup> existingSetups)
+        {
+            var setups = existingSetups ?? new List<SweepSetup>();
+            PurgeExpired(setups, lastClosedBarIndex);
+
+            if (lastClosedBarIndex < 1)
+                return setups;
+
+            int bar = lastClosedBarIndex;
+            double open = opens[bar];
+            double high = highs[bar];
+            double low = lows[bar];
+            double close = closes[bar];
+            double body = Math.Abs(close - open);
+
+            foreach (var zone in zones.Where(z => z.IsActive && z.StrengthScore >= _minZoneStrength))
+            {
+                if (setups.Any(s => s.Zone.LevelPrice == zone.LevelPrice && s.Zone.Source == zone.Source && s.Phase != SweepPhase.Invalidated))
+                    continue;
+
+                if (zone.Side == LiquiditySide.SellSide)
+                {
+                    TryDetectBullishSweep(zone, open, high, low, close, body, bar, setups, highs, lows, closes);
+                }
+                else
+                {
+                    TryDetectBearishSweep(zone, open, high, low, close, body, bar, setups, highs, lows, closes);
+                }
+            }
+
+            AdvanceConfirmation(setups, opens, highs, lows, closes, lastClosedBarIndex);
+            return setups;
+        }
+
+        public IReadOnlyList<SweepSetup> GetReadyEntries(IEnumerable<SweepSetup> setups)
+        {
+            return setups
+                .Where(s => s.Phase == SweepPhase.Confirmed && s.ConfirmationBarsRemaining <= 0)
+                .Where(s => !_requireStructureShift || s.StructureShiftConfirmed)
+                .ToList();
+        }
+
+        private void TryDetectBullishSweep(
+            LiquidityZone zone,
+            double open,
+            double high,
+            double low,
+            double close,
+            double body,
+            int bar,
+            List<SweepSetup> setups,
+            double[] highs,
+            double[] lows,
+            double[] closes)
+        {
+            if (low >= zone.LevelPrice)
+                return;
+
+            bool closedBackInside = close > zone.LevelPrice;
+            if (!closedBackInside)
+                return;
+
+            double lowerWick = Math.Min(open, close) - low;
+            if (body > 0 && lowerWick / body < _minWickToBodyRatio)
+                return;
+
+            setups.Add(new SweepSetup
+            {
+                Zone = zone,
+                Direction = TradeType.Buy,
+                Phase = SweepPhase.Swept,
+                SweepBarIndex = bar,
+                SweepWickExtreme = low,
+                ConfirmationBarsRemaining = _confirmationBarDelay,
+                StructureShiftConfirmed = !_requireStructureShift || HasBullishStructureShift(highs, lows, closes, bar),
+                DetectedAt = DateTime.UtcNow
+            });
+        }
+
+        private void TryDetectBearishSweep(
+            LiquidityZone zone,
+            double open,
+            double high,
+            double low,
+            double close,
+            double body,
+            int bar,
+            List<SweepSetup> setups,
+            double[] highs,
+            double[] lows,
+            double[] closes)
+        {
+            if (high <= zone.LevelPrice)
+                return;
+
+            bool closedBackInside = close < zone.LevelPrice;
+            if (!closedBackInside)
+                return;
+
+            double upperWick = high - Math.Max(open, close);
+            if (body > 0 && upperWick / body < _minWickToBodyRatio)
+                return;
+
+            setups.Add(new SweepSetup
+            {
+                Zone = zone,
+                Direction = TradeType.Sell,
+                Phase = SweepPhase.Swept,
+                SweepBarIndex = bar,
+                SweepWickExtreme = high,
+                ConfirmationBarsRemaining = _confirmationBarDelay,
+                StructureShiftConfirmed = !_requireStructureShift || HasBearishStructureShift(highs, lows, closes, bar),
+                DetectedAt = DateTime.UtcNow
+            });
+        }
+
+        private void AdvanceConfirmation(
+            List<SweepSetup> setups,
+            double[] opens,
+            double[] highs,
+            double[] lows,
+            double[] closes,
+            int bar)
+        {
+            foreach (var setup in setups.Where(s => s.Phase == SweepPhase.Swept || s.Phase == SweepPhase.Confirmed))
+            {
+                if (bar <= setup.SweepBarIndex)
+                    continue;
+
+                if (setup.Direction == TradeType.Buy)
+                {
+                    if (closes[bar] < setup.Zone.LevelPrice)
+                    {
+                        setup.Phase = SweepPhase.Invalidated;
+                        continue;
+                    }
+                }
+                else if (closes[bar] > setup.Zone.LevelPrice)
+                {
+                    setup.Phase = SweepPhase.Invalidated;
+                    continue;
+                }
+
+                if (_requireStructureShift && !setup.StructureShiftConfirmed)
+                {
+                    setup.StructureShiftConfirmed = setup.Direction == TradeType.Buy
+                        ? HasBullishStructureShift(highs, lows, closes, bar)
+                        : HasBearishStructureShift(highs, lows, closes, bar);
+                }
+
+                if (setup.Phase == SweepPhase.Swept)
+                {
+                    setup.Phase = SweepPhase.Confirmed;
+                }
+
+                if (setup.ConfirmationBarsRemaining > 0)
+                    setup.ConfirmationBarsRemaining--;
+            }
+        }
+
+        private bool HasBullishStructureShift(double[] highs, double[] lows, double[] closes, int bar)
+        {
+            var swings = SwingPointDetector.DetectConfirmedSwings(highs, lows, null, _structurePivotBars, bar);
+            var lastHigh = swings.LastOrDefault(s => s.IsHigh && s.BarIndex < bar);
+            if (lastHigh == null)
+                return false;
+            return closes[bar] > lastHigh.Price;
+        }
+
+        private bool HasBearishStructureShift(double[] highs, double[] lows, double[] closes, int bar)
+        {
+            var swings = SwingPointDetector.DetectConfirmedSwings(highs, lows, null, _structurePivotBars, bar);
+            var lastLow = swings.LastOrDefault(s => !s.IsHigh && s.BarIndex < bar);
+            if (lastLow == null)
+                return false;
+            return closes[bar] < lastLow.Price;
+        }
+
+        private void PurgeExpired(List<SweepSetup> setups, int bar)
+        {
+            setups.RemoveAll(s =>
+                s.Phase == SweepPhase.Invalidated ||
+                (s.Phase != SweepPhase.None && bar - s.SweepBarIndex > _maxSweepAgeBars));
+        }
+    }
+
+    // --- RiskManager ---
+
+    public sealed class RiskManager
+    {
+        private readonly RiskMode _mode;
+        private readonly double _fixedUsdRisk;
+        private readonly double _riskPercent;
+        private readonly double _maxSpreadPips;
+        private readonly double _stopBufferAtrMultiplier;
+
+        public RiskManager(
+            RiskMode mode,
+            double fixedUsdRisk,
+            double riskPercent,
+            double maxSpreadPips,
+            double stopBufferAtrMultiplier)
+        {
+            _mode = mode;
+            _fixedUsdRisk = Math.Max(1, fixedUsdRisk);
+            _riskPercent = Math.Max(0.01, riskPercent);
+            _maxSpreadPips = maxSpreadPips;
+            _stopBufferAtrMultiplier = stopBufferAtrMultiplier;
+        }
+
+        public bool IsSpreadAcceptable(Symbol symbol)
+        {
+            if (_maxSpreadPips <= 0)
+                return true;
+            return symbol.Spread / symbol.PipSize <= _maxSpreadPips;
+        }
+
+        public double CalculateRiskAmount(Account account)
+        {
+            switch (_mode)
+            {
+                case RiskMode.FixedUsd:
+                    return _fixedUsdRisk;
+                case RiskMode.PercentEquity:
+                    return account.Equity * _riskPercent / 100.0;
+                case RiskMode.PercentBalance:
+                    return account.Balance * _riskPercent / 100.0;
+                default:
+                    return _fixedUsdRisk;
+            }
+        }
+
+        public double BuildStopLoss(TradeType direction, double sweepWickExtreme, double atr, Symbol symbol)
+        {
+            double buffer = atr * _stopBufferAtrMultiplier;
+            double stop = direction == TradeType.Buy
+                ? sweepWickExtreme - buffer
+                : sweepWickExtreme + buffer;
+
+            return symbol.NormalizePrice(stop);
+        }
+
+        public double CalculateVolumeInUnits(Symbol symbol, double entryPrice, double stopLoss, double riskAmount)
+        {
+            double stopDistance = Math.Abs(entryPrice - stopLoss);
+            if (stopDistance <= 0)
+                return symbol.VolumeInUnitsMin;
+
+            double amountRiskedPerUnit = stopDistance * symbol.TickValue / symbol.TickSize;
+            if (amountRiskedPerUnit <= 0)
+                return symbol.VolumeInUnitsMin;
+
+            double rawVolume = riskAmount / amountRiskedPerUnit;
+            rawVolume = symbol.NormalizeVolumeInUnits(rawVolume, RoundingMode.Down);
+
+            if (rawVolume < symbol.VolumeInUnitsMin)
+                return 0;
+
+            if (rawVolume > symbol.VolumeInUnitsMax)
+                rawVolume = symbol.VolumeInUnitsMax;
+
+            return rawVolume;
+        }
+    }
+
+    // --- ProfitManager ---
+
+    public sealed class ProfitManager
+    {
+        private readonly double _rewardRiskRatio;
+        private readonly bool _moveToBreakevenAt1R;
+        private readonly bool _partialCloseAt1R;
+        private readonly double _partialClosePercent;
+        private readonly bool _useTrailingStop;
+        private readonly double _trailingStopPercent;
+        private readonly double _activateTrailAfterR;
+
+        private readonly Dictionary<long, ManagedTradeState> _states = new Dictionary<long, ManagedTradeState>();
+
+        public ProfitManager(
+            double rewardRiskRatio,
+            bool moveToBreakevenAt1R,
+            bool partialCloseAt1R,
+            double partialClosePercent,
+            bool useTrailingStop,
+            double trailingStopPercent,
+            double activateTrailAfterR)
+        {
+            _rewardRiskRatio = Math.Max(0.5, rewardRiskRatio);
+            _moveToBreakevenAt1R = moveToBreakevenAt1R;
+            _partialCloseAt1R = partialCloseAt1R;
+            _partialClosePercent = Math.Min(90, Math.Max(10, partialClosePercent));
+            _useTrailingStop = useTrailingStop;
+            _trailingStopPercent = Math.Max(0.1, trailingStopPercent);
+            _activateTrailAfterR = Math.Max(0.5, activateTrailAfterR);
+        }
+
+        public void RegisterPosition(Position position, double initialStopLoss)
+        {
+            double riskDistance = Math.Abs(position.EntryPrice - initialStopLoss);
+            if (riskDistance <= 0)
+                return;
+
+            _states[position.Id] = new ManagedTradeState
+            {
+                PositionId = position.Id,
+                EntryPrice = position.EntryPrice,
+                InitialStopLoss = initialStopLoss,
+                RiskDistance = riskDistance,
+                HighestPrice = position.EntryPrice,
+                LowestPrice = position.EntryPrice
+            };
+        }
+
+        public void ManageOpenPositions(Robot robot, Symbol symbol)
+        {
+            foreach (var position in robot.Positions.Where(p => p.SymbolName == symbol.Name))
+            {
+                ManagedTradeState state;
+                if (!_states.TryGetValue(position.Id, out state))
+                    continue;
+
+                double price = position.TradeType == TradeType.Buy ? symbol.Bid : symbol.Ask;
+                state.HighestPrice = Math.Max(state.HighestPrice, price);
+                state.LowestPrice = Math.Min(state.LowestPrice, price);
+
+                double profitR = GetProfitInR(position, state, price);
+                double? newStop = null;
+
+                if (_moveToBreakevenAt1R && !state.MovedToBreakeven && profitR >= 1.0)
+                {
+                    newStop = state.EntryPrice;
+                    state.MovedToBreakeven = true;
+                }
+
+                if (_partialCloseAt1R && !state.PartialTaken && profitR >= 1.0)
+                {
+                    double closeVolume = symbol.NormalizeVolumeInUnits(
+                        position.VolumeInUnits * (_partialClosePercent / 100.0),
+                        RoundingMode.Down);
+
+                    if (closeVolume >= symbol.VolumeInUnitsMin && closeVolume < position.VolumeInUnits)
+                    {
+                        robot.ClosePosition(position, closeVolume);
+                        state.PartialTaken = true;
+                    }
+                }
+
+                if (_useTrailingStop && profitR >= _activateTrailAfterR)
+                {
+                    double trailDistance = price * (_trailingStopPercent / 100.0);
+                    double trailStop = position.TradeType == TradeType.Buy
+                        ? state.HighestPrice - trailDistance
+                        : state.LowestPrice + trailDistance;
+
+                    trailStop = symbol.NormalizePrice(trailStop);
+                    newStop = BetterStop(position, newStop, trailStop);
+                }
+
+                if (newStop.HasValue && IsImprovement(position, newStop.Value))
+                {
+                    robot.ModifyPosition(position, newStop.Value, position.TakeProfit);
+                }
+            }
+
+            CleanupClosed(robot);
+        }
+
+        public double CalculateTakeProfit(TradeType direction, double entryPrice, double stopLoss)
+        {
+            double risk = Math.Abs(entryPrice - stopLoss);
+            return direction == TradeType.Buy
+                ? entryPrice + risk * _rewardRiskRatio
+                : entryPrice - risk * _rewardRiskRatio;
+        }
+
+        private static double GetProfitInR(Position position, ManagedTradeState state, double price)
+        {
+            double move = position.TradeType == TradeType.Buy
+                ? price - state.EntryPrice
+                : state.EntryPrice - price;
+            return move / state.RiskDistance;
+        }
+
+        private static double? BetterStop(Position position, double? current, double candidate)
+        {
+            if (!current.HasValue)
+                return candidate;
+
+            if (position.TradeType == TradeType.Buy)
+                return Math.Max(current.Value, candidate);
+
+            return Math.Min(current.Value, candidate);
+        }
+
+        private static bool IsImprovement(Position position, double newStop)
+        {
+            if (!position.StopLoss.HasValue)
+                return true;
+
+            return position.TradeType == TradeType.Buy
+                ? newStop > position.StopLoss.Value
+                : newStop < position.StopLoss.Value;
+        }
+
+        private void CleanupClosed(Robot robot)
+        {
+            var openIds = new HashSet<long>();
+            foreach (var position in robot.Positions)
+                openIds.Add(position.Id);
+
+            var keysToRemove = new List<long>();
+            foreach (var id in _states.Keys)
+            {
+                if (!openIds.Contains(id))
+                    keysToRemove.Add(id);
+            }
+
+            foreach (var id in keysToRemove)
+                _states.Remove(id);
+        }
+    }
+
+    // --- ChartVisualizer ---
+
+    public sealed class ChartVisualizer
+    {
+        private const string Prefix = "LQ_";
+        private readonly HashSet<string> _trackedObjects = new HashSet<string>();
+
+        public void DrawZonesAndSetups(
+            Chart chart,
+            Bars chartBars,
+            Symbol symbol,
+            TimeFrame zoneTimeFrame,
+            IReadOnlyList<LiquidityZone> zones,
+            Bars entryBars,
+            IEnumerable<SweepSetup> setups,
+            int maxZones,
+            int lookbackBars,
+            bool showLabels,
+            bool showSweepMarkers,
+            bool showEntryMarkers,
+            IReadOnlyList<EntryMarker> recentEntries)
+        {
+            Clear(chart);
+
+            if (chartBars.Count < 2)
+                return;
+
+            int startIndex = Math.Max(0, chartBars.Count - lookbackBars);
+            DateTime startTime = chartBars.OpenTimes[startIndex];
+            DateTime endTime = chartBars.LastBar.OpenTime;
+
+            foreach (var zone in zones.OrderByDescending(z => z.StrengthScore).Take(maxZones))
+            {
+                DrawZone(chart, symbol, zone, startTime, endTime, showLabels);
+            }
+
+            if (showSweepMarkers && entryBars != null)
+            {
+                foreach (var setup in setups.Where(s => s.Phase == SweepPhase.Swept || s.Phase == SweepPhase.Confirmed))
+                {
+                    DrawSweepMarker(chart, entryBars, symbol, setup);
+                }
+            }
+
+            if (showEntryMarkers)
+            {
+                foreach (var entry in recentEntries)
+                    DrawEntryMarker(chart, symbol, entry);
+            }
+
+            DrawTimeframeBadge(chart, chartBars, zoneTimeFrame);
+        }
+
+        private void DrawZone(
+            Chart chart,
+            Symbol symbol,
+            LiquidityZone zone,
+            DateTime startTime,
+            DateTime endTime,
+            bool showLabels)
+        {
+            string id = ZoneId(zone);
+            bool isBsl = zone.Side == LiquiditySide.BuySide;
+            Color fill = isBsl ? Color.FromArgb(45, 231, 76, 60) : Color.FromArgb(45, 52, 152, 219);
+            Color line = isBsl ? Color.FromArgb(200, 231, 76, 60) : Color.FromArgb(200, 52, 152, 219);
+            Color labelColor = isBsl ? Color.FromArgb(255, 192, 57, 43) : Color.FromArgb(255, 41, 128, 185);
+
+            TrackDraw(Prefix + "rect_" + id);
+            chart.DrawRectangle(
+                Prefix + "rect_" + id,
+                startTime,
+                zone.ZoneTop,
+                endTime,
+                zone.ZoneBottom,
+                fill,
+                1,
+                LineStyle.Solid);
+
+            TrackDraw(Prefix + "lvl_" + id);
+            chart.DrawTrendLine(
+                Prefix + "lvl_" + id,
+                startTime,
+                zone.LevelPrice,
+                endTime,
+                zone.LevelPrice,
+                line,
+                2,
+                LineStyle.Solid);
+
+            if (showLabels)
+            {
+                string sideTag = isBsl ? "BSL" : "SSL";
+                string text = sideTag + " " + ShortSource(zone.Source) + " @ " + Math.Round(zone.LevelPrice, symbol.Digits) + "  [" + zone.StrengthScore + "]";
+                TrackDraw(Prefix + "lbl_" + id);
+                chart.DrawText(
+                    Prefix + "lbl_" + id,
+                    text,
+                    endTime,
+                    zone.LevelPrice,
+                    labelColor);
+            }
+        }
+
+        private void DrawSweepMarker(Chart chart, Bars entryBars, Symbol symbol, SweepSetup setup)
+        {
+            if (setup.SweepBarIndex < 0 || setup.SweepBarIndex >= entryBars.Count)
+                return;
+
+            DateTime time = entryBars.OpenTimes[setup.SweepBarIndex];
+            double price = setup.SweepWickExtreme;
+            bool isLong = setup.Direction == TradeType.Buy;
+            Color color = isLong ? Color.LimeGreen : Color.OrangeRed;
+            string phase = setup.Phase == SweepPhase.Confirmed ? "SWEEP OK" : "SWEEP";
+            string sweepKey = setup.SweepBarIndex + "_" + setup.Zone.LevelPrice.ToString("F5");
+
+            TrackDraw(Prefix + "sweep_" + sweepKey);
+            chart.DrawIcon(
+                Prefix + "sweep_" + sweepKey,
+                isLong ? ChartIconType.UpTriangle : ChartIconType.DownTriangle,
+                time,
+                price,
+                color);
+
+            TrackDraw(Prefix + "sweep_txt_" + sweepKey);
+            chart.DrawText(
+                Prefix + "sweep_txt_" + sweepKey,
+                phase,
+                time,
+                price + (isLong ? -symbol.PipSize * 8 : symbol.PipSize * 8),
+                color);
+        }
+
+        private void DrawEntryMarker(Chart chart, Symbol symbol, EntryMarker entry)
+        {
+            bool isLong = entry.Direction == TradeType.Buy;
+            Color color = isLong ? Color.DodgerBlue : Color.MediumVioletRed;
+
+            string entryKey = entry.Time.Ticks.ToString();
+
+            TrackDraw(Prefix + "entry_" + entryKey);
+            chart.DrawIcon(
+                Prefix + "entry_" + entryKey,
+                isLong ? ChartIconType.UpArrow : ChartIconType.DownArrow,
+                entry.Time,
+                entry.Price,
+                color);
+
+            TrackDraw(Prefix + "entry_txt_" + entryKey);
+            chart.DrawText(
+                Prefix + "entry_txt_" + entryKey,
+                "ENTRY " + (isLong ? "LONG" : "SHORT"),
+                entry.Time,
+                entry.Price + (isLong ? symbol.PipSize * 10 : -symbol.PipSize * 10),
+                color);
+
+            if (entry.StopLoss > 0)
+            {
+                TrackDraw(Prefix + "entry_sl_" + entryKey);
+                chart.DrawHorizontalLine(
+                    Prefix + "entry_sl_" + entryKey,
+                    entry.StopLoss,
+                    Color.FromArgb(160, 231, 76, 60),
+                    1,
+                    LineStyle.Dots);
+            }
+
+            if (entry.TakeProfit > 0)
+            {
+                TrackDraw(Prefix + "entry_tp_" + entryKey);
+                chart.DrawHorizontalLine(
+                    Prefix + "entry_tp_" + entryKey,
+                    entry.TakeProfit,
+                    Color.FromArgb(160, 46, 204, 113),
+                    1,
+                    LineStyle.Dots);
+            }
+        }
+
+        private void DrawTimeframeBadge(Chart chart, Bars chartBars, TimeFrame zoneTimeFrame)
+        {
+            if (chartBars.Count < 1)
+                return;
+
+            TrackDraw(Prefix + "tf_badge");
+            chart.DrawStaticText(
+                Prefix + "tf_badge",
+                "Liquidity zones: " + FormatTimeFrame(zoneTimeFrame),
+                VerticalAlignment.Top,
+                HorizontalAlignment.Left,
+                Color.FromArgb(220, 44, 62, 80));
+        }
+
+        public void Clear(Chart chart)
+        {
+            foreach (var name in _trackedObjects.ToList())
+                chart.RemoveObject(name);
+            _trackedObjects.Clear();
+        }
+
+        private void TrackDraw(string name)
+        {
+            _trackedObjects.Add(name);
+        }
+
+        private static string ZoneId(LiquidityZone zone)
+        {
+            return (zone.Source + "_" + zone.LevelPrice.ToString("F5")).Replace('.', '_');
+        }
+
+        private static string ShortSource(LiquiditySource source)
+        {
+            switch (source)
+            {
+                case LiquiditySource.EqualHigh:
+                    return "EQH";
+                case LiquiditySource.EqualLow:
+                    return "EQL";
+                case LiquiditySource.PreviousDayHigh:
+                    return "PDH";
+                case LiquiditySource.PreviousDayLow:
+                    return "PDL";
+                case LiquiditySource.PreviousWeekHigh:
+                    return "PWH";
+                case LiquiditySource.PreviousWeekLow:
+                    return "PWL";
+                case LiquiditySource.SwingHigh:
+                    return "SwingH";
+                case LiquiditySource.SwingLow:
+                    return "SwingL";
+                default:
+                    return source.ToString();
+            }
+        }
+
+        private static string FormatTimeFrame(TimeFrame tf)
+        {
+            if (tf == TimeFrame.Minute) return "M1";
+            if (tf == TimeFrame.Minute5) return "M5";
+            if (tf == TimeFrame.Minute15) return "M15";
+            if (tf == TimeFrame.Minute30) return "M30";
+            if (tf == TimeFrame.Hour) return "H1";
+            if (tf == TimeFrame.Hour4) return "H4";
+            if (tf == TimeFrame.Daily) return "D1";
+            if (tf == TimeFrame.Weekly) return "W1";
+            if (tf == TimeFrame.Monthly) return "MN1";
+            return tf.ToString();
+        }
+    }
+
+    // --- SymbolTradingContext ---
+
+    public sealed class SymbolTradingContext
+    {
+        public SymbolTradingContext(
+            Symbol symbol,
+            Bars zoneBars,
+            Bars entryBars,
+            AverageTrueRange zoneAtr,
+            AverageTrueRange entryAtr,
+            LiquidityZoneEngine zoneEngine,
+            SweepConfirmationEngine sweepEngine)
+        {
+            Symbol = symbol;
+            ZoneBars = zoneBars;
+            EntryBars = entryBars;
+            ZoneAtr = zoneAtr;
+            EntryAtr = entryAtr;
+            ZoneEngine = zoneEngine;
+            SweepEngine = sweepEngine;
+            ActiveSetups = new List<SweepSetup>();
+            LastZones = new List<LiquidityZone>();
+        }
+
+        public Symbol Symbol { get; private set; }
+        public Bars ZoneBars { get; private set; }
+        public Bars EntryBars { get; private set; }
+        public AverageTrueRange ZoneAtr { get; private set; }
+        public AverageTrueRange EntryAtr { get; private set; }
+        public LiquidityZoneEngine ZoneEngine { get; private set; }
+        public SweepConfirmationEngine SweepEngine { get; private set; }
+        public List<SweepSetup> ActiveSetups { get; private set; }
+        public IReadOnlyList<LiquidityZone> LastZones { get; private set; }
+
+        public static int GetLastClosedBarIndex(Bars bars)
+        {
+            if (bars.Count >= 2)
+                return bars.Count - 2;
+            if (bars.Count == 1)
+                return 0;
+            return -1;
+        }
+
+        public void RefreshZones()
+        {
+            int zoneLast = GetLastClosedBarIndex(ZoneBars);
+            if (zoneLast < 10)
+                return;
+
+            LastZones = ZoneEngine.BuildZones(
+                ToArray(ZoneBars.HighPrices),
+                ToArray(ZoneBars.LowPrices),
+                ToArray(ZoneBars.ClosePrices),
+                ToArray(ZoneBars.OpenTimes),
+                ToArray(ZoneAtr.Result),
+                zoneLast);
+        }
+
+        public void RefreshEntrySetups()
+        {
+            int entryLast = GetLastClosedBarIndex(EntryBars);
+            if (entryLast < 5 || LastZones.Count == 0)
+                return;
+
+            ActiveSetups = SweepEngine.UpdateSetups(
+                LastZones,
+                ToArray(EntryBars.OpenPrices),
+                ToArray(EntryBars.HighPrices),
+                ToArray(EntryBars.LowPrices),
+                ToArray(EntryBars.ClosePrices),
+                entryLast,
+                ActiveSetups);
+        }
+
+        public void EvaluateAtBarOpen(bool isZoneBarEvent)
+        {
+            if (isZoneBarEvent)
+                RefreshZones();
+            RefreshEntrySetups();
+        }
+
+        private static double[] ToArray(DataSeries series)
+        {
+            var data = new double[series.Count];
+            for (int i = 0; i < series.Count; i++)
+                data[i] = series[i];
+            return data;
+        }
+
+        private static DateTime[] ToArray(TimeSeries times)
+        {
+            var data = new DateTime[times.Count];
+            for (int i = 0; i < times.Count; i++)
+                data[i] = times[i];
+            return data;
+        }
+    }
+
+    // --- Main Robot ---
+
+    /// <summary>
+    /// Liquidity Sweep cBot for cTrader.
+    /// Identifies liquidity on a configurable timeframe, waits for sweep + price-action confirmation,
+    /// then manages risk and profit using USD/percent sizing and R-multiple targets.
+    /// </summary>
+    [Robot(TimeZone = TimeZones.UTC, AccessRights = AccessRights.None)]
+    public class LiquiditySweepBot : Robot
+    {
+        // --- Symbols ---
+        [Parameter("Trade Chart Symbol Only", DefaultValue = true, Group = "Symbols")]
+        public bool TradeChartSymbolOnly { get; set; }
+
+        [Parameter("Extra Symbols (comma-separated)", DefaultValue = "ETHUSD", Group = "Symbols")]
+        public string ExtraSymbols { get; set; }
+
+        [Parameter("Max Open Positions Per Symbol", DefaultValue = 1, MinValue = 1, Group = "Symbols")]
+        public int MaxPositionsPerSymbol { get; set; }
+
+        // --- Timeframes ---
+        [Parameter("Use Chart Timeframe for Zones", DefaultValue = false, Group = "Timeframes")]
+        public bool UseChartTimeframeForZones { get; set; }
+
+        [Parameter("Liquidity Zone Timeframe", DefaultValue = "Hour4", Group = "Timeframes")]
+        public TimeFrame ZoneTimeFrame { get; set; }
+
+        [Parameter("Use Chart Timeframe for Entry", DefaultValue = true, Group = "Timeframes")]
+        public bool UseChartTimeframeForEntry { get; set; }
+
+        [Parameter("Entry Timeframe", DefaultValue = "Minute15", Group = "Timeframes")]
+        public TimeFrame EntryTimeFrame { get; set; }
+
+        // --- Liquidity detection ---
+        [Parameter("Pivot Bars (swing confirmation)", DefaultValue = 5, MinValue = 2, Group = "Liquidity")]
+        public int PivotBars { get; set; }
+
+        [Parameter("Equal Level Tolerance (x ATR)", DefaultValue = 0.15, MinValue = 0.05, Group = "Liquidity")]
+        public double EqualLevelToleranceAtr { get; set; }
+
+        [Parameter("Min Equal Touches", DefaultValue = 2, MinValue = 2, Group = "Liquidity")]
+        public int MinEqualTouches { get; set; }
+
+        [Parameter("Zone Padding (x ATR)", DefaultValue = 0.10, MinValue = 0.01, Group = "Liquidity")]
+        public double ZonePaddingAtr { get; set; }
+
+        [Parameter("Use Session Levels (PDH/L, PWH/L)", DefaultValue = true, Group = "Liquidity")]
+        public bool UseSessionLevels { get; set; }
+
+        [Parameter("Min Zone Strength (0-100)", DefaultValue = 60, MinValue = 0, MaxValue = 100, Group = "Liquidity")]
+        public int MinZoneStrength { get; set; }
+
+        [Parameter("Max Active Zones", DefaultValue = 12, MinValue = 5, Group = "Liquidity")]
+        public int MaxActiveZones { get; set; }
+
+        // --- Sweep confirmation ---
+        [Parameter("Confirmation Bar Delay", DefaultValue = 1, MinValue = 0, Group = "Confirmation")]
+        public int ConfirmationBarDelay { get; set; }
+
+        [Parameter("Max Sweep Age (entry bars)", DefaultValue = 12, MinValue = 3, Group = "Confirmation")]
+        public int MaxSweepAgeBars { get; set; }
+
+        [Parameter("Require Structure Shift (MSS)", DefaultValue = true, Group = "Confirmation")]
+        public bool RequireStructureShift { get; set; }
+
+        [Parameter("Structure Pivot Bars", DefaultValue = 3, MinValue = 2, Group = "Confirmation")]
+        public int StructurePivotBars { get; set; }
+
+        [Parameter("Min Wick/Body Ratio", DefaultValue = 0.8, MinValue = 0.1, Group = "Confirmation")]
+        public double MinWickBodyRatio { get; set; }
+
+        // --- Risk ---
+        [Parameter("Risk Mode", DefaultValue = RiskMode.PercentEquity, Group = "Risk")]
+        public RiskMode RiskModeSetting { get; set; }
+
+        [Parameter("Fixed USD Risk", DefaultValue = 100, MinValue = 1, Group = "Risk")]
+        public double FixedUsdRisk { get; set; }
+
+        [Parameter("Risk Percent", DefaultValue = 0.8, MinValue = 0.01, Group = "Risk")]
+        public double RiskPercent { get; set; }
+
+        [Parameter("Max Spread (pips, 0=off)", DefaultValue = 0, MinValue = 0, Group = "Risk")]
+        public double MaxSpreadPips { get; set; }
+
+        [Parameter("Stop Buffer (x ATR)", DefaultValue = 0.05, MinValue = 0, Group = "Risk")]
+        public double StopBufferAtr { get; set; }
+
+        [Parameter("ATR Period", DefaultValue = 14, MinValue = 5, Group = "Risk")]
+        public int AtrPeriod { get; set; }
+
+        // --- Profit ---
+        [Parameter("Reward:Risk Ratio", DefaultValue = 2.0, MinValue = 0.5, Group = "Profit")]
+        public double RewardRiskRatio { get; set; }
+
+        [Parameter("Move SL to Breakeven at 1R", DefaultValue = true, Group = "Profit")]
+        public bool MoveToBreakevenAt1R { get; set; }
+
+        [Parameter("Partial Close at 1R", DefaultValue = true, Group = "Profit")]
+        public bool PartialCloseAt1R { get; set; }
+
+        [Parameter("Partial Close %", DefaultValue = 50, MinValue = 10, MaxValue = 90, Group = "Profit")]
+        public double PartialClosePercent { get; set; }
+
+        [Parameter("Use Trailing Stop", DefaultValue = true, Group = "Profit")]
+        public bool UseTrailingStop { get; set; }
+
+        [Parameter("Trailing Stop %", DefaultValue = 0.35, MinValue = 0.1, Group = "Profit")]
+        public double TrailingStopPercent { get; set; }
+
+        [Parameter("Activate Trail After R", DefaultValue = 1.5, MinValue = 0.5, Group = "Profit")]
+        public double ActivateTrailAfterR { get; set; }
+
+        // --- Visual ---
+        [Parameter("Draw Zones On Chart", DefaultValue = true, Group = "Visual")]
+        public bool DrawZonesOnChart { get; set; }
+
+        [Parameter("Show Zone Labels", DefaultValue = true, Group = "Visual")]
+        public bool ShowZoneLabels { get; set; }
+
+        [Parameter("Show Sweep Markers", DefaultValue = true, Group = "Visual")]
+        public bool ShowSweepMarkers { get; set; }
+
+        [Parameter("Show Entry Markers", DefaultValue = true, Group = "Visual")]
+        public bool ShowEntryMarkers { get; set; }
+
+        [Parameter("Max Zones Drawn", DefaultValue = 10, MinValue = 1, MaxValue = 20, Group = "Visual")]
+        public int MaxZonesDrawn { get; set; }
+
+        [Parameter("Zone Lookback Bars", DefaultValue = 200, MinValue = 50, Group = "Visual")]
+        public int ZoneLookbackBars { get; set; }
+
+        private readonly Dictionary<string, SymbolTradingContext> _contexts = new Dictionary<string, SymbolTradingContext>();
+        private readonly List<EntryMarker> _entryMarkers = new List<EntryMarker>();
+        private readonly ChartVisualizer _visualizer = new ChartVisualizer();
+        private RiskManager _riskManager;
+        private ProfitManager _profitManager;
+        private TimeFrame _resolvedZoneTimeFrame;
+        private TimeFrame _resolvedEntryTimeFrame;
+
+        protected override void OnStart()
+        {
+            _resolvedZoneTimeFrame = UseChartTimeframeForZones ? TimeFrame : ZoneTimeFrame;
+            _resolvedEntryTimeFrame = UseChartTimeframeForEntry ? TimeFrame : EntryTimeFrame;
+
+            _riskManager = new RiskManager(
+                RiskModeSetting,
+                FixedUsdRisk,
+                RiskPercent,
+                MaxSpreadPips,
+                StopBufferAtr);
+
+            _profitManager = new ProfitManager(
+                RewardRiskRatio,
+                MoveToBreakevenAt1R,
+                PartialCloseAt1R,
+                PartialClosePercent,
+                UseTrailingStop,
+                TrailingStopPercent,
+                ActivateTrailAfterR);
+
+            foreach (var symbol in ResolveSymbols())
+            {
+                RegisterSymbol(symbol);
+            }
+
+            if (_contexts.Count == 0)
+            {
+                Print("No tradable symbols resolved. Attach bot to BTCUSD chart or set Extra Symbols.");
+                Stop();
+                return;
+            }
+
+            Print("Liquidity TF: " + _resolvedZoneTimeFrame + " | Entry TF: " + _resolvedEntryTimeFrame + " | Chart TF: " + TimeFrame);
+
+            SymbolTradingContext chartCtx;
+            if (_contexts.TryGetValue(SymbolName, out chartCtx))
+            {
+                chartCtx.RefreshZones();
+                chartCtx.RefreshEntrySetups();
+                RefreshChartVisuals(chartCtx);
+            }
+        }
+
+        protected override void OnStop()
+        {
+            _visualizer.Clear(Chart);
+        }
+
+        protected override void OnTick()
+        {
+            foreach (var ctx in _contexts.Values)
+                _profitManager.ManageOpenPositions(this, ctx.Symbol);
+        }
+
+        private void RegisterSymbol(Symbol symbol)
+        {
+            var zoneBars = MarketData.GetBars(_resolvedZoneTimeFrame, symbol.Name);
+            var entryBars = MarketData.GetBars(_resolvedEntryTimeFrame, symbol.Name);
+            var zoneAtr = Indicators.AverageTrueRange(zoneBars, AtrPeriod, MovingAverageType.Simple);
+            var entryAtr = Indicators.AverageTrueRange(entryBars, AtrPeriod, MovingAverageType.Simple);
+
+            var zoneEngine = new LiquidityZoneEngine(
+                PivotBars,
+                EqualLevelToleranceAtr,
+                MinEqualTouches,
+                ZonePaddingAtr,
+                UseSessionLevels,
+                MaxActiveZones);
+
+            var sweepEngine = new SweepConfirmationEngine(
+                ConfirmationBarDelay,
+                MaxSweepAgeBars,
+                RequireStructureShift,
+                StructurePivotBars,
+                MinWickBodyRatio,
+                MinZoneStrength);
+
+            var ctx = new SymbolTradingContext(symbol, zoneBars, entryBars, zoneAtr, entryAtr, zoneEngine, sweepEngine);
+            _contexts[symbol.Name] = ctx;
+
+            zoneBars.BarOpened += args =>
+            {
+                if (args.Bars.SymbolName != symbol.Name)
+                    return;
+                ProcessSymbol(ctx, true);
+            };
+
+            entryBars.BarOpened += args =>
+            {
+                if (args.Bars.SymbolName != symbol.Name)
+                    return;
+                ProcessSymbol(ctx, false);
+            };
+
+            Print("Registered " + symbol.Name + " | Zone TF: " + _resolvedZoneTimeFrame + " | Entry TF: " + _resolvedEntryTimeFrame);
+        }
+
+        private void ProcessSymbol(SymbolTradingContext ctx, bool isZoneBarEvent)
+        {
+            ctx.EvaluateAtBarOpen(isZoneBarEvent);
+
+            if (ctx.Symbol.Name == SymbolName)
+                RefreshChartVisuals(ctx);
+
+            if (!isZoneBarEvent)
+            {
+                _profitManager.ManageOpenPositions(this, ctx.Symbol);
+                TryExecuteEntries(ctx);
+            }
+        }
+
+        private void RefreshChartVisuals(SymbolTradingContext ctx)
+        {
+            if (!DrawZonesOnChart)
+            {
+                _visualizer.Clear(Chart);
+                return;
+            }
+
+            _visualizer.DrawZonesAndSetups(
+                Chart,
+                Bars,
+                ctx.Symbol,
+                _resolvedZoneTimeFrame,
+                ctx.LastZones,
+                ctx.EntryBars,
+                ctx.ActiveSetups,
+                MaxZonesDrawn,
+                ZoneLookbackBars,
+                ShowZoneLabels,
+                ShowSweepMarkers,
+                ShowEntryMarkers,
+                _entryMarkers);
+        }
+
+        private void TryExecuteEntries(SymbolTradingContext ctx)
+        {
+            if (!_riskManager.IsSpreadAcceptable(ctx.Symbol))
+                return;
+
+            int openForSymbol = Positions.Count(p => p.SymbolName == ctx.Symbol.Name);
+            if (openForSymbol >= MaxPositionsPerSymbol)
+                return;
+
+            var ready = ctx.SweepEngine.GetReadyEntries(ctx.ActiveSetups);
+            foreach (var setup in ready)
+            {
+                if (openForSymbol >= MaxPositionsPerSymbol)
+                    break;
+
+                ExecuteSetup(ctx, setup);
+                setup.Phase = SweepPhase.Invalidated;
+                openForSymbol++;
+            }
+        }
+
+        private void ExecuteSetup(SymbolTradingContext ctx, SweepSetup setup)
+        {
+            var symbol = ctx.Symbol;
+            double entry = setup.Direction == TradeType.Buy ? symbol.Ask : symbol.Bid;
+            int atrIndex = SymbolTradingContext.GetLastClosedBarIndex(ctx.EntryBars);
+            if (atrIndex < 0)
+                atrIndex = 0;
+            double atr = ctx.EntryAtr.Result[atrIndex];
+
+            double stopLoss = _riskManager.BuildStopLoss(setup.Direction, setup.SweepWickExtreme, atr, symbol);
+            double takeProfit = symbol.NormalizePrice(
+                _profitManager.CalculateTakeProfit(setup.Direction, entry, stopLoss));
+
+            double riskAmount = _riskManager.CalculateRiskAmount(Account);
+            double volume = _riskManager.CalculateVolumeInUnits(symbol, entry, stopLoss, riskAmount);
+
+            if (volume <= 0)
+            {
+                Print(symbol.Name + ": volume too small for risk settings.");
+                return;
+            }
+
+            var result = ExecuteMarketOrder(setup.Direction, symbol.Name, volume, "LQ_Sweep", stopLoss, takeProfit);
+            if (result.IsSuccessful)
+            {
+                _profitManager.RegisterPosition(result.Position, stopLoss);
+
+                if (ShowEntryMarkers && symbol.Name == SymbolName)
+                {
+                    _entryMarkers.Add(new EntryMarker
+                    {
+                        Time = ctx.EntryBars.OpenTimes[atrIndex],
+                        Price = entry,
+                        StopLoss = stopLoss,
+                        TakeProfit = takeProfit,
+                        Direction = setup.Direction
+                    });
+
+                    if (_entryMarkers.Count > 30)
+                        _entryMarkers.RemoveAt(0);
+
+                    RefreshChartVisuals(ctx);
+                }
+
+                Print(symbol.Name + " " + setup.Direction + " | Zone: " + setup.Zone.Label + " @ " + setup.Zone.LevelPrice.ToString("F2") + " | SL " + stopLoss.ToString("F2") + " | TP " + takeProfit.ToString("F2") + " | R:R " + RewardRiskRatio);
+            }
+            else
+            {
+                Print(symbol.Name + " order failed: " + result.Error);
+            }
+        }
+
+        private IEnumerable<Symbol> ResolveSymbols()
+        {
+            var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            if (TradeChartSymbolOnly)
+            {
+                names.Add(SymbolName);
+            }
+            else
+            {
+                names.Add(SymbolName);
+                if (!string.IsNullOrWhiteSpace(ExtraSymbols))
+                {
+                    foreach (var part in ExtraSymbols.Split(new[] { ',', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries))
+                        names.Add(part.Trim());
+                }
+            }
+
+            foreach (var name in names)
+            {
+                Symbol symbol = Symbols.GetSymbol(name);
+                if (symbol == null)
+                {
+                    Print("Symbol not found: " + name);
+                    continue;
+                }
+                yield return symbol;
+            }
+        }
+    }
+}

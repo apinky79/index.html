@@ -27,19 +27,24 @@ This combination is the most **backtestable** and **broker-agnostic** approach (
 
 ## Installation
 
-1. Open **cTrader Automate** (requires cTrader **4.8+** for `BarClosed` events).
-2. Create a new cBot and copy all `.cs` files from this folder into the project (same namespace structure).
-3. Build the project.
-4. Attach to a **BTCUSD** chart (recommended entry TF: **M15**).
-5. Enable Algo trading.
+1. Open **cTrader Automate**.
+2. Create a new cBot project.
+3. Copy **`LiquiditySweepBot.SingleFile.cs`** into the project and **rename it to `LiquiditySweepBot.cs`**.
+4. Delete any other `.cs` files from the project (the multi-file version is for development only — do **not** copy those into cTrader).
+5. Build the project.
+6. Attach to a **BTCUSD** chart (recommended entry TF: **M15**).
+7. Enable Algo trading.
 
-### File layout
+> **Important:** Use only the single-file version (`LiquiditySweepBot.SingleFile.cs`). The multi-file layout below is for repository development and is **not** compatible with older cTrader builds when copied as-is.
+
+### Repository layout (development only)
 
 ```
 ctrader-liquidity-bot/
-├── LiquiditySweepBot.cs          # Main robot + parameters
-├── Models/LiquidityModels.cs
-├── Engine/
+├── LiquiditySweepBot.SingleFile.cs   # ← COPY THIS into cTrader (rename to LiquiditySweepBot.cs)
+├── LiquiditySweepBot.cs              # Multi-file main robot (dev only)
+├── Models/LiquidityModels.cs         # Dev only
+├── Engine/                           # Dev only
 │   ├── SwingPointDetector.cs
 │   ├── LiquidityZoneEngine.cs
 │   ├── SweepConfirmationEngine.cs
@@ -138,4 +143,4 @@ Volume is calculated from **stop distance** (beyond sweep wick + ATR buffer), no
 - [FractalTrader liquidity module](https://github.com/r464r64r/FractalTrader/blob/main/core/liquidity.py) — equal levels & sweep detection
 - [LuxAlgo — Liquidity Sweep concept](https://www.luxalgo.com/library/concept/liquidity-sweep/)
 - [cTrader multi-timeframe guide](https://help.ctrader.com/ctrader-algo/how-tos/cbots/code-multitimeframe-strategies/)
-- [cTrader BarClosed events](https://help.ctrader.com/ctrader-algo/how-tos/cbots/handle-bar-events/)
+- [cTrader bar events](https://help.ctrader.com/ctrader-algo/how-tos/cbots/handle-bar-events/)
