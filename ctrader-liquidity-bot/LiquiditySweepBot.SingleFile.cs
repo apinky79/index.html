@@ -611,7 +611,7 @@ namespace cAlgo.Robots
             double close = closes[bar];
             double body = Math.Abs(close - open);
 
-            foreach (var zone in zones.Where(z => z.IsActive && z.StrengthScore >= _minZoneStrength && ZoneTouchesLevel(zone, high, low)))
+            foreach (var zone in zones.Where(z => z.IsActive && z.StrengthScore >= _minZoneStrength && ZoneTouchesLevel(z, high, low)))
             {
                 if (setups.Any(s => s.Zone.LevelPrice == zone.LevelPrice && s.Zone.Source == zone.Source && s.Phase != SweepPhase.Invalidated))
                     continue;
