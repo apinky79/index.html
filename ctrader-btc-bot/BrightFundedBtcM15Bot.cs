@@ -93,6 +93,7 @@ namespace cAlgo.Robots
                 Print("Warning: designed for M15; current chart is {0}", TimeFrame);
 
             _atr = Indicators.AverageTrueRange(AtrPeriod, MovingAverageType.Exponential);
+            _ema20 = Indicators.ExponentialMovingAverage(Bars.ClosePrices, 20);
             _ema50 = Indicators.ExponentialMovingAverage(Bars.ClosePrices, 50);
             _ema200 = Indicators.ExponentialMovingAverage(Bars.ClosePrices, 200);
             _ema21 = Indicators.ExponentialMovingAverage(Bars.ClosePrices, 21);
@@ -202,10 +203,9 @@ namespace cAlgo.Robots
 
         private void KeltnerBreak(int i, out bool lng, out bool shrt)
         {
-            var mid = Indicators.ExponentialMovingAverage(Bars.ClosePrices, 20);
             double band = 2.0 * _atr.Result.Last(i);
-            double up = mid.Result.Last(i) + band;
-            double lo = mid.Result.Last(i) - band;
+            double up = _ema20.Result.Last(i) + band;
+            double lo = _ema20.Result.Last(i) - band;
             lng = Bars.ClosePrices.Last(i + 1) <= up && Bars.ClosePrices.Last(i) > up;
             shrt = Bars.ClosePrices.Last(i + 1) >= lo && Bars.ClosePrices.Last(i) < lo;
         }
