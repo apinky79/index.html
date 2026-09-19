@@ -101,7 +101,7 @@ namespace cAlgo.Robots
             _ema200 = Indicators.ExponentialMovingAverage(Bars.ClosePrices, 200);
             _m15Dms = Indicators.DirectionalMovementSystem(14);
             _h4Bars = MarketData.GetBars(TimeFrame.Hour4);
-            _h4Dms = Indicators.DirectionalMovementSystem(14, _h4Bars);
+            _h4Dms = Indicators.DirectionalMovementSystem(_h4Bars, 14);
             _h4Ema55 = Indicators.ExpponentialMovingAverage(_h4Bars.ClosePrices, 55);
 
             _sessionStartedUtc = Server.Time;

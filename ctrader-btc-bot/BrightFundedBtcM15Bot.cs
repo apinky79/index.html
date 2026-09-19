@@ -102,7 +102,7 @@ namespace cAlgo.Robots
             _aroon = Indicators.AroonOscillator(25);
 
             _h4Bars = MarketData.GetBars(TimeFrame.Hour4);
-            _h4Dms = Indicators.DirectionalMovementSystem(14, _h4Bars);
+            _h4Dms = Indicators.DirectionalMovementSystem(_h4Bars, 14);
             _h4Ema55 = Indicators.ExponentialMovingAverage(_h4Bars.ClosePrices, 55);
 
             ResetWeek(Server.Time);
