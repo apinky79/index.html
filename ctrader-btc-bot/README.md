@@ -1,5 +1,10 @@
 # Atlas BTC bots (cTrader)
 
+## Ultimate BTC Bot (start here)
+
+**`UltimateBtcBot.cs`** — one flagship: M15 EMA 50/200 + H4 trend + ADX gates + prop risk + 12h max hold.  
+Read **`ULTIMATE_BOT.md`**.
+
 ## BrightFunded M15 (prop / weekly regime)
 
 **`BrightFundedBtcM15Bot.cs`** — $50k Classic defaults (0.8% risk, 3.5% week brake, Monday H4 ADX skip, **48-bar max hold ~12h**).  
