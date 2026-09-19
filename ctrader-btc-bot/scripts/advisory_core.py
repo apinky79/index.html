@@ -145,6 +145,7 @@ def format_telegram_message(ad: WeeklyAdvisory) -> str:
         f"*Max hold:* {ad.max_hold_bars} bars\n\n"
         f"{opt}\n{rev}\n"
         f"{ad.review_reason if ad.review_recommended else 'Keep cBot running on M15 demo/live.'}\n\n"
+        f"⏱ cTrader stops cBots ~every 7 days — restart Learned Autopilot on chart every 5–6 days.\n\n"
         f"_{ad.best_alternate or 'Fixed EMA 50/200 remains default.'}_"
     )
 

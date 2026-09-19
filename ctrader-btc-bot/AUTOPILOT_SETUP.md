@@ -20,6 +20,30 @@ The bot runs **by itself** — no manual entries, no weekly parameter changes in
 
 *(Same logic as `UltimateBtcBot.cs`; Autopilot adds clearer logging + H4 intraweek ADX pause.)*
 
+### cTrader’s ~7-day restart (important)
+
+cTrader **stops algorithm instances after about 7 days**. You must **stop and start** (or remove and re-attach) the cBot on the chart — parameters stay saved; the instance does not run forever.
+
+**Routine (every 5–6 days, or when the log says so):**
+
+1. Leave **open trades** alone — they stay on the account; the bot uses label `Learned-Autopilot` and picks them up again after restart.
+2. **Stop** the cBot on the BTCUSD **M15** chart → **Start** it again (AutoTrading still on).
+3. Optional: run `python3 record_ctrader_restart.py` in `telegram_advisor/` so Telegram restart reminders stay accurate.
+
+**What survives a restart**
+
+| Item | After restart |
+|------|----------------|
+| Open positions | Yes — same label, max-hold counted from entry time |
+| Week-start equity & 3.5% week brake | Yes — if **Persist week state** is on (default) |
+| Monday TRADE/SKIP gate this week | Yes — restored from local state file |
+| 7-day cTrader timer | Reset — you get another ~7 days |
+
+State file (Windows example):  
+`Documents\cAlgo\Data\cBots\LearnedBtcAutopilotBot\autopilot_state.txt`
+
+The bot logs a **REMINDER** once it has been running **6+ days** in the same instance.
+
 ---
 
 ## Part 2: Telegram advisor (optional)
@@ -53,6 +77,18 @@ Cron example:
 
 ```cron
 0 18 * * 0 cd /path/to/ctrader-btc-bot/telegram_advisor && TELEGRAM_BOT_TOKEN=... TELEGRAM_CHAT_ID=... python3 send_advisory.py
+```
+
+Daily **cTrader restart** nudge (optional, if you use Telegram on a VPS):
+
+```cron
+0 9 * * * cd /path/to/ctrader-btc-bot/telegram_advisor && TELEGRAM_BOT_TOKEN=... TELEGRAM_CHAT_ID=... python3 send_restart_reminder.py
+```
+
+After each manual cBot restart on your PC:
+
+```bash
+python3 record_ctrader_restart.py
 ```
 
 Or run on a Raspberry Pi / VPS — **Telegram does not run inside cTrader**; it’s a small sidecar.

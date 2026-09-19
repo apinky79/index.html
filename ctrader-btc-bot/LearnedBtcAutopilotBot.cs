@@ -1,8 +1,11 @@
 // Learned BTC Autopilot — runs on its own from consolidated research.
 // M15 | EMA 50/200 | H4 trend + ADX gates | prop risk | ~12h max hold | no weekly param hopping.
 // Pair with telegram_advisor/ for Sunday regime messages (optional).
+// cTrader stops cBots after ~7 days — restart the instance; week/risk state is persisted locally.
 
 using System;
+using System.Globalization;
+using System.IO;
 using System.Linq;
 using cAlgo.API;
 using cAlgo.API.Indicators;
@@ -10,10 +13,11 @@ using cAlgo.API.Internals;
 
 namespace cAlgo.Robots
 {
-    [Robot(TimeZone = TimeZones.UTC, AccessRights = AccessRights.None, AddIndicators = true)]
+    [Robot(TimeZone = TimeZones.UTC, AccessRights = AccessRights.FullAccess, AddIndicators = true)]
     public class LearnedBtcAutopilotBot : Robot
     {
         private const string Label = "Learned-Autopilot";
+        private const double RestartWarnDays = 6.0;
 
         [Parameter("Challenge risk % (Monday equity)", Group = "Autopilot", DefaultValue = 0.8, MinValue = 0.1)]
         public double ChallengeRiskPercent { get; set; }
@@ -23,6 +27,9 @@ namespace cAlgo.Robots
 
         [Parameter("Week drawdown brake %", Group = "Autopilot", DefaultValue = 3.5, MinValue = 0.5)]
         public double WeekMaxDrawdownPercent { get; set; }
+
+        [Parameter("Persist week state across restarts", Group = "Autopilot", DefaultValue = true)]
+        public bool PersistState { get; set; }
 
         [Parameter("Monday skip if H4 ADX <", Group = "Regime", DefaultValue = 20, MinValue = 5)]
         public double MondaySkipAdx { get; set; }
@@ -72,8 +79,17 @@ namespace cAlgo.Robots
         private int _isoWeek = -1;
         private bool _weekTradingAllowed = true;
         private DateTime _lastMondayCheck = DateTime.MinValue;
-        private int _barsInTrade;
+        private DateTime _sessionStartedUtc;
         private DateTime _lastH4Log = DateTime.MinValue;
+
+        private string StateFilePath =>
+            Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+                "cAlgo",
+                "Data",
+                "cBots",
+                nameof(LearnedBtcAutopilotBot),
+                "autopilot_state.txt");
 
         protected override void OnStart()
         {
@@ -86,17 +102,26 @@ namespace cAlgo.Robots
             _m15Dms = Indicators.DirectionalMovementSystem(14);
             _h4Bars = MarketData.GetBars(TimeFrame.Hour4);
             _h4Dms = Indicators.DirectionalMovementSystem(14, _h4Bars);
-            _h4Ema55 = Indicators.ExponentialMovingAverage(_h4Bars.ClosePrices, 55);
+            _h4Ema55 = Indicators.ExpponentialMovingAverage(_h4Bars.ClosePrices, 55);
 
-            ResetWeek(Server.Time);
-            Positions.Opened += OnPositionOpened;
+            _sessionStartedUtc = Server.Time;
+            if (!TryRestoreWeekState(Server.Time))
+                ResetWeek(Server.Time, persist: false);
+
+            SaveState();
+
+            var open = BotPositions();
+            if (open.Length > 0)
+                Print("Reattached to {0} open position(s) with label {1}", open.Length, Label);
 
             Print("Learned Autopilot ON | fixed EMA50/200 | risk {0:F2}% | hold≤{1} bars",
                 _activeRiskPercent, MaxHoldBars);
+            Print("cTrader ~7-day limit: restart this cBot before it stops. State file: {0}", StateFilePath);
         }
 
         protected override void OnBarClosed()
         {
+            WarnIfRestartDue();
             EnsureWeekRollover();
             UpdateMondayGate();
             LogH4StatusIfNewBar();
@@ -112,12 +137,18 @@ namespace cAlgo.Robots
             TryEntry();
         }
 
-        protected override void OnStop() => Positions.Opened -= OnPositionOpened;
-
-        private void OnPositionOpened(PositionOpenedEventArgs args)
+        protected override void OnStop()
         {
-            if (args.Position.Label == Label)
-                _barsInTrade = 0;
+            SaveState();
+        }
+
+        private void WarnIfRestartDue()
+        {
+            double days = (Server.Time - _sessionStartedUtc).TotalDays;
+            if (days < RestartWarnDays)
+                return;
+            Print("REMINDER: cBot running {0:F1} days — restart Learned Autopilot soon (cTrader ~7-day limit).",
+                days);
         }
 
         private void TryEntry()
@@ -176,12 +207,18 @@ namespace cAlgo.Robots
         {
             foreach (var p in BotPositions())
             {
-                _barsInTrade++;
+                int barsHeld = BarsHeldM15(p);
                 if (BreakevenAtOneR)
                     TryBreakeven(p);
-                if (_barsInTrade >= MaxHoldBars)
+                if (barsHeld >= MaxHoldBars)
                     ClosePosition(p);
             }
+        }
+
+        private int BarsHeldM15(Position p)
+        {
+            double minutes = Math.Max(0, (Server.Time - p.EntryTime).TotalMinutes);
+            return Math.Max(0, (int)(minutes / 15.0));
         }
 
         private void TryBreakeven(Position p)
@@ -241,7 +278,7 @@ namespace cAlgo.Robots
             ResetWeek(Server.Time);
         }
 
-        private void ResetWeek(DateTime utc)
+        private void ResetWeek(DateTime utc, bool persist = true)
         {
             _isoWeek = GetIsoWeek(utc);
             _weekStartEquity = Account.Equity;
@@ -249,6 +286,8 @@ namespace cAlgo.Robots
             _weekTradingAllowed = true;
             _lastMondayCheck = DateTime.MinValue;
             Print("New week {0} | equity {1:F2} | risk {2:F2}%", _isoWeek, _weekStartEquity, _activeRiskPercent);
+            if (persist)
+                SaveState();
         }
 
         private void UpdateMondayGate()
@@ -261,6 +300,76 @@ namespace cAlgo.Robots
             double adx = _h4Dms.ADX.Last(1);
             _weekTradingAllowed = adx >= MondaySkipAdx;
             Print("Monday gate ADX={0:F1} → {1}", adx, _weekTradingAllowed ? "TRADE" : "SKIP");
+            SaveState();
+        }
+
+        private bool TryRestoreWeekState(DateTime utc)
+        {
+            if (!PersistState || !File.Exists(StateFilePath))
+                return false;
+
+            try
+            {
+                var lines = File.ReadAllLines(StateFilePath);
+                if (lines.Length < 1)
+                    return false;
+
+                var parts = lines[0].Split('|');
+                if (parts.Length < 5)
+                    return false;
+
+                int savedWeek = int.Parse(parts[0], CultureInfo.InvariantCulture);
+                int currentWeek = GetIsoWeek(utc);
+                if (savedWeek != currentWeek)
+                    return false;
+
+                _isoWeek = savedWeek;
+                _weekStartEquity = double.Parse(parts[1], CultureInfo.InvariantCulture);
+                _weekTradingAllowed = parts[2] == "1";
+                long mondayTicks = long.Parse(parts[3], CultureInfo.InvariantCulture);
+                if (mondayTicks > 0)
+                    _lastMondayCheck = new DateTime(mondayTicks, DateTimeKind.Utc);
+                _activeRiskPercent = FundedPhase ? ChallengeRiskPercent / 2.0 : ChallengeRiskPercent;
+
+                Print("Restored week {0} state | week-start equity {1:F2} | Monday gate {2}",
+                    _isoWeek, _weekStartEquity, _weekTradingAllowed ? "TRADE" : "SKIP");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Print("Could not load state ({0}); starting fresh week.", ex.Message);
+                return false;
+            }
+        }
+
+        private void SaveState()
+        {
+            if (!PersistState)
+                return;
+
+            try
+            {
+                var dir = Path.GetDirectoryName(StateFilePath);
+                if (!string.IsNullOrEmpty(dir))
+                    Directory.CreateDirectory(dir);
+
+                long mondayTicks = _lastMondayCheck == DateTime.MinValue ? 0 : _lastMondayCheck.ToUniversalTime().Ticks;
+                long sessionTicks = _sessionStartedUtc.ToUniversalTime().Ticks;
+                var line = string.Format(
+                    CultureInfo.InvariantCulture,
+                    "{0}|{1}|{2}|{3}|{4}",
+                    _isoWeek,
+                    _weekStartEquity,
+                    _weekTradingAllowed ? "1" : "0",
+                    mondayTicks,
+                    sessionTicks);
+
+                File.WriteAllText(StateFilePath, line);
+            }
+            catch (Exception ex)
+            {
+                Print("State save failed: {0}", ex.Message);
+            }
         }
 
         private long VolumeForRisk(double stopDistancePrice)
@@ -279,8 +388,8 @@ namespace cAlgo.Robots
 
         private static int GetIsoWeek(DateTime utc)
         {
-            var cal = System.Globalization.CultureInfo.InvariantCulture.Calendar;
-            return cal.GetWeekOfYear(utc, System.Globalization.CalendarWeekRule.FirstFourDayWeek, DayOfWeek.Monday);
+            var cal = CultureInfo.InvariantCulture.Calendar;
+            return cal.GetWeekOfYear(utc, CalendarWeekRule.FirstFourDayWeek, DayOfWeek.Monday);
         }
     }
 }
