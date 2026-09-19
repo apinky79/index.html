@@ -68,11 +68,11 @@ namespace cAlgo.Robots
         public bool LogStatus { get; set; }
 
         private AverageTrueRange _atr;
-        private ExponentialMovingAverage _ema50, _ema200;
+        private MovingAverage _ema50, _ema200;
         private DirectionalMovementSystem _m15Dms;
         private Bars _h4Bars;
         private DirectionalMovementSystem _h4Dms;
-        private ExponentialMovingAverage _h4Ema55;
+        private MovingAverage _h4Ema55;
 
         private double _activeRiskPercent;
         private double _weekStartEquity;
@@ -97,12 +97,12 @@ namespace cAlgo.Robots
                 Print("Learned Autopilot expects M15; current: {0}", TimeFrame);
 
             _atr = Indicators.AverageTrueRange(14, MovingAverageType.Exponential);
-            _ema50 = Indicators.ExponentialMovingAverage(Bars.ClosePrices, 50);
-            _ema200 = Indicators.ExponentialMovingAverage(Bars.ClosePrices, 200);
+            _ema50 = Indicators.MovingAverage(Bars.ClosePrices, 50, MovingAverageType.Exponential);
+            _ema200 = Indicators.MovingAverage(Bars.ClosePrices, 200, MovingAverageType.Exponential);
             _m15Dms = Indicators.DirectionalMovementSystem(14);
             _h4Bars = MarketData.GetBars(TimeFrame.Hour4);
             _h4Dms = Indicators.DirectionalMovementSystem(_h4Bars, 14);
-            _h4Ema55 = Indicators.ExpponentialMovingAverage(_h4Bars.ClosePrices, 55);
+            _h4Ema55 = Indicators.MovingAverage(_h4Bars.ClosePrices, 55, MovingAverageType.Exponential);
 
             _sessionStartedUtc = Server.Time;
             if (!TryRestoreWeekState(Server.Time))
@@ -190,7 +190,7 @@ namespace cAlgo.Robots
             double sl = side == TradeType.Buy ? entry - stopDist : entry + stopDist;
             double tp = side == TradeType.Buy ? entry + RewardRiskMultiple * stopDist : entry - RewardRiskMultiple * stopDist;
 
-            long vol = VolumeForRisk(stopDist);
+            double vol = VolumeForRisk(stopDist);
             if (vol < Symbol.VolumeInUnitsMin)
                 return;
 
@@ -372,7 +372,7 @@ namespace cAlgo.Robots
             }
         }
 
-        private long VolumeForRisk(double stopDistancePrice)
+        private double VolumeForRisk(double stopDistancePrice)
         {
             double cash = Account.Equity * (_activeRiskPercent / 100.0);
             if (Symbol.TickSize <= 0 || Symbol.TickValue <= 0 || stopDistancePrice <= 0)
