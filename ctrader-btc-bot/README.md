@@ -1,46 +1,31 @@
-# XTX BTC Trend Regime Bot (cTrader)
+# Atlas BTC Breakout Bot (cTrader)
 
-cAlgo cBot for **BTCUSD**: H4 **regime filter** + H1 **trend pullback** entries, ATR stops, percent-of-equity sizing.
+**New build** from full-history BTC/USD research — not tied to prior prop tests.
 
-| File | Purpose |
-|------|---------|
-| `XTXBtcTrendRegimeBot.cs` | cTrader cBot source |
-| `PLAIN_ENGLISH_GUIDE.md` | Non-technical explanation |
-| `scripts/backtest_btc_trend_regime.py` | Offline research / replay |
+## Strategy
 
-Aligned with workspace `TRADING_RULES.md` (ADX gate, 0.8% risk, 3.5% weekly DD brake, single position).
+**ADX-filtered Donchian breakout** on **H4**:
 
-## Quick start
+- Long when close breaks above the highest high of the last **55** bars (prior window) while **ADX ≥ 22** and **+DI > −DI**.
+- Short is symmetric (optional).
+- **Stop:** 2.5 × ATR(14). **Target:** 2.5 × stop distance. **Risk:** 1% of equity per trade.
 
-1. Copy `XTXBtcTrendRegimeBot.cs` into cTrader Algo (new cBot).
-2. Build and attach to **BTCUSD** **H1** chart.
-3. Demo trade until logs and fills match expectations.
+See `RESEARCH.md` for backtest tables and `PLAIN_ENGLISH_GUIDE.md` for non-technical explanation.
 
-## Recommended settings
+## Install
 
-| Setting | Value |
-|---------|--------|
-| Chart | BTCUSD **H1** |
-| Fast / Slow EMA | 13 / 34 |
-| Stop | 2.5 × ATR(14) |
-| Take profit | 2.5 × stop distance |
-| Risk | 0.8% equity (0.4% funded) |
-| ADX gate | On (H4, enter 25 / exit 20, 3 bars) |
-| Monday gate | Skip week if H4 ADX < 20 |
+1. cTrader → **Algo** → **New cBot** → paste `AtlasBtcBreakoutBot.cs`.
+2. Build → attach to **BTCUSD** **H4** → **demo** first.
 
-## Research
+## Files
 
-```bash
-pip install yfinance pandas numpy
-python3 scripts/backtest_btc_trend_regime.py
-```
-
-## Troubleshooting
-
-- **`DirectionalMovementSystem` / `ADX`**: On some cTrader builds the property is `ADX` on `DirectionalMovementSystem`; if compile fails, check API docs for your version.
-- **Volume too small**: Lower risk slightly or use a account/broker with smaller minimum volume on BTCUSD.
-- **Different symbol name**: Some brokers use `BTCUSD`, `BTC/USD`, or `BITCOIN`; set the chart symbol before attaching.
+| File | Role |
+|------|------|
+| `AtlasBtcBreakoutBot.cs` | **Use this bot** |
+| `XTXBtcTrendRegimeBot.cs` | Previous version (EMA pullback) — optional |
+| `scripts/strategy_research.py` | History tournament |
+| `scripts/backtest_btc_trend_regime.py` | Old EMA bot replay |
 
 ## Disclaimer
 
-Trading crypto is high risk. This is educational software; not financial advice. Test on demo first.
+High risk. Educational only. Demo before live.
