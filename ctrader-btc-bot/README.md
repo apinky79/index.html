@@ -4,6 +4,8 @@
 
 **`LearnedBtcAutopilotBot.cs`** + **`AUTOPILOT_SETUP.md`** + **`telegram_advisor/`**
 
+cTrader stops cBots after ~**7 days** — restart the instance on chart every 5–6 days (week brake state persists; see setup doc).
+
 ## Ultimate BTC Bot
 
 **`UltimateBtcBot.cs`** — one flagship: M15 EMA 50/200 + H4 trend + ADX gates + prop risk + 12h max hold.  
