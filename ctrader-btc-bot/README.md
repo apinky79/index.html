@@ -1,6 +1,10 @@
 # Atlas BTC bots (cTrader)
 
-## Ultimate BTC Bot (start here)
+## Learned BTC Autopilot (start here — self-running + optional Telegram)
+
+**`LearnedBtcAutopilotBot.cs`** + **`AUTOPILOT_SETUP.md`** + **`telegram_advisor/`**
+
+## Ultimate BTC Bot
 
 **`UltimateBtcBot.cs`** — one flagship: M15 EMA 50/200 + H4 trend + ADX gates + prop risk + 12h max hold.  
 Read **`ULTIMATE_BOT.md`**.
