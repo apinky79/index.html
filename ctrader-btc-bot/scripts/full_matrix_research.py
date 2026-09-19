@@ -301,6 +301,98 @@ def sig_ichimoku_tk(df: pd.DataFrame) -> pd.DataFrame:
     ).fillna(False)
 
 
+def sig_williams_r(df: pd.DataFrame, n: int = 14) -> pd.DataFrame:
+    hh = df["High"].rolling(n).max()
+    ll = df["Low"].rolling(n).min()
+    wr = -100 * (hh - df["Close"]) / (hh - ll).replace(0, np.nan)
+    return pd.DataFrame(
+        {
+            "long": (wr.shift(1) <= -80) & (wr > -80),
+            "short": (wr.shift(1) >= -20) & (wr < -20),
+        },
+        index=df.index,
+    ).fillna(False)
+
+
+def sig_aroon_cross(df: pd.DataFrame, n: int = 25) -> pd.DataFrame:
+    a_up = df["High"].rolling(n).apply(lambda x: 100 * (n - 1 - np.argmax(x)) / n, raw=True)
+    a_down = df["Low"].rolling(n).apply(lambda x: 100 * (n - 1 - np.argmin(x)) / n, raw=True)
+    return pd.DataFrame(
+        {
+            "long": (a_up.shift(1) <= a_down.shift(1)) & (a_up > a_down) & (a_up > 50),
+            "short": (a_down.shift(1) <= a_up.shift(1)) & (a_down > a_up) & (a_down > 50),
+        },
+        index=df.index,
+    ).fillna(False)
+
+
+def sig_psar_flip(df: pd.DataFrame, step=0.02, max_step=0.2) -> pd.DataFrame:
+    # Simplified PSAR trend flip vs close
+    high, low, close = df["High"].values, df["Low"].values, df["Close"].values
+    n = len(df)
+    psar = np.zeros(n)
+    bull = True
+    af, ep = step, low[0]
+    psar[0] = high[0]
+    for i in range(1, n):
+        psar[i] = psar[i - 1] + af * (ep - psar[i - 1])
+        if bull:
+            psar[i] = min(psar[i], low[i - 1], low[i - 2] if i > 1 else low[i - 1])
+            if low[i] < psar[i]:
+                bull = False
+                psar[i] = ep
+                ep = low[i]
+                af = step
+            elif high[i] > ep:
+                ep = high[i]
+                af = min(af + step, max_step)
+        else:
+            psar[i] = max(psar[i], high[i - 1], high[i - 2] if i > 1 else high[i - 1])
+            if high[i] > psar[i]:
+                bull = True
+                psar[i] = ep
+                ep = high[i]
+                af = step
+            elif low[i] < ep:
+                ep = low[i]
+                af = min(af + step, max_step)
+    bull_s = pd.Series(close > psar, index=df.index)
+    return pd.DataFrame(
+        {
+            "long": (~bull_s.shift(1).fillna(False)) & bull_s,
+            "short": bull_s.shift(1).fillna(False) & (~bull_s),
+        },
+        index=df.index,
+    ).fillna(False)
+
+
+def sig_mfi_reversal(df: pd.DataFrame, n: int = 14) -> pd.DataFrame:
+    tp = (df["High"] + df["Low"] + df["Close"]) / 3
+    rmf = tp * df["Volume"]
+    pos = np.where(tp > tp.shift(1), rmf, 0.0)
+    neg = np.where(tp < tp.shift(1), rmf, 0.0)
+    mfr = pd.Series(pos, index=df.index).rolling(n).sum() / pd.Series(neg, index=df.index).rolling(n).sum().replace(0, np.nan)
+    mfi = 100 - 100 / (1 + mfr)
+    return pd.DataFrame(
+        {
+            "long": (mfi.shift(1) <= 20) & (mfi > 20),
+            "short": (mfi.shift(1) >= 80) & (mfi < 80),
+        },
+        index=df.index,
+    ).fillna(False)
+
+
+def sig_sma_cross(df: pd.DataFrame, f: int, s: int) -> pd.DataFrame:
+    fs, ss = sma(df["Close"], f), sma(df["Close"], s)
+    return pd.DataFrame(
+        {
+            "long": (fs.shift(1) <= ss.shift(1)) & (fs > ss),
+            "short": (fs.shift(1) >= ss.shift(1)) & (fs < ss),
+        },
+        index=df.index,
+    ).fillna(False)
+
+
 def sig_vol_breakout(df: pd.DataFrame, n=20) -> pd.DataFrame:
     vol_ma = df["Volume"].rolling(n).mean()
     hi = df["High"].rolling(n).max().shift(1)
@@ -444,28 +536,73 @@ STRATEGIES: dict[str, Callable[[pd.DataFrame], pd.DataFrame]] = {
     "supertrend_flip": lambda d: sig_supertrend(d),
     "ichimoku_tk_cross": lambda d: sig_ichimoku_tk(d),
     "volume_spike_break": lambda d: sig_vol_breakout(d),
+    "williams_r_reversal": lambda d: sig_williams_r(d),
+    "aroon_cross_25": lambda d: sig_aroon_cross(d, 25),
+    "psar_flip": lambda d: sig_psar_flip(d),
+    "mfi_reversal": lambda d: sig_mfi_reversal(d),
+    "sma_50_200": lambda d: sig_sma_cross(d, 50, 200),
+    "ema_9_21": lambda d: sig_ema_cross(d, 9, 21),
+    "donchian_10": lambda d: sig_donchian(d, 10),
 }
 
 PARAM_GRID = [(2.0, 2.0), (2.5, 2.5), (2.5, 3.0)]
 
 
+def _ohlc_agg(df: pd.DataFrame, rule: str) -> pd.DataFrame:
+    return (
+        df.resample(rule)
+        .agg({"Open": "first", "High": "max", "Low": "min", "Close": "last", "Volume": "sum"})
+        .dropna()
+    )
+
+
 def load_timeframes() -> dict[str, pd.DataFrame]:
     t = yf.Ticker("BTC-USD")
+    m1 = t.history(period="7d", interval="1m")
+    m5 = t.history(period="60d", interval="5m")
     m15 = t.history(period="60d", interval="15m")
     m30 = t.history(period="60d", interval="30m")
     h1 = t.history(period="730d", interval="1h")
     d1 = t.history(period="max", interval="1d")
-    h4 = h1.resample("4h").agg({"Open": "first", "High": "max", "Low": "min", "Close": "last", "Volume": "sum"}).dropna()
-    h2 = h1.resample("2h").agg({"Open": "first", "High": "max", "Low": "min", "Close": "last", "Volume": "sum"}).dropna()
-    return {"M15": m15, "M30": m30, "H1": h1, "H2": h2, "H4": h4, "D1": d1}
+    m3 = _ohlc_agg(m1, "3min") if len(m1) > 500 else pd.DataFrame()
+    h2 = _ohlc_agg(h1, "2h")
+    h3 = _ohlc_agg(h1, "3h")
+    h4 = _ohlc_agg(h1, "4h")
+    w1 = _ohlc_agg(d1, "W")
+    out = {
+        "M1": m1,
+        "M3": m3,
+        "M5": m5,
+        "M15": m15,
+        "M30": m30,
+        "H1": h1,
+        "H2": h2,
+        "H3": h3,
+        "H4": h4,
+        "D1": d1,
+        "W1": w1,
+    }
+    return {k: v for k, v in out.items() if v is not None and len(v) >= 300}
 
 
 def min_trades_for(tf: str) -> int:
-    return {"M15": 25, "M30": 20, "H1": 15, "H2": 12, "H4": 10, "D1": 10}[tf]
+    return {
+        "M1": 40,
+        "M3": 35,
+        "M5": 30,
+        "M15": 25,
+        "M30": 20,
+        "H1": 15,
+        "H2": 12,
+        "H3": 12,
+        "H4": 10,
+        "D1": 10,
+        "W1": 8,
+    }.get(tf, 15)
 
 
 def higher_tf(tf: str) -> str | None:
-    order = ["M15", "M30", "H1", "H2", "H4", "D1"]
+    order = ["M1", "M3", "M5", "M15", "M30", "H1", "H2", "H3", "H4", "D1", "W1"]
     i = order.index(tf)
     return order[i + 1] if i + 1 < len(order) else None
 
@@ -515,7 +652,7 @@ def main() -> None:
     out.to_csv(path, index=False)
 
     print(f"Wrote {len(out)} rows to {path}\n")
-    for tf in ["M15", "M30", "H1", "H2", "H4", "D1"]:
+    for tf in ["M1", "M3", "M5", "M15", "M30", "H1", "H2", "H3", "H4", "D1", "W1"]:
         sub = out[out["timeframe"] == tf].head(5)
         if sub.empty:
             continue

@@ -1,12 +1,12 @@
 # Atlas BTC bots — plain English
 
-You asked for **every timeframe** and **every serious indicator/trigger**. We ran **792 backtests** (see `TIMEFRAME_MATRIX.md` and `scripts/full_matrix_results.csv`).
+You asked for **every timeframe** and **every indicator/trigger**. The latest run tests **11 timeframes** (M1 → Weekly) and **33 triggers** (~**1,900+** combinations). See `TIMEFRAME_MATRIX.md` and `scripts/full_matrix_results.csv`.
 
 ## Which file to use?
 
 | Bot | When to use |
 |-----|-------------|
-| **`AtlasBtcOmniBot.cs`** | **Start here.** One bot, **24 triggers**, any chart from **M15 to Daily**, optional higher-timeframe filter. |
+| **`AtlasBtcOmniBot.cs`** | **Start here.** One bot, **33 triggers**, any chart **M1 → Weekly**, optional higher-timeframe filter. |
 | `AtlasBtcBreakoutBot.cs` | Simple breakout-only version (H4). |
 
 ---
@@ -22,18 +22,23 @@ You asked for **every timeframe** and **every serious indicator/trigger**. We ra
 
 | Your chart | Trigger | In simple terms |
 |------------|---------|-----------------|
+| **M1** | EMA 9/21 | Very fast trend cross |
+| **M3** | Donchian 10 | Micro range break |
+| **M5** | ADX + Donchian 20 | Breakout with trend strength |
 | **M15** | EMA 50/200 cross | Only when slow trend agrees |
 | **M30** | Volume spike + break | Big volume + new high/low |
 | **H1** | CCI crosses ±100 | Strong momentum push |
 | **H2** | MACD cross | Trend acceleration |
+| **H3** | ADX + Donchian 55 | Slower breakout filter |
 | **H4** | ADX + Donchian 20 | Breakout in a real trend |
 | **Daily** | ADX rising + Donchian 20 | Best long-run combo on 2014+ data |
+| **Weekly** | Donchian 55 | Slow swing breakouts |
 
 You can override **Auto** and choose any trigger from the dropdown (Donchian, RSI, Bollinger, Ichimoku, Stochastic, etc.).
 
 ---
 
-## All 24 triggers (what they mean)
+## All 33 triggers (what they mean)
 
 | Trigger | Normal person description |
 |---------|---------------------------|
@@ -53,6 +58,14 @@ You can override **Auto** and choose any trigger from the dropdown (Donchian, RS
 | ROC momentum | Rate-of-change turns positive/negative |
 | Ichimoku TK cross | Tenkan/Kijun cross (Japanese trend system) |
 | Volume spike break | Unusual volume + range break |
+| SuperTrend flip | Trend line (ATR channel) direction change |
+| Williams %R | Bounce from oversold/overbought zones |
+| Parabolic SAR flip | Dots flip from below to above price |
+| Aroon cross | Which side made a new high/low recently |
+| MFI reversal | Money-flow index leaves extreme zone |
+| SMA 50/200 | Classic golden/death cross |
+| EMA 9/21 | Fast intraday trend cross |
+| Donchian 10 | Very short range break |
 
 Research finding: **breakout + trend/momentum** triggers beat **mean reversion** on BTC most of the time.
 
@@ -62,10 +75,12 @@ Research finding: **breakout + trend/momentum** triggers beat **mean reversion**
 
 | TF | Data length | Notes |
 |----|-------------|--------|
-| M15, M30 | 60 days | Short sample (Yahoo limit) — use demo to confirm |
+| M1 | 7 days | Demo-validate only |
+| M3, M5, M15, M30 | 60 days (M3 from M1) | Short sample — demo on broker |
 | H1 | ~2 years | Good intraday sample |
-| H2, H4 | Resampled from H1 | Same window as H1 |
+| H2, H3, H4 | Resampled from H1 | Same window as H1 |
 | Daily | 2014 → today | Best for long-term stats |
+| Weekly | From daily | Few trades; long hold |
 
 Re-run research: `python3 scripts/full_matrix_research.py`
 

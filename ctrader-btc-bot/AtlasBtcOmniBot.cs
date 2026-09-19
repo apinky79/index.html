@@ -1,5 +1,5 @@
 // Atlas BTC Omni Bot — all researched timeframes & triggers (see TIMEFRAME_MATRIX.md)
-// Attach to M15, M30, H1, H2, H4, or Daily. Use Entry trigger = Auto for research defaults.
+// Attach to M1–Weekly (cTrader). Entry trigger = Auto picks best trigger for that TF (see TIMEFRAME_MATRIX.md).
 
 using System;
 using System.Linq;
@@ -34,7 +34,15 @@ namespace cAlgo.Robots
         DiCross,
         RocMomentum12,
         IchimokuTkCross,
-        VolumeSpikeBreak
+        VolumeSpikeBreak,
+        SupertrendFlip,
+        WilliamsRReversal,
+        ParabolicSarFlip,
+        AroonCross25,
+        MfiReversal,
+        SmaCross50_200,
+        EmaCross9_21,
+        Donchian10
     }
 
     [Robot(TimeZone = TimeZones.UTC, AccessRights = AccessRights.None, AddIndicators = true)]
@@ -90,6 +98,12 @@ namespace cAlgo.Robots
         private StochasticOscillator _stoch;
         private CommodityChannelIndex _cci;
         private IchimokuKinkoHyo _ichimoku;
+        private ParabolicSAR _psar;
+        private WilliamsPctR _williamsR;
+        private AroonOscillator _aroon;
+        private MoneyFlowIndex _mfi;
+        private SimpleMovingAverage _sma50, _sma200;
+        private ExponentialMovingAverage _ema9;
 
         private Bars _filterBars;
         private ExponentialMovingAverage _htfEma55;
@@ -109,6 +123,13 @@ namespace cAlgo.Robots
             _stoch = Indicators.StochasticOscillator(14, 3, 3, MovingAverageType.Simple);
             _cci = Indicators.CommodityChannelIndex(20);
             _ichimoku = Indicators.IchimokuKinkoHyo(9, 26, 52);
+            _psar = Indicators.ParabolicSAR(0.02, 0.2);
+            _williamsR = Indicators.WilliamsPctR(14);
+            _aroon = Indicators.AroonOscillator(25);
+            _mfi = Indicators.MoneyFlowIndex(14);
+            _sma50 = Indicators.SimpleMovingAverage(Bars.ClosePrices, 50);
+            _sma200 = Indicators.SimpleMovingAverage(Bars.ClosePrices, 200);
+            _ema9 = Indicators.ExponentialMovingAverage(Bars.ClosePrices, 9);
             _ema8 = Indicators.ExponentialMovingAverage(Bars.ClosePrices, 8);
             _ema12 = Indicators.ExponentialMovingAverage(Bars.ClosePrices, 12);
             _ema21 = Indicators.ExponentialMovingAverage(Bars.ClosePrices, 21);
@@ -234,6 +255,30 @@ namespace cAlgo.Robots
                 case OmniEntryTrigger.VolumeSpikeBreak:
                     VolumeBreakSignal(i, out wantLong, out wantShort);
                     break;
+                case OmniEntryTrigger.SupertrendFlip:
+                    SupertrendSignal(i, out wantLong, out wantShort);
+                    break;
+                case OmniEntryTrigger.WilliamsRReversal:
+                    WilliamsSignal(i, out wantLong, out wantShort);
+                    break;
+                case OmniEntryTrigger.ParabolicSarFlip:
+                    PsarSignal(i, out wantLong, out wantShort);
+                    break;
+                case OmniEntryTrigger.AroonCross25:
+                    AroonSignal(i, out wantLong, out wantShort);
+                    break;
+                case OmniEntryTrigger.MfiReversal:
+                    MfiSignal(i, out wantLong, out wantShort);
+                    break;
+                case OmniEntryTrigger.SmaCross50_200:
+                    SmaCrossSignal(i, out wantLong, out wantShort);
+                    break;
+                case OmniEntryTrigger.EmaCross9_21:
+                    EmaCrossSignal(i, 9, 21, out wantLong, out wantShort);
+                    break;
+                case OmniEntryTrigger.Donchian10:
+                    DonchianSignal(i, 10, false, out wantLong, out wantShort);
+                    break;
             }
         }
 
@@ -283,6 +328,7 @@ namespace cAlgo.Robots
             switch (period)
             {
                 case 8: return _ema8;
+                case 9: return _ema9;
                 case 12: return _ema12;
                 case 21: return _ema21;
                 case 26: return _ema26;
@@ -400,6 +446,52 @@ namespace cAlgo.Robots
             shrt = spike && c < lo;
         }
 
+        private void SupertrendSignal(int i, out bool lng, out bool shrt)
+        {
+            // Proxy: price vs Keltner mid ± 3 ATR band flip
+            double band = 3.0 * _atr.Result.Last(i);
+            double up = _keltnerMid.Result.Last(i) + band;
+            double lo = _keltnerMid.Result.Last(i) - band;
+            lng = Bars.ClosePrices.Last(i + 1) <= up && Bars.ClosePrices.Last(i) > up;
+            shrt = Bars.ClosePrices.Last(i + 1) >= lo && Bars.ClosePrices.Last(i) < lo;
+        }
+
+        private void WilliamsSignal(int i, out bool lng, out bool shrt)
+        {
+            lng = _williamsR.Result.Last(i + 1) <= -80 && _williamsR.Result.Last(i) > -80;
+            shrt = _williamsR.Result.Last(i + 1) >= -20 && _williamsR.Result.Last(i) < -20;
+        }
+
+        private void PsarSignal(int i, out bool lng, out bool shrt)
+        {
+            bool bull = Bars.ClosePrices.Last(i) > _psar.Result.Last(i);
+            bool bullPrev = Bars.ClosePrices.Last(i + 1) > _psar.Result.Last(i + 1);
+            lng = !bullPrev && bull;
+            shrt = bullPrev && !bull;
+        }
+
+        private void AroonSignal(int i, out bool lng, out bool shrt)
+        {
+            double up = _aroon.Up.Last(i);
+            double down = _aroon.Down.Last(i);
+            double up1 = _aroon.Up.Last(i + 1);
+            double down1 = _aroon.Down.Last(i + 1);
+            lng = up1 <= down1 && up > down && up > 50;
+            shrt = down1 <= up1 && down > up && down > 50;
+        }
+
+        private void MfiSignal(int i, out bool lng, out bool shrt)
+        {
+            lng = _mfi.Result.Last(i + 1) <= 20 && _mfi.Result.Last(i) > 20;
+            shrt = _mfi.Result.Last(i + 1) >= 80 && _mfi.Result.Last(i) < 80;
+        }
+
+        private void SmaCrossSignal(int i, out bool lng, out bool shrt)
+        {
+            lng = _sma50.Result.Last(i + 1) <= _sma200.Result.Last(i + 1) && _sma50.Result.Last(i) > _sma200.Result.Last(i);
+            shrt = _sma50.Result.Last(i + 1) >= _sma200.Result.Last(i + 1) && _sma50.Result.Last(i) < _sma200.Result.Last(i);
+        }
+
         private void Open(TradeType side, double atr)
         {
             double entry = Bars.ClosePrices.Last(1);
@@ -446,22 +538,32 @@ namespace cAlgo.Robots
 
         private TimeFrame ResolveFilterTimeFrame()
         {
+            if (TimeFrame == TimeFrame.Minute) return TimeFrame.Minute5;
+            if (TimeFrame == TimeFrame.Minute3) return TimeFrame.Minute15;
+            if (TimeFrame == TimeFrame.Minute5) return TimeFrame.Minute15;
             if (TimeFrame == TimeFrame.Minute15) return TimeFrame.Hour;
             if (TimeFrame == TimeFrame.Minute30) return TimeFrame.Hour4;
             if (TimeFrame == TimeFrame.Hour) return TimeFrame.Hour4;
             if (TimeFrame == TimeFrame.Hour2) return TimeFrame.Hour4;
+            if (TimeFrame == TimeFrame.Hour3) return TimeFrame.Hour4;
             if (TimeFrame == TimeFrame.Hour4) return TimeFrame.Daily;
+            if (TimeFrame == TimeFrame.Daily) return TimeFrame.Weekly;
             return FilterTimeFrame;
         }
 
         private static OmniEntryTrigger RecommendTrigger(TimeFrame tf)
         {
+            if (tf == TimeFrame.Minute) return OmniEntryTrigger.EmaCross9_21;
+            if (tf == TimeFrame.Minute3) return OmniEntryTrigger.Donchian10;
+            if (tf == TimeFrame.Minute5) return OmniEntryTrigger.AdxDonchian20;
             if (tf == TimeFrame.Minute15) return OmniEntryTrigger.EmaCross50_200;
             if (tf == TimeFrame.Minute30) return OmniEntryTrigger.VolumeSpikeBreak;
             if (tf == TimeFrame.Hour) return OmniEntryTrigger.Cci100Cross;
             if (tf == TimeFrame.Hour2) return OmniEntryTrigger.MacdCross;
+            if (tf == TimeFrame.Hour3) return OmniEntryTrigger.AdxDonchian55;
             if (tf == TimeFrame.Hour4) return OmniEntryTrigger.AdxDonchian20;
             if (tf == TimeFrame.Daily) return OmniEntryTrigger.AdxRisingBreak20;
+            if (tf == TimeFrame.Weekly) return OmniEntryTrigger.Donchian55;
             return OmniEntryTrigger.AdxDonchian20;
         }
 
@@ -469,7 +571,12 @@ namespace cAlgo.Robots
         {
             if (EntryTrigger != OmniEntryTrigger.Auto)
                 return;
-            if (tf == TimeFrame.Minute15 || tf == TimeFrame.Hour2 || tf == TimeFrame.Daily)
+            if (tf == TimeFrame.Minute || tf == TimeFrame.Minute3)
+            {
+                StopAtrMultiple = 1.5;
+                RewardRiskMultiple = 2.0;
+            }
+            if (tf == TimeFrame.Minute5 || tf == TimeFrame.Minute15 || tf == TimeFrame.Hour2 || tf == TimeFrame.Daily)
             {
                 StopAtrMultiple = 2.0;
                 RewardRiskMultiple = 2.0;
