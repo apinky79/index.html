@@ -1,5 +1,10 @@
 # Atlas BTC bots (cTrader)
 
+## BrightFunded M15 (prop / weekly regime)
+
+**`BrightFundedBtcM15Bot.cs`** — $50k Classic defaults (0.8% risk, 3.5% week brake, Monday H4 ADX skip, **48-bar max hold ~12h**).  
+Guide: **`BRIGHTFUNDED_M15.md`** · Sunday script: `python3 scripts/weekly_regime_pick.py`
+
 ## Primary: Omni bot (all timeframes & triggers)
 
 **`AtlasBtcOmniBot.cs`** — 24 entry triggers, M15→Daily, **Auto** mode picks research winner per timeframe.
