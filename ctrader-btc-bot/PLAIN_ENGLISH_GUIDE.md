@@ -1,91 +1,86 @@
-# Atlas BTC Breakout Bot — explained simply
+# Atlas BTC bots — plain English
 
-This is a **brand-new** cTrader bot built after testing many ideas on **all BTC/USD history we could download** (daily data back to **2014**, plus **two years of hourly** data resampled to 4-hour bars).
+You asked for **every timeframe** and **every serious indicator/trigger**. We ran **792 backtests** (see `TIMEFRAME_MATRIX.md` and `scripts/full_matrix_results.csv`).
 
-It does **not** use your older prop-test notes. It uses one clear idea that kept winning in research.
+## Which file to use?
 
----
-
-## The idea in one sentence
-
-**Buy when Bitcoin breaks above its recent “ceiling” during a strong trend; sell when it breaks below its recent “floor” — otherwise do nothing.**
-
-That is how many professional trend desks trade crypto: **breakout + trend filter**, not guessing tomorrow’s headline.
+| Bot | When to use |
+|-----|-------------|
+| **`AtlasBtcOmniBot.cs`** | **Start here.** One bot, **24 triggers**, any chart from **M15 to Daily**, optional higher-timeframe filter. |
+| `AtlasBtcBreakoutBot.cs` | Simple breakout-only version (H4). |
 
 ---
 
-## The three rules
+## Omni bot in 60 seconds
 
-### 1. The “ceiling” and “floor” (Donchian channel)
+1. **Pick a chart speed** (M15 = fast, H4 = calm, Daily = slow).  
+2. Set **Entry trigger = Auto** → the bot picks the trigger that won research **for that timeframe**.  
+3. **Higher-TF filter ON** → ignore signals that fight the bigger trend (price vs 55-period average on a higher chart).  
+4. Every trade risks about **1%** of equity with **ATR-based** stop and target.
 
-Look at the last **55 four-hour candles** (about **9 days**).  
-- **Ceiling** = highest price in that window (excluding the current candle).  
-- **Floor** = lowest price in that window.
+### What “Auto” picks (from full history research)
 
-If price **closes above the ceiling**, something new is happening → **long**.  
-If it **closes below the floor** → **short** (if your broker allows).
+| Your chart | Trigger | In simple terms |
+|------------|---------|-----------------|
+| **M15** | EMA 50/200 cross | Only when slow trend agrees |
+| **M30** | Volume spike + break | Big volume + new high/low |
+| **H1** | CCI crosses ±100 | Strong momentum push |
+| **H2** | MACD cross | Trend acceleration |
+| **H4** | ADX + Donchian 20 | Breakout in a real trend |
+| **Daily** | ADX rising + Donchian 20 | Best long-run combo on 2014+ data |
 
-### 2. Only when the trend is real (ADX filter)
-
-**ADX** measures *strength*, not direction.  
-If ADX is below **22**, the market is usually drifting → **no trade**.
-
-If **+DI > −DI**, bulls are in control (prefer long breakouts).  
-If **−DI > +DI**, bears are in control (prefer short breakouts).
-
-### 3. Fixed risk on every trade
-
-- **Stop loss** = **2.5 × ATR** (how much Bitcoin typically moves in a day-ish window).  
-- **Take profit** = **2.5 times** that distance (reward:risk **2.5 : 1**).  
-- **Position size** = lose about **1% of account equity** if the stop hits.
+You can override **Auto** and choose any trigger from the dropdown (Donchian, RSI, Bollinger, Ichimoku, Stochastic, etc.).
 
 ---
 
-## What the research showed (honest numbers)
+## All 24 triggers (what they mean)
 
-We ran a **strategy tournament** (`scripts/strategy_research.py`): Donchian, moving-average crosses, Keltner, RSI pullbacks, Bollinger squeeze, and ADX hybrids.
+| Trigger | Normal person description |
+|---------|---------------------------|
+| Donchian 20 / 55 | Price breaks its recent range (new high or low) |
+| ADX + Donchian | Same, but only if trend strength is high enough |
+| ADX rising + break | Breakout while trend is **getting** stronger |
+| EMA crosses | Faster average crosses slower → trend change |
+| Triple EMA pullback | Strong trend stack; buy the dip to middle average |
+| MACD cross / histogram | Momentum indicator flips direction |
+| RSI pullback | In a big trend, buy when RSI was oversold and turns up |
+| RSI 50 cross | Momentum crosses the middle line |
+| Bollinger breakout / fade | Break outer band OR bounce from outer band |
+| Keltner breakout | Similar to Bollinger, ATR-based channel |
+| Stochastic cross | Short-term oscillator cross in trend zone |
+| CCI ±100 | Commodity Channel Index momentum burst |
+| DI cross | Buyers vs sellers strength flip |
+| ROC momentum | Rate-of-change turns positive/negative |
+| Ichimoku TK cross | Tenkan/Kijun cross (Japanese trend system) |
+| Volume spike break | Unusual volume + range break |
 
-| Test | Best approach | Rough result |
-|------|----------------|--------------|
-| **Daily, 2014 → today** | ADX + 55-day breakout | ~**+98%** on $10k sim, **~5%** max drawdown, profit factor **~2.2**, **116** trades |
-| **Last ~2 years, H4 bars** | ADX + 55-bar breakout, 2.5 ATR stop | ~**+22%**, **~5%** drawdown, PF **~1.8** |
-| **Out-of-sample** (last 35% of days) | Same family of rules | **Positive but modest** — no holy grail |
-
-**Takeaway:** This style fits Bitcoin’s long-run behaviour (long trends + violent breakouts). It **will** have losing streaks. It **will not** win every month. Past simulation ≠ your broker’s spread tomorrow.
-
----
-
-## cTrader setup
-
-1. **Algo → New cBot** → paste `AtlasBtcBreakoutBot.cs` → **Build**.  
-2. Chart: **BTCUSD**, timeframe **H4**.  
-3. Start on **demo**.  
-4. Defaults match the research winner: Donchian **55**, ADX **22**, stop **2.5×ATR**, target **2.5R**, risk **1%**.
-
-### When you might change settings
-
-| You want… | Try… |
-|-----------|------|
-| More trades, faster | Donchian **20** (more whipsaw) |
-| Less size | Risk **0.5%** |
-| Long-only (some firms) | Turn off **Allow short** |
+Research finding: **breakout + trend/momentum** triggers beat **mean reversion** on BTC most of the time.
 
 ---
 
-## What this bot is NOT
+## Timeframes tested
 
-- Not a “predict the news” AI.  
-- Not guaranteed profit.  
-- Not HFT — it trades **a few times per month** on H4.
+| TF | Data length | Notes |
+|----|-------------|--------|
+| M15, M30 | 60 days | Short sample (Yahoo limit) — use demo to confirm |
+| H1 | ~2 years | Good intraday sample |
+| H2, H4 | Resampled from H1 | Same window as H1 |
+| Daily | 2014 → today | Best for long-term stats |
+
+Re-run research: `python3 scripts/full_matrix_research.py`
 
 ---
 
-## Files
+## cTrader steps
 
-| File | Purpose |
-|------|---------|
-| `AtlasBtcBreakoutBot.cs` | The cBot |
-| `scripts/strategy_research.py` | Full history tournament |
-| `RESEARCH.md` | Detailed results |
+1. Algo → New cBot → paste **`AtlasBtcOmniBot.cs`** → Build.  
+2. Open **BTCUSD**, choose timeframe.  
+3. **Entry trigger: Auto**, **HTF filter: true**, demo first.
 
-**Old file `XTXBtcTrendRegimeBot.cs`** is kept for reference only — use **Atlas** for the new design.
+---
+
+## Honest expectations
+
+- No trigger wins on **every** timeframe. That’s why **Auto** exists.  
+- Past CSV results ≠ future live fills.  
+- **M15/M30** numbers used only 60 days of data — treat as **hints**, not proof.

@@ -48,7 +48,7 @@ namespace cAlgo.Robots
         [Parameter("Higher-TF EMA55 filter", Group = "Signal", DefaultValue = true)]
         public bool UseHigherTfFilter { get; set; }
 
-        [Parameter("Filter timeframe (if not Auto)", Group = "Signal", DefaultValue = "Hour4")]
+        [Parameter("Filter timeframe (manual override)", Group = "Signal", DefaultValue = TimeFrame.Hour4)]
         public TimeFrame FilterTimeFrame { get; set; }
 
         [Parameter("Min ADX (ADX triggers)", Group = "Signal", DefaultValue = 22, MinValue = 5)]

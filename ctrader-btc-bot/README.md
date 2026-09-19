@@ -1,8 +1,17 @@
-# Atlas BTC Breakout Bot (cTrader)
+# Atlas BTC bots (cTrader)
 
-**New build** from full-history BTC/USD research — not tied to prior prop tests.
+## Primary: Omni bot (all timeframes & triggers)
 
-## Strategy
+**`AtlasBtcOmniBot.cs`** — 24 entry triggers, M15→Daily, **Auto** mode picks research winner per timeframe.
+
+| Doc | Content |
+|-----|---------|
+| `TIMEFRAME_MATRIX.md` | Best trigger per TF + top 5 tables |
+| `scripts/full_matrix_research.py` | Regenerate 792-test matrix |
+| `scripts/full_matrix_results.csv` | Raw ranked results |
+| `PLAIN_ENGLISH_GUIDE.md` | Non-technical guide |
+
+## Simple: Breakout-only bot
 
 **ADX-filtered Donchian breakout** on **H4**:
 
