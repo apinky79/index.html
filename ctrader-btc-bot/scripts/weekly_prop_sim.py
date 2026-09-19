@@ -34,6 +34,7 @@ def run_sim_max_hold(
     week_idx = None
     weekly_pnls: list[float] = []
     trades = 0
+    pnls: list[float] = []
     atr_v = atr(df)
 
     for i in range(250, len(df)):
@@ -68,7 +69,9 @@ def run_sim_max_hold(
                     exit_p = row["Close"]
             if exit_p is not None:
                 sign = 1 if pos["side"] == "long" else -1
-                equity += (exit_p - pos["entry"]) * pos["units"] * sign
+                pnl = (exit_p - pos["entry"]) * pos["units"] * sign
+                equity += pnl
+                pnls.append(pnl)
                 trades += 1
                 pos = None
 
@@ -109,17 +112,109 @@ def run_sim_max_hold(
 
     w = np.array(weekly_pnls)
     green = (w > 0).sum()
+    gp = sum(p for p in pnls if p > 0)
+    gl = -sum(p for p in pnls if p < 0)
+    pf = gp / max(1e-9, gl)
     return {
         "final": equity,
         "ret_pct": (equity / start_equity - 1) * 100,
         "max_dd_pct": max_dd * 100,
         "trades": trades,
+        "profit_factor": pf,
         "weeks": len(w),
         "green_weeks": int(green),
         "green_week_pct": green / max(1, len(w)) * 100,
         "avg_week_pnl": w.mean() if len(w) else 0,
         "worst_week": w.min() if len(w) else 0,
         "best_week": w.max() if len(w) else 0,
+    }
+
+
+def run_sim_forward_week(
+    df: pd.DataFrame,
+    signals: pd.DataFrame,
+    *,
+    week_start: pd.Timestamp,
+    week_end: pd.Timestamp,
+    max_hold_bars: int,
+    atr_sl: float,
+    rr: float,
+    risk: float,
+    start_equity: float,
+    week_dd_limit: float = 0.035,
+) -> dict:
+    """Simulate with warmup in df; new entries only inside [week_start, week_end]."""
+    equity = start_equity
+    week_start_eq = start_equity
+    pos = None
+    trades = 0
+    pnls: list[float] = []
+    atr_v = atr(df)
+    mask = (df.index >= week_start) & (df.index <= week_end)
+
+    for i in range(250, len(df)):
+        ts = df.index[i]
+        in_week = mask[i]
+        row = df.iloc[i]
+
+        if pos:
+            pos["hold"] += 1
+            exit_p = None
+            if pos["side"] == "long":
+                if row["Low"] <= pos["sl"]:
+                    exit_p = pos["sl"]
+                elif row["High"] >= pos["tp"]:
+                    exit_p = pos["tp"]
+                elif pos["hold"] >= max_hold_bars:
+                    exit_p = row["Close"]
+            else:
+                if row["High"] >= pos["sl"]:
+                    exit_p = pos["sl"]
+                elif row["Low"] <= pos["tp"]:
+                    exit_p = pos["tp"]
+                elif pos["hold"] >= max_hold_bars:
+                    exit_p = row["Close"]
+            if exit_p is not None:
+                sign = 1 if pos["side"] == "long" else -1
+                pnl = (exit_p - pos["entry"]) * pos["units"] * sign
+                equity += pnl
+                if in_week:
+                    pnls.append(pnl)
+                    trades += 1
+                pos = None
+            elif not in_week and ts > week_end:
+                exit_p = row["Close"]
+                sign = 1 if pos["side"] == "long" else -1
+                pnl = (exit_p - pos["entry"]) * pos["units"] * sign
+                equity += pnl
+                trades += 1
+                pos = None
+
+        week_dd = (week_start_eq - equity) / week_start_eq if week_start_eq > 0 else 0
+        allow_entry = in_week and week_dd < week_dd_limit
+
+        if pos is None and allow_entry:
+            av = atr_v.iloc[i]
+            if av <= 0 or np.isnan(av):
+                continue
+            if bool(signals["long"].iloc[i]):
+                entry = row["Close"]
+                sl = entry - atr_sl * av
+                r = entry - sl
+                pos = {"side": "long", "entry": entry, "sl": sl, "tp": entry + rr * r, "units": equity * risk / r, "hold": 0}
+            elif bool(signals["short"].iloc[i]):
+                entry = row["Close"]
+                sl = entry + atr_sl * av
+                r = sl - entry
+                pos = {"side": "short", "entry": entry, "sl": sl, "tp": entry - rr * r, "units": equity * risk / r, "hold": 0}
+
+    gp = sum(p for p in pnls if p > 0)
+    gl = -sum(p for p in pnls if p < 0)
+    return {
+        "final": equity,
+        "week_pnl": equity - start_equity,
+        "trades": trades,
+        "profit_factor": gp / max(1e-9, gl),
     }
 
 
