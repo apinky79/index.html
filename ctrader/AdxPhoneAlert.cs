@@ -1,18 +1,25 @@
 //───────────────────────────────────────────────────────────────────────────────
-// cBot: ADX Phone Alert (side project)
+// cBot: EMA Cross Phone Alert
 // Author: Adam Pink
-// Purpose: Periodically report ADX (and optional DI+/DI−) on a chosen timeframe,
-//          plus whether price is above a selected EMA, and whether the EMA of
-//          BBWP is above the BBWP% line.
-// Phone delivery: Telegram (recommended) and/or Email. Journal always logged.
+// Purpose: When two selected EMAs cross on a closed bar, send one Telegram
+//          (and optional email) alert. The message can include:
+//            • ADX ranging or trending, above or below the selected level
+//            • ADX direction: long or short (+DI vs −DI)
+//            • whether the BBWP EMA is above the BBWP% value
+//            • whether tick volume is above or below its selected EMA
+//          Turn each block off when that week's bot is not using it.
+//          The EMA cross itself is the trigger and always runs.
+// Phone delivery: Telegram. Journal always logged.
 // NOTE: Outbound alerts need a DESKTOP/local instance — cTrader Cloud blocks
-//       HTTP and email. Attach this cBot to any chart; it monitors the TF you pick.
+//       HTTP and email. Attach this cBot to any chart; the cross uses the
+//       timeframe you pick, not necessarily the chart timeframe.
 //
 // BBWP (Bollinger Band Width Percentile), same idea as TradingView ta.percentrank:
 //   band width = (upper − lower) / middle
 //   BBWP%      = 100 × (how many of the previous Lookback widths are <= current) / Lookback
-//   The EMA is an exponential moving average of that BBWP% series.
-//   "EMA is ABOVE the BBWP% line" means that EMA value is greater than the current BBWP%.
+//   "BBWP EMA is ABOVE the BBWP% value" means the EMA of that series is greater
+//   than the current BBWP%.
+// Paste the Bot Token and Chat ID into the cBot parameters. They are not stored here.
 //───────────────────────────────────────────────────────────────────────────────
 using System;
 using System.Globalization;
@@ -22,73 +29,43 @@ using cAlgo.API.Indicators;
 
 namespace cAlgo.Robots
 {
-    public enum AdxAlertIntervalUnit
-    {
-        Minutes,
-        Hours,
-        Bars
-    }
-
-    /// <summary>
-    /// Always = report every interval.
-    /// Above / Below = only send when ADX is above/below Filter Level.
-    /// </summary>
-    public enum AdxThresholdFilterMode
-    {
-        Always,
-        Above,
-        Below
-    }
-
     // AccessRights.None — Http.Get still works on desktop for Telegram (.NET 6+).
     // Cloud blocks outbound HTTP/email anyway.
     [Robot(TimeZone = TimeZones.UTC, AccessRights = AccessRights.None)]
     public class AdxPhoneAlert : Robot
     {
         // ===========================
-        // Chart / ADX
+        // Trigger: two EMAs cross
         // ===========================
+        [Parameter("EMA TimeFrame", Group = "EMA Cross", DefaultValue = "Hour")]
+        public TimeFrame EmaTimeFrame { get; set; }
+
+        [Parameter("Fast EMA Period", Group = "EMA Cross", DefaultValue = 20, MinValue = 1)]
+        public int FastEmaPeriod { get; set; }
+
+        [Parameter("Slow EMA Period", Group = "EMA Cross", DefaultValue = 50, MinValue = 1)]
+        public int SlowEmaPeriod { get; set; }
+
+        // ===========================
+        // ADX level (ranging / trending) — optional
+        // ===========================
+        [Parameter("Include ADX", Group = "ADX", DefaultValue = true)]
+        public bool IncludeAdx { get; set; }
+
         [Parameter("ADX TimeFrame", Group = "ADX", DefaultValue = "Hour")]
         public TimeFrame AdxTimeFrame { get; set; }
 
         [Parameter("ADX Period", Group = "ADX", DefaultValue = 14, MinValue = 1)]
         public int AdxPeriod { get; set; }
 
-        [Parameter("Include DI+ / DI−", Group = "ADX", DefaultValue = true)]
-        public bool IncludeDi { get; set; }
+        [Parameter("ADX Level", Group = "ADX", DefaultValue = 25.0, MinValue = 0.0, MaxValue = 100.0)]
+        public double AdxLevel { get; set; }
 
-        [Parameter("Trending Threshold", Group = "ADX", DefaultValue = 25.0)]
-        public double TrendingThreshold { get; set; }
-
-        [Parameter("Ranging Threshold", Group = "ADX", DefaultValue = 20.0)]
-        public double RangingThreshold { get; set; }
+        [Parameter("Include Long / Short", Group = "ADX", DefaultValue = true)]
+        public bool IncludeAdxDirection { get; set; }
 
         // ===========================
-        // Only alert when ADX is above/below a level (optional)
-        // ===========================
-        [Parameter("Threshold Filter", Group = "ADX Filter", DefaultValue = AdxThresholdFilterMode.Always)]
-        public AdxThresholdFilterMode ThresholdFilter { get; set; }
-
-        [Parameter("Filter Level", Group = "ADX Filter", DefaultValue = 25.0, MinValue = 0.0, MaxValue = 100.0)]
-        public double FilterLevel { get; set; }
-
-        [Parameter("Log Skipped Alerts", Group = "ADX Filter", DefaultValue = false)]
-        public bool LogSkippedAlerts { get; set; }
-
-        // ===========================
-        // Volume Trend EMA — is the closed price above this EMA?
-        // ===========================
-        [Parameter("Include EMA", Group = "Volume Trend EMA", DefaultValue = true)]
-        public bool IncludeEma { get; set; }
-
-        [Parameter("EMA TimeFrame", Group = "Volume Trend EMA", DefaultValue = "Hour")]
-        public TimeFrame EmaTimeFrame { get; set; }
-
-        [Parameter("EMA Period", Group = "Volume Trend EMA", DefaultValue = 50, MinValue = 1)]
-        public int EmaPeriod { get; set; }
-
-        // ===========================
-        // BBWP — is the EMA of BBWP above the BBWP% line?
+        // BBWP — optional
         // ===========================
         [Parameter("Include BBWP", Group = "BBWP", DefaultValue = true)]
         public bool IncludeBbwp { get; set; }
@@ -112,16 +89,16 @@ namespace cAlgo.Robots
         public int BbwpEmaPeriod { get; set; }
 
         // ===========================
-        // Frequency
+        // Volume trend vs its EMA — optional
         // ===========================
-        [Parameter("Interval Unit", Group = "Frequency", DefaultValue = AdxAlertIntervalUnit.Minutes)]
-        public AdxAlertIntervalUnit IntervalUnit { get; set; }
+        [Parameter("Include Volume Trend", Group = "Volume Trend", DefaultValue = true)]
+        public bool IncludeVolumeTrend { get; set; }
 
-        [Parameter("Interval Value", Group = "Frequency", DefaultValue = 60, MinValue = 1)]
-        public int IntervalValue { get; set; }
+        [Parameter("Volume TimeFrame", Group = "Volume Trend", DefaultValue = "Hour")]
+        public TimeFrame VolumeTimeFrame { get; set; }
 
-        [Parameter("Send Alert On Start", Group = "Frequency", DefaultValue = true)]
-        public bool AlertOnStart { get; set; }
+        [Parameter("Volume EMA Period", Group = "Volume Trend", DefaultValue = 20, MinValue = 1)]
+        public int VolumeEmaPeriod { get; set; }
 
         // ===========================
         // Telegram (phone message)
@@ -129,8 +106,8 @@ namespace cAlgo.Robots
         [Parameter("Enable Telegram", Group = "Telegram", DefaultValue = true)]
         public bool EnableTelegram { get; set; }
 
-        // Create a bot via @BotFather, then get chat id via @userinfobot or getUpdates.
-        // Leave these blank in source and paste them into the cBot parameters.
+        // Create a bot via @BotFather, then get the chat id via @userinfobot or getUpdates.
+        // Enter both on the cBot instance. Leave them blank in source.
         [Parameter("Bot Token", Group = "Telegram", DefaultValue = "")]
         public string TelegramBotToken { get; set; }
 
@@ -149,42 +126,41 @@ namespace cAlgo.Robots
         [Parameter("To Email", Group = "Email", DefaultValue = "")]
         public string EmailTo { get; set; }
 
-        // ===========================
-        // Local notify
-        // ===========================
-        private DirectionalMovementSystem _dms;
+        private Bars _crossBars;
+        private ExponentialMovingAverage _fastEma;
+        private ExponentialMovingAverage _slowEma;
+
         private Bars _adxBars;
-        private ExponentialMovingAverage _ema;
-        private Bars _emaBars;
-        private BollingerBands _bb;
+        private DirectionalMovementSystem _dms;
+
         private Bars _bbwpBars;
-        private DateTime _nextAlertUtc = DateTime.MinValue;
-        private int _lastAlertedBarIndex = -1;
+        private BollingerBands _bb;
+
+        private Bars _volumeBars;
+        private ExponentialMovingAverage _volumeEma;
+
+        private DateTime _lastEvaluatedOpenTime = DateTime.MinValue;
 
         protected override void OnStart()
         {
-            Print("*** ADX Phone Alert BUILD 2026-10-04-v5 ***");
-            Print("Symbol={0} | ADX TF={1} | Period={2} | Interval={3} {4}",
-                SymbolName, AdxTimeFrame, AdxPeriod, IntervalValue, IntervalUnit);
-            if (ThresholdFilter == AdxThresholdFilterMode.Always)
-                Print("ADX filter: Always (every interval).");
-            else
-                Print("ADX filter: only when ADX is {0} {1:0.##}", ThresholdFilter, FilterLevel);
+            Print("*** EMA Cross Phone Alert BUILD 2026-10-04-v6 ***");
+            Print("Symbol={0} | Cross TF={1} | Fast EMA={2} | Slow EMA={3}",
+                SymbolName, EmaTimeFrame, FastEmaPeriod, SlowEmaPeriod);
+            Print("Sections: ADX={0} | Long/Short={1} | BBWP={2} | Volume trend={3}",
+                OnOff(IncludeAdx), OnOff(IncludeAdxDirection), OnOff(IncludeBbwp), OnOff(IncludeVolumeTrend));
 
-            if (IncludeEma)
-                Print("Volume Trend EMA: period {0} on {1} (close vs EMA).", EmaPeriod, EmaTimeFrame);
-            else
-                Print("Volume Trend EMA: off.");
+            if (FastEmaPeriod == SlowEmaPeriod)
+                Print("WARNING: Fast EMA and Slow EMA use the same period — a cross may never print.");
 
+            if (IncludeAdx)
+                Print("ADX level: {0:0.##} on {1}. Above = TRENDING, below = RANGING.", AdxLevel, AdxTimeFrame);
             if (IncludeBbwp)
             {
                 Print("BBWP: BB({0}, {1:0.##}, {2}) lookback {3} | EMA({4}) on {5}.",
                     BbPeriod, BbStdDev, BbBasisType, BbwpLookback, BbwpEmaPeriod, BbwpTimeFrame);
             }
-            else
-            {
-                Print("BBWP: off.");
-            }
+            if (IncludeVolumeTrend)
+                Print("Volume trend: tick volume vs EMA({0}) on {1}.", VolumeEmaPeriod, VolumeTimeFrame);
 
             if (EnableTelegram && (string.IsNullOrWhiteSpace(TelegramBotToken) || string.IsNullOrWhiteSpace(TelegramChatId)))
                 Print("WARNING: Telegram enabled but Bot Token / Chat ID is empty — Telegram alerts disabled.");
@@ -193,17 +169,17 @@ namespace cAlgo.Robots
                 Print("WARNING: Email enabled but From/To is empty — Email alerts disabled.");
 
             Print("REMINDER: Run this cBot on DESKTOP (not Cloud) for Telegram/Email to reach your phone.");
+            Print("Alerts fire only when the fast EMA crosses the slow EMA on a closed bar.");
 
-            _adxBars = AdxTimeFrame == Bars.TimeFrame
-                ? Bars
-                : MarketData.GetBars(AdxTimeFrame);
+            _crossBars = GetBars(EmaTimeFrame);
+            _fastEma = Indicators.ExponentialMovingAverage(_crossBars.ClosePrices, FastEmaPeriod);
+            _slowEma = Indicators.ExponentialMovingAverage(_crossBars.ClosePrices, SlowEmaPeriod);
+            _crossBars.BarClosed += OnCrossBarClosed;
 
-            _dms = Indicators.DirectionalMovementSystem(_adxBars, AdxPeriod);
-
-            if (IncludeEma)
+            if (IncludeAdx || IncludeAdxDirection)
             {
-                _emaBars = GetBars(EmaTimeFrame);
-                _ema = Indicators.ExponentialMovingAverage(_emaBars.ClosePrices, EmaPeriod);
+                _adxBars = GetBars(AdxTimeFrame);
+                _dms = Indicators.DirectionalMovementSystem(_adxBars, AdxPeriod);
             }
 
             if (IncludeBbwp)
@@ -212,184 +188,157 @@ namespace cAlgo.Robots
                 _bb = Indicators.BollingerBands(_bbwpBars.ClosePrices, BbPeriod, BbStdDev, BbBasisType);
             }
 
-            if (IntervalUnit == AdxAlertIntervalUnit.Bars)
+            if (IncludeVolumeTrend)
             {
-                // Bar-mode checks on each tick of the monitored TF via OnBar of chart;
-                // we also poll with a short timer so a higher TF still gets checked.
-                Timer.Start(15);
-            }
-            else
-            {
-                ScheduleNextAlert(forceImmediate: AlertOnStart);
-                StartIntervalTimer();
+                _volumeBars = GetBars(VolumeTimeFrame);
+                _volumeEma = Indicators.ExponentialMovingAverage(_volumeBars.TickVolumes, VolumeEmaPeriod);
             }
 
-            if (AlertOnStart)
-                SendAdxAlert("startup");
+            ArmCrossWatch();
+            Timer.Start(15);
         }
 
         protected override void OnTimer()
         {
-            if (IntervalUnit == AdxAlertIntervalUnit.Bars)
-            {
-                TrySendBarIntervalAlert();
-                return;
-            }
-
-            var now = Server.Time.Kind == DateTimeKind.Utc
-                ? Server.Time
-                : DateTime.SpecifyKind(Server.Time, DateTimeKind.Utc);
-
-            if (now >= _nextAlertUtc)
-            {
-                SendAdxAlert("schedule");
-                ScheduleNextAlert(forceImmediate: false);
-            }
-
-            StartIntervalTimer();
+            CheckForNewCrossBars();
         }
 
         protected override void OnBar()
         {
-            if (IntervalUnit == AdxAlertIntervalUnit.Bars)
-                TrySendBarIntervalAlert();
+            CheckForNewCrossBars();
         }
 
         protected override void OnStop()
         {
             Timer.Stop();
-            Print("ADX Phone Alert stopped.");
+            if (_crossBars != null)
+                _crossBars.BarClosed -= OnCrossBarClosed;
+            Print("EMA Cross Phone Alert stopped.");
+        }
+
+        private void OnCrossBarClosed(BarClosedEventArgs args)
+        {
+            CheckForNewCrossBars();
         }
 
         private Bars GetBars(TimeFrame timeFrame)
         {
+            if (_crossBars != null && timeFrame == EmaTimeFrame)
+                return _crossBars;
             if (timeFrame == Bars.TimeFrame)
                 return Bars;
-            if (_adxBars != null && timeFrame == AdxTimeFrame)
-                return _adxBars;
             return MarketData.GetBars(timeFrame);
         }
 
-        private void StartIntervalTimer()
+        private void ArmCrossWatch()
         {
-            // Wake often enough to hit the schedule; keep wake short and mobile-safe.
-            int wakeSeconds = 30;
-            if (IntervalUnit == AdxAlertIntervalUnit.Minutes && IntervalValue < 5)
-                wakeSeconds = 10;
+            if (_crossBars == null || _crossBars.Count < 3)
+                return;
 
-            Timer.Start(wakeSeconds);
+            int closed = _crossBars.Count - 2;
+            _lastEvaluatedOpenTime = _crossBars.OpenTimes[closed];
+            Print("Watching from bar {0:dd/MM/yyyy HH:mm} UTC. No alert until the next cross.",
+                _lastEvaluatedOpenTime);
         }
 
-        private void ScheduleNextAlert(bool forceImmediate)
+        private void CheckForNewCrossBars()
         {
-            var now = Server.Time.Kind == DateTimeKind.Utc
-                ? Server.Time
-                : DateTime.SpecifyKind(Server.Time, DateTimeKind.Utc);
+            if (_crossBars == null || _fastEma == null || _slowEma == null)
+                return;
 
-            if (forceImmediate)
+            int minIndex = Math.Max(FastEmaPeriod, SlowEmaPeriod);
+            if (_crossBars.Count < minIndex + 3)
+                return;
+
+            int closed = _crossBars.Count - 2;
+            if (closed < minIndex)
+                return;
+
+            DateTime closedTime = _crossBars.OpenTimes[closed];
+            if (_lastEvaluatedOpenTime == DateTime.MinValue)
             {
-                _nextAlertUtc = now;
+                _lastEvaluatedOpenTime = closedTime;
                 return;
             }
 
-            if (IntervalUnit == AdxAlertIntervalUnit.Hours)
-                _nextAlertUtc = now.AddHours(IntervalValue);
-            else
-                _nextAlertUtc = now.AddMinutes(IntervalValue);
+            if (closedTime <= _lastEvaluatedOpenTime)
+                return;
 
-            Print("Next ADX alert at {0:dd/MM/yyyy HH:mm:ss} UTC", _nextAlertUtc);
+            int from = closed;
+            while (from > minIndex && _crossBars.OpenTimes[from - 1] > _lastEvaluatedOpenTime)
+                from--;
+
+            _lastEvaluatedOpenTime = closedTime;
+
+            for (int i = from; i <= closed; i++)
+            {
+                string side;
+                if (TryGetCross(i, out side))
+                    SendCrossAlert(i, side);
+            }
         }
 
-        private void TrySendBarIntervalAlert()
+        private bool TryGetCross(int index, out string side)
         {
-            if (_adxBars == null || _adxBars.Count < AdxPeriod + 2)
-                return;
+            side = null;
+            if (index < 1)
+                return false;
 
-            int closedIndex = _adxBars.Count - 2; // last closed bar on ADX TF
-            if (closedIndex < 0)
-                return;
+            double prevFast = _fastEma.Result[index - 1];
+            double prevSlow = _slowEma.Result[index - 1];
+            double fast = _fastEma.Result[index];
+            double slow = _slowEma.Result[index];
+            if (!IsFinite(prevFast) || !IsFinite(prevSlow) || !IsFinite(fast) || !IsFinite(slow))
+                return false;
 
-            // Fire once every N closed ADX-TF bars
-            if (_lastAlertedBarIndex < 0)
+            // LONG = fast EMA crossed above the slow EMA. SHORT = crossed below.
+            if (prevFast <= prevSlow && fast > slow)
             {
-                _lastAlertedBarIndex = closedIndex;
-                return;
+                side = "LONG";
+                return true;
             }
 
-            int barsSince = closedIndex - _lastAlertedBarIndex;
-            if (barsSince < IntervalValue)
-                return;
+            if (prevFast >= prevSlow && fast < slow)
+            {
+                side = "SHORT";
+                return true;
+            }
 
-            _lastAlertedBarIndex = closedIndex;
-            SendAdxAlert("bar");
+            return false;
         }
 
-        private void SendAdxAlert(string reason)
+        private void SendCrossAlert(int index, string side)
         {
-            if (_dms == null || _adxBars == null || _adxBars.Count < AdxPeriod + 2)
-            {
-                Print("ADX not ready yet (need more bars).");
-                return;
-            }
+            double fast = _fastEma.Result[index];
+            double slow = _slowEma.Result[index];
+            double close = _crossBars.ClosePrices[index];
+            string crossed = side == "LONG" ? "ABOVE" : "BELOW";
 
-            int i = _adxBars.Count - 2; // closed bar
-            double adx = _dms.ADX[i];
-            double diPlus = _dms.DIPlus[i];
-            double diMinus = _dms.DIMinus[i];
+            string adxTag = null;
+            string directionTag = null;
+            string bbwpTag = null;
+            string volumeTag = null;
 
-            if (!PassesThresholdFilter(adx))
-            {
-                if (LogSkippedAlerts)
-                {
-                    Print("Skipped alert ({0}): ADX={1:0.00} does not meet filter {2} {3:0.##}",
-                        reason, adx, ThresholdFilter, FilterLevel);
-                }
-                return;
-            }
-
-            string regime;
-            if (adx >= TrendingThreshold)
-                regime = "TRENDING";
-            else if (adx <= RangingThreshold)
-                regime = "RANGING";
-            else
-                regime = "NEUTRAL";
-
-            string bias = diPlus > diMinus ? "DI+ > DI− (bullish bias)"
-                : diMinus > diPlus ? "DI− > DI+ (bearish bias)"
-                : "DI+ ≈ DI−";
-
-            string emaSide = null;
-            string bbwpSide = null;
-
-            var barTime = _adxBars.OpenTimes[i];
             var sb = new StringBuilder();
             sb.AppendFormat(CultureInfo.InvariantCulture,
-                "ADX Alert | {0} | TF {1}\n", SymbolName, AdxTimeFrame);
+                "EMA Cross Alert | {0} | TF {1}\n", SymbolName, EmaTimeFrame);
             sb.AppendFormat(CultureInfo.InvariantCulture,
-                "Bar: {0:dd/MM/yyyy HH:mm} UTC\n", barTime);
+                "Bar: {0:dd/MM/yyyy HH:mm} UTC\n", _crossBars.OpenTimes[index]);
             sb.AppendFormat(CultureInfo.InvariantCulture,
-                "ADX({0}) = {1:0.00}  [{2}]\n", AdxPeriod, adx, regime);
+                "Cross: {0} — Fast EMA({1}) crossed {2} Slow EMA({3})\n",
+                side, FastEmaPeriod, crossed, SlowEmaPeriod);
+            sb.AppendFormat(CultureInfo.InvariantCulture,
+                "Fast EMA = {0} | Slow EMA = {1} | close = {2}\n",
+                FormatPrice(fast), FormatPrice(slow), FormatPrice(close));
 
-            if (ThresholdFilter != AdxThresholdFilterMode.Always)
-            {
-                sb.AppendFormat(CultureInfo.InvariantCulture,
-                    "Filter: {0} {1:0.##} (passed)\n", ThresholdFilter, FilterLevel);
-            }
+            if (IncludeAdx || IncludeAdxDirection)
+                AppendAdx(sb, ref adxTag, ref directionTag);
+            if (IncludeBbwp)
+                AppendBbwp(sb, ref bbwpTag);
+            if (IncludeVolumeTrend)
+                AppendVolume(sb, ref volumeTag);
 
-            if (IncludeDi)
-            {
-                sb.AppendFormat(CultureInfo.InvariantCulture,
-                    "+DI = {0:0.00} | −DI = {1:0.00}\n", diPlus, diMinus);
-                sb.Append(bias).Append('\n');
-            }
-
-            AppendEma(sb, ref emaSide);
-            AppendBbwp(sb, ref bbwpSide);
-
-            sb.AppendFormat("Reason: {0}", reason);
-
-            string message = sb.ToString();
+            string message = sb.ToString().TrimEnd();
             Print(message.Replace("\n", " | "));
 
             if (EnableTelegram
@@ -405,15 +354,19 @@ namespace cAlgo.Robots
             {
                 try
                 {
-                    string subject = string.Format(CultureInfo.InvariantCulture,
-                        "ADX {0} {1}: {2:0.00} [{3}]",
-                        SymbolName, AdxTimeFrame, adx, regime);
-                    if (!string.IsNullOrEmpty(emaSide))
-                        subject += " | Price " + emaSide + " EMA";
-                    if (!string.IsNullOrEmpty(bbwpSide))
-                        subject += " | EMA " + bbwpSide + " BBWP";
+                    var subject = new StringBuilder();
+                    subject.AppendFormat(CultureInfo.InvariantCulture,
+                        "EMA {0} cross {1} {2}", side, SymbolName, EmaTimeFrame);
+                    if (!string.IsNullOrEmpty(adxTag))
+                        subject.Append(" | ").Append(adxTag);
+                    if (!string.IsNullOrEmpty(directionTag))
+                        subject.Append(" | ").Append(directionTag);
+                    if (!string.IsNullOrEmpty(bbwpTag))
+                        subject.Append(" | ").Append(bbwpTag);
+                    if (!string.IsNullOrEmpty(volumeTag))
+                        subject.Append(" | ").Append(volumeTag);
 
-                    Notifications.SendEmail(EmailFrom, EmailTo, subject, message);
+                    Notifications.SendEmail(EmailFrom, EmailTo, subject.ToString(), message);
                     Print("Email alert sent to {0}", EmailTo);
                 }
                 catch (Exception ex)
@@ -423,63 +376,85 @@ namespace cAlgo.Robots
             }
         }
 
-        private void AppendEma(StringBuilder sb, ref string emaSide)
+        private void AppendAdx(StringBuilder sb, ref string adxTag, ref string directionTag)
         {
-            if (!IncludeEma)
-                return;
-
-            if (_ema == null || _emaBars == null || _emaBars.Count < EmaPeriod + 2)
+            if (_dms == null || _adxBars == null || _adxBars.Count < AdxPeriod + 2)
             {
-                sb.Append("Volume Trend EMA: not ready (need more bars)\n");
+                sb.Append("ADX: not ready (need more bars)\n");
                 return;
             }
 
-            int closed = _emaBars.Count - 2;
-            if (closed < EmaPeriod)
+            int closed = _adxBars.Count - 2;
+            double adx = _dms.ADX[closed];
+            double diPlus = _dms.DIPlus[closed];
+            double diMinus = _dms.DIMinus[closed];
+            if (!IsFinite(adx))
             {
-                sb.Append("Volume Trend EMA: not ready (need more bars)\n");
+                sb.Append("ADX: not ready (need more bars)\n");
                 return;
             }
 
-            double ema = _ema.Result[closed];
-            double close = _emaBars.ClosePrices[closed];
-            if (!IsFinite(ema) || !IsFinite(close))
+            if (IncludeAdx)
             {
-                sb.Append("Volume Trend EMA: not ready (need more bars)\n");
+                string regime;
+                string versus;
+                if (adx > AdxLevel)
+                {
+                    regime = "TRENDING";
+                    versus = "ABOVE";
+                }
+                else if (adx < AdxLevel)
+                {
+                    regime = "RANGING";
+                    versus = "BELOW";
+                }
+                else
+                {
+                    regime = "ON LEVEL";
+                    versus = "ON";
+                }
+
+                adxTag = regime + " " + versus + " " + AdxLevel.ToString("0.##", CultureInfo.InvariantCulture);
+                sb.AppendFormat(CultureInfo.InvariantCulture,
+                    "ADX({0}) {1} = {2:0.00} — {3} — {4} the {5:0.##} line\n",
+                    AdxPeriod, AdxTimeFrame, adx, regime, versus, AdxLevel);
+            }
+
+            if (!IncludeAdxDirection)
+                return;
+
+            if (!IsFinite(diPlus) || !IsFinite(diMinus))
+            {
+                sb.Append("ADX trend: not ready\n");
                 return;
             }
 
-            string relation;
-            if (close > ema)
+            string direction;
+            string detail;
+            if (diPlus > diMinus)
             {
-                relation = "ABOVE";
-                emaSide = "ABOVE";
+                direction = "LONG";
+                detail = "+DI > −DI";
             }
-            else if (close < ema)
+            else if (diMinus > diPlus)
             {
-                relation = "BELOW";
-                emaSide = "BELOW";
+                direction = "SHORT";
+                detail = "−DI > +DI";
             }
             else
             {
-                relation = "EQUAL TO";
-                emaSide = "ON";
+                direction = "FLAT";
+                detail = "+DI = −DI";
             }
 
+            directionTag = "ADX " + direction;
             sb.AppendFormat(CultureInfo.InvariantCulture,
-                "Volume Trend EMA({0}) {1}: close is {2} the EMA | close {3} | EMA {4}\n",
-                EmaPeriod,
-                EmaTimeFrame,
-                relation,
-                FormatPrice(close),
-                FormatPrice(ema));
+                "ADX trend: {0} ({1} | +DI {2:0.00} | −DI {3:0.00})\n",
+                direction, detail, diPlus, diMinus);
         }
 
-        private void AppendBbwp(StringBuilder sb, ref string bbwpSide)
+        private void AppendBbwp(StringBuilder sb, ref string bbwpTag)
         {
-            if (!IncludeBbwp)
-                return;
-
             if (_bb == null || _bbwpBars == null || _bbwpBars.Count < 3)
             {
                 sb.Append("BBWP: not ready (need more bars)\n");
@@ -509,18 +484,18 @@ namespace cAlgo.Robots
             string relation;
             if (bbwpEma > bbwp)
             {
-                relation = "EMA is ABOVE the BBWP% line";
-                bbwpSide = "ABOVE";
+                relation = "BBWP EMA is ABOVE the BBWP% value";
+                bbwpTag = "BBWP EMA ABOVE";
             }
             else if (bbwpEma < bbwp)
             {
-                relation = "EMA is BELOW the BBWP% line";
-                bbwpSide = "BELOW";
+                relation = "BBWP EMA is BELOW the BBWP% value";
+                bbwpTag = "BBWP EMA BELOW";
             }
             else
             {
-                relation = "EMA is ON the BBWP% line";
-                bbwpSide = "ON";
+                relation = "BBWP EMA is EQUAL to the BBWP% value";
+                bbwpTag = "BBWP EMA EQUAL";
             }
 
             sb.AppendFormat(CultureInfo.InvariantCulture,
@@ -528,11 +503,55 @@ namespace cAlgo.Robots
                 BbwpEmaPeriod, bbwpEma, relation);
         }
 
-        /// <summary>
-        /// BBWP at the closed bar, plus the EMA of the BBWP series through that bar.
-        /// Returns false when the percentile itself is not available yet.
-        /// hasEma is false when BBWP exists but the EMA is still warming up.
-        /// </summary>
+        private void AppendVolume(StringBuilder sb, ref string volumeTag)
+        {
+            if (_volumeEma == null || _volumeBars == null || _volumeBars.Count < VolumeEmaPeriod + 2)
+            {
+                sb.Append("Volume trend: not ready (need more bars)\n");
+                return;
+            }
+
+            int closed = _volumeBars.Count - 2;
+            if (closed < VolumeEmaPeriod)
+            {
+                sb.Append("Volume trend: not ready (need more bars)\n");
+                return;
+            }
+
+            double volume = _volumeBars.TickVolumes[closed];
+            double ema = _volumeEma.Result[closed];
+            if (!IsFinite(volume) || !IsFinite(ema))
+            {
+                sb.Append("Volume trend: not ready (need more bars)\n");
+                return;
+            }
+
+            string relation;
+            if (volume > ema)
+            {
+                relation = "ABOVE";
+                volumeTag = "Volume ABOVE EMA";
+            }
+            else if (volume < ema)
+            {
+                relation = "BELOW";
+                volumeTag = "Volume BELOW EMA";
+            }
+            else
+            {
+                relation = "EQUAL TO";
+                volumeTag = "Volume ON EMA";
+            }
+
+            sb.AppendFormat(CultureInfo.InvariantCulture,
+                "Volume trend {0}: {1} the EMA({2}) | volume {3} | EMA {4}\n",
+                VolumeTimeFrame,
+                relation,
+                VolumeEmaPeriod,
+                volume.ToString("0.##", CultureInfo.InvariantCulture),
+                ema.ToString("0.##", CultureInfo.InvariantCulture));
+        }
+
         private bool TryComputeBbwp(int closedIndex, out double bbwp, out double bbwpEma, out bool hasEma)
         {
             bbwp = 0;
@@ -578,7 +597,6 @@ namespace cAlgo.Robots
 
         private double BandWidth(int index)
         {
-            // First window is the BbPeriod bars ending at this index.
             if (index < BbPeriod - 1)
                 return double.NaN;
 
@@ -605,9 +623,6 @@ namespace cAlgo.Robots
             return true;
         }
 
-        /// <summary>
-        /// TradingView ta.percentrank: share of the previous Lookback values that are &lt;= current.
-        /// </summary>
         private double PercentRank(double[] width, int index)
         {
             double current = width[index];
@@ -622,9 +637,6 @@ namespace cAlgo.Robots
             return 100.0 * rank / BbwpLookback;
         }
 
-        /// <summary>
-        /// EMA seeded with an SMA of the first period, then the standard 2/(n+1) smoother.
-        /// </summary>
         private static double ExponentialAverage(double[] values, int period)
         {
             if (values == null || period < 1 || values.Length < period)
@@ -658,27 +670,20 @@ namespace cAlgo.Robots
             return value.ToString("F" + digits.ToString(CultureInfo.InvariantCulture), CultureInfo.InvariantCulture);
         }
 
+        private static string OnOff(bool enabled)
+        {
+            return enabled ? "ON" : "OFF";
+        }
+
         private static bool IsFinite(double value)
         {
             return !double.IsNaN(value) && !double.IsInfinity(value);
-        }
-
-        private bool PassesThresholdFilter(double adx)
-        {
-            if (ThresholdFilter == AdxThresholdFilterMode.Always)
-                return true;
-            if (ThresholdFilter == AdxThresholdFilterMode.Above)
-                return adx > FilterLevel;
-            if (ThresholdFilter == AdxThresholdFilterMode.Below)
-                return adx < FilterLevel;
-            return true;
         }
 
         private void SendTelegram(string text)
         {
             try
             {
-                // URL-encode manually (no System.Web / no LINQ)
                 string encoded = Uri.EscapeDataString(text);
                 string url = string.Format(
                     "https://api.telegram.org/bot{0}/sendMessage?chat_id={1}&text={2}",
