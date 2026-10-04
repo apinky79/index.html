@@ -1,8 +1,8 @@
 //───────────────────────────────────────────────────────────────────────────────
 // cBot: EMA Cross Phone Alert
 // Author: Adam Pink
-// Purpose: When two selected EMAs cross on a closed bar, send one Telegram
-//          (and optional email) alert. The message can include:
+// Purpose: Send a Telegram message when the cBot starts, then again when two
+//          selected EMAs cross on a closed bar. The message can include:
 //            • ADX ranging or trending, above or below the selected level
 //            • ADX direction: long or short (+DI vs −DI)
 //            • whether the BBWP EMA is above the BBWP% value
@@ -143,7 +143,7 @@ namespace cAlgo.Robots
 
         protected override void OnStart()
         {
-            Print("*** EMA Cross Phone Alert BUILD 2026-10-04-v6 ***");
+            Print("*** EMA Cross Phone Alert BUILD 2026-10-04-v7 ***");
             Print("Symbol={0} | Cross TF={1} | Fast EMA={2} | Slow EMA={3}",
                 SymbolName, EmaTimeFrame, FastEmaPeriod, SlowEmaPeriod);
             Print("Sections: ADX={0} | Long/Short={1} | BBWP={2} | Volume trend={3}",
@@ -169,7 +169,7 @@ namespace cAlgo.Robots
                 Print("WARNING: Email enabled but From/To is empty — Email alerts disabled.");
 
             Print("REMINDER: Run this cBot on DESKTOP (not Cloud) for Telegram/Email to reach your phone.");
-            Print("Alerts fire only when the fast EMA crosses the slow EMA on a closed bar.");
+            Print("A Telegram message is sent on start, then when the fast EMA crosses the slow EMA on a closed bar.");
 
             _crossBars = GetBars(EmaTimeFrame);
             _fastEma = Indicators.ExponentialMovingAverage(_crossBars.ClosePrices, FastEmaPeriod);
@@ -195,6 +195,7 @@ namespace cAlgo.Robots
             }
 
             ArmCrossWatch();
+            SendStartupAlert();
             Timer.Start(15);
         }
 
@@ -237,7 +238,7 @@ namespace cAlgo.Robots
 
             int closed = _crossBars.Count - 2;
             _lastEvaluatedOpenTime = _crossBars.OpenTimes[closed];
-            Print("Watching from bar {0:dd/MM/yyyy HH:mm} UTC. No alert until the next cross.",
+            Print("Armed at bar {0:dd/MM/yyyy HH:mm} UTC. Crosses on this bar and earlier are ignored.",
                 _lastEvaluatedOpenTime);
         }
 
@@ -338,7 +339,77 @@ namespace cAlgo.Robots
             if (IncludeVolumeTrend)
                 AppendVolume(sb, ref volumeTag);
 
-            string message = sb.ToString().TrimEnd();
+            var subject = new StringBuilder();
+            subject.AppendFormat(CultureInfo.InvariantCulture,
+                "EMA {0} cross {1} {2}", side, SymbolName, EmaTimeFrame);
+            if (!string.IsNullOrEmpty(adxTag))
+                subject.Append(" | ").Append(adxTag);
+            if (!string.IsNullOrEmpty(directionTag))
+                subject.Append(" | ").Append(directionTag);
+            if (!string.IsNullOrEmpty(bbwpTag))
+                subject.Append(" | ").Append(bbwpTag);
+            if (!string.IsNullOrEmpty(volumeTag))
+                subject.Append(" | ").Append(volumeTag);
+
+            Deliver(sb.ToString().TrimEnd(), subject.ToString());
+        }
+
+        private void SendStartupAlert()
+        {
+            string adxTag = null;
+            string directionTag = null;
+            string bbwpTag = null;
+            string volumeTag = null;
+
+            var sb = new StringBuilder();
+            sb.AppendFormat(CultureInfo.InvariantCulture,
+                "EMA Cross Alert STARTED | {0} | TF {1}\n", SymbolName, EmaTimeFrame);
+            sb.AppendFormat(CultureInfo.InvariantCulture,
+                "Watching Fast EMA({0}) and Slow EMA({1})\n", FastEmaPeriod, SlowEmaPeriod);
+            sb.AppendFormat(CultureInfo.InvariantCulture,
+                "Sections: ADX {0} | Long/Short {1} | BBWP {2} | Volume {3}\n",
+                OnOff(IncludeAdx), OnOff(IncludeAdxDirection), OnOff(IncludeBbwp), OnOff(IncludeVolumeTrend));
+
+            if (_crossBars != null && _fastEma != null && _slowEma != null && _crossBars.Count >= 3)
+            {
+                int closed = _crossBars.Count - 2;
+                double fast = _fastEma.Result[closed];
+                double slow = _slowEma.Result[closed];
+                double close = _crossBars.ClosePrices[closed];
+                if (IsFinite(fast) && IsFinite(slow) && IsFinite(close))
+                {
+                    string position = fast > slow ? "ABOVE" : fast < slow ? "BELOW" : "EQUAL TO";
+                    sb.AppendFormat(CultureInfo.InvariantCulture,
+                        "Now: Fast EMA is {0} Slow EMA | Fast {1} | Slow {2} | close {3}\n",
+                        position, FormatPrice(fast), FormatPrice(slow), FormatPrice(close));
+                }
+            }
+
+            sb.Append("Next alert when the fast EMA crosses the slow EMA on a closed bar.\n");
+
+            if (IncludeAdx || IncludeAdxDirection)
+                AppendAdx(sb, ref adxTag, ref directionTag);
+            if (IncludeBbwp)
+                AppendBbwp(sb, ref bbwpTag);
+            if (IncludeVolumeTrend)
+                AppendVolume(sb, ref volumeTag);
+
+            var subject = new StringBuilder();
+            subject.AppendFormat(CultureInfo.InvariantCulture, "EMA alert started {0} {1}", SymbolName, EmaTimeFrame);
+            if (!string.IsNullOrEmpty(adxTag))
+                subject.Append(" | ").Append(adxTag);
+            if (!string.IsNullOrEmpty(directionTag))
+                subject.Append(" | ").Append(directionTag);
+            if (!string.IsNullOrEmpty(bbwpTag))
+                subject.Append(" | ").Append(bbwpTag);
+            if (!string.IsNullOrEmpty(volumeTag))
+                subject.Append(" | ").Append(volumeTag);
+
+            Deliver(sb.ToString().TrimEnd(), subject.ToString());
+        }
+
+        private void Deliver(string message, string emailSubject)
+        {
             Print(message.Replace("\n", " | "));
 
             if (EnableTelegram
@@ -354,19 +425,7 @@ namespace cAlgo.Robots
             {
                 try
                 {
-                    var subject = new StringBuilder();
-                    subject.AppendFormat(CultureInfo.InvariantCulture,
-                        "EMA {0} cross {1} {2}", side, SymbolName, EmaTimeFrame);
-                    if (!string.IsNullOrEmpty(adxTag))
-                        subject.Append(" | ").Append(adxTag);
-                    if (!string.IsNullOrEmpty(directionTag))
-                        subject.Append(" | ").Append(directionTag);
-                    if (!string.IsNullOrEmpty(bbwpTag))
-                        subject.Append(" | ").Append(bbwpTag);
-                    if (!string.IsNullOrEmpty(volumeTag))
-                        subject.Append(" | ").Append(volumeTag);
-
-                    Notifications.SendEmail(EmailFrom, EmailTo, subject.ToString(), message);
+                    Notifications.SendEmail(EmailFrom, EmailTo, emailSubject, message);
                     Print("Email alert sent to {0}", EmailTo);
                 }
                 catch (Exception ex)
