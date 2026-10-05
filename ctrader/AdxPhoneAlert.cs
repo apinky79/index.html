@@ -22,8 +22,7 @@
 //        short when it is below the short threshold.
 //   Price EMA and RSI are directional. A cross checks that side only.
 //   The startup message shows both sides. A one-sided miss does not fail
-//   the startup summary. The lines still print when Include is off. They
-//   change Strategy filters only after Include is turned on.
+//   the startup summary. A filter line is sent only when Include is on.
 //
 // Defaults match the BTCUSD m15 set BTC_100K:
 //   Fast 5 / Slow 21, offset none, entry EMA test of EMA 21
@@ -260,7 +259,7 @@ namespace cAlgo.Robots
 
         protected override void OnStart()
         {
-            Print("*** EMA Cross Phone Alert BUILD 2026-10-05-v11 ***");
+            Print("*** EMA Cross Phone Alert BUILD 2026-10-05-v12 ***");
             Print("Symbol={0} | Cross TF={1} | Fast EMA={2} | Slow EMA={3} | Offset={4} {5}",
                 SymbolName, EmaTimeFrame, FastEmaPeriod, SlowEmaPeriod, EmaOffsetType, EmaOffsetValue);
             Print("Sections: ADX={0} | ADX trend={1} | BBWP={2} | Volume={3} | Price EMA={4} | RSI={5}",
@@ -286,10 +285,12 @@ namespace cAlgo.Robots
             }
             if (IncludeVolumeTrend)
                 Print("Volume trend: tick volume must be above EMA({0}) on {1}.", VolumeEmaPeriod, VolumeTimeFrame);
-            Print("Price EMA: {0}, length {1} on {2}. Long passes when Ask is above the EMA. Short passes when Bid is below the EMA.",
-                OnOff(IncludePriceEma), PriceEmaPeriod, PriceEmaTimeFrame);
-            Print("RSI: {0}, length {1} on {2}. Long passes above {3}. Short passes below {4}.",
-                OnOff(IncludeRsi), RsiPeriod, RsiTimeFrame, LongRsiThreshold, ShortRsiThreshold);
+            if (IncludePriceEma)
+                Print("Price EMA: length {0} on {1}. Long passes when Ask is above the EMA. Short passes when Bid is below the EMA.",
+                    PriceEmaPeriod, PriceEmaTimeFrame);
+            if (IncludeRsi)
+                Print("RSI: length {0} on {1}. Long passes above {2}. Short passes below {3}.",
+                    RsiPeriod, RsiTimeFrame, LongRsiThreshold, ShortRsiThreshold);
 
             if (EnableTelegram && (string.IsNullOrWhiteSpace(TelegramBotToken) || string.IsNullOrWhiteSpace(TelegramChatId)))
                 Print("WARNING: Telegram enabled but Bot Token / Chat ID is empty — Telegram alerts disabled.");
@@ -334,11 +335,17 @@ namespace cAlgo.Robots
                 _volumeEma = Indicators.ExponentialMovingAverage(_volumeBars.TickVolumes, VolumeEmaPeriod);
             }
 
-            _priceEmaBars = GetBars(PriceEmaTimeFrame);
-            _priceEma = Indicators.ExponentialMovingAverage(_priceEmaBars.ClosePrices, PriceEmaPeriod);
+            if (IncludePriceEma)
+            {
+                _priceEmaBars = GetBars(PriceEmaTimeFrame);
+                _priceEma = Indicators.ExponentialMovingAverage(_priceEmaBars.ClosePrices, PriceEmaPeriod);
+            }
 
-            _rsiBars = GetBars(RsiTimeFrame);
-            _rsi = Indicators.RelativeStrengthIndex(_rsiBars.ClosePrices, RsiPeriod);
+            if (IncludeRsi)
+            {
+                _rsiBars = GetBars(RsiTimeFrame);
+                _rsi = Indicators.RelativeStrengthIndex(_rsiBars.ClosePrices, RsiPeriod);
+            }
 
             ArmCrossWatch();
             SendStartupAlert();
@@ -523,8 +530,10 @@ namespace cAlgo.Robots
                 AppendBbwp(sb, ref bbwpTag);
             if (IncludeVolumeTrend)
                 AppendVolume(sb, ref volumeTag);
-            AppendPriceEma(sb, side, ref priceEmaTag);
-            AppendRsi(sb, side, ref rsiTag);
+            if (IncludePriceEma)
+                AppendPriceEma(sb, side, ref priceEmaTag);
+            if (IncludeRsi)
+                AppendRsi(sb, side, ref rsiTag);
             AppendFilterSummary(sb, side, adxTag, directionTag, bbwpTag, volumeTag, priceEmaTag, rsiTag);
 
             var subject = new StringBuilder();
@@ -554,10 +563,7 @@ namespace cAlgo.Robots
                 "EMA Cross Alert STARTED | {0} | TF {1}\n", SymbolName, EmaTimeFrame);
             sb.AppendFormat(CultureInfo.InvariantCulture,
                 "Watching Fast EMA({0}) and Slow EMA({1})\n", FastEmaPeriod, SlowEmaPeriod);
-            sb.AppendFormat(CultureInfo.InvariantCulture,
-                "Sections: ADX {0} | ADX trend {1} | BBWP {2} | Volume {3} | Price EMA {4} | RSI {5}\n",
-                OnOff(IncludeAdx), OnOff(IncludeAdxDirection), OnOff(IncludeBbwp), OnOff(IncludeVolumeTrend),
-                OnOff(IncludePriceEma), OnOff(IncludeRsi));
+            AppendEnabledFilters(sb);
             AppendEntryNote(sb);
 
             if (_crossBars != null && _fastEma != null && _slowEma != null && _crossBars.Count >= 3)
@@ -587,8 +593,10 @@ namespace cAlgo.Robots
                 AppendBbwp(sb, ref bbwpTag);
             if (IncludeVolumeTrend)
                 AppendVolume(sb, ref volumeTag);
-            AppendPriceEma(sb, null, ref priceEmaTag);
-            AppendRsi(sb, null, ref rsiTag);
+            if (IncludePriceEma)
+                AppendPriceEma(sb, null, ref priceEmaTag);
+            if (IncludeRsi)
+                AppendRsi(sb, null, ref rsiTag);
             AppendFilterSummary(sb, null, adxTag, directionTag, bbwpTag, volumeTag, priceEmaTag, rsiTag);
 
             var subject = new StringBuilder();
@@ -601,6 +609,30 @@ namespace cAlgo.Robots
             AppendSubjectTag(subject, rsiTag);
 
             Deliver(sb.ToString().TrimEnd(), subject.ToString());
+        }
+
+        private void AppendEnabledFilters(StringBuilder sb)
+        {
+            sb.Append("Filters:");
+            bool any = false;
+            any = AppendFilterName(sb, any, IncludeAdx, "ADX");
+            any = AppendFilterName(sb, any, IncludeAdxDirection, "ADX trend");
+            any = AppendFilterName(sb, any, IncludeBbwp, "BBWP");
+            any = AppendFilterName(sb, any, IncludeVolumeTrend, "Volume");
+            any = AppendFilterName(sb, any, IncludePriceEma, "Price EMA");
+            any = AppendFilterName(sb, any, IncludeRsi, "RSI");
+            if (!any)
+                sb.Append(" none");
+            sb.Append('\n');
+        }
+
+        private static bool AppendFilterName(StringBuilder sb, bool any, bool include, string name)
+        {
+            if (!include)
+                return any;
+            sb.Append(any ? " | " : " ");
+            sb.Append(name);
+            return true;
         }
 
         private void AppendEntryNote(StringBuilder sb)
@@ -901,8 +933,7 @@ namespace cAlgo.Robots
             if (!TryGetClosedPriceEma(out ema) || !IsFinite(Symbol.Ask) || !IsFinite(Symbol.Bid))
             {
                 sb.Append("Price EMA: not ready (need more bars)\n");
-                if (IncludePriceEma)
-                    priceEmaTag = "WAIT";
+                priceEmaTag = "WAIT";
                 return;
             }
 
@@ -914,8 +945,7 @@ namespace cAlgo.Robots
             }
 
             bool pass = AppendPriceEmaLine(sb, crossSide == "LONG", ema);
-            if (IncludePriceEma)
-                priceEmaTag = pass ? "PASS" : "FAIL";
+            priceEmaTag = pass ? "PASS" : "FAIL";
         }
 
         private bool AppendPriceEmaLine(StringBuilder sb, bool isLong, double ema)
@@ -937,8 +967,6 @@ namespace cAlgo.Robots
                 relation,
                 FormatPrice(ema),
                 result);
-            if (!IncludePriceEma)
-                sb.Append(" | off");
             sb.Append('\n');
             return pass;
         }
@@ -960,8 +988,7 @@ namespace cAlgo.Robots
             if (!TryGetClosedRsi(out rsi))
             {
                 sb.Append("RSI: not ready (need more bars)\n");
-                if (IncludeRsi)
-                    rsiTag = "WAIT";
+                rsiTag = "WAIT";
                 return;
             }
 
@@ -973,8 +1000,7 @@ namespace cAlgo.Robots
             }
 
             bool pass = AppendRsiLine(sb, crossSide == "LONG", rsi);
-            if (IncludeRsi)
-                rsiTag = pass ? "PASS" : "FAIL";
+            rsiTag = pass ? "PASS" : "FAIL";
         }
 
         private bool AppendRsiLine(StringBuilder sb, bool isLong, double rsi)
@@ -995,8 +1021,6 @@ namespace cAlgo.Robots
                 relation,
                 threshold,
                 result);
-            if (!IncludeRsi)
-                sb.Append(" | off");
             sb.Append('\n');
             return pass;
         }
@@ -1196,7 +1220,7 @@ namespace cAlgo.Robots
 
         /// <summary>
         /// Normal message text. Enabled pass/fail lines get a tick or a cross.
-        /// A line marked off is a disabled setting and stays as plain text.
+        /// Disabled filters are left out of the message.
         /// </summary>
         private static string ToTelegramHtml(string text)
         {
@@ -1217,8 +1241,6 @@ namespace cAlgo.Robots
 
         private static string MarkEnabledResult(string line)
         {
-            if (line.IndexOf(" | off") >= 0)
-                return line;
             if (line.IndexOf(" — PASS") >= 0 || line == "Strategy filters: PASS")
                 return "✅ " + line;
             if (line.IndexOf(" — FAIL") >= 0 || line == "Strategy filters: FAIL")
