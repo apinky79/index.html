@@ -260,7 +260,7 @@ namespace cAlgo.Robots
 
         protected override void OnStart()
         {
-            Print("*** EMA Cross Phone Alert BUILD 2026-10-05-v10 ***");
+            Print("*** EMA Cross Phone Alert BUILD 2026-10-05-v11 ***");
             Print("Symbol={0} | Cross TF={1} | Fast EMA={2} | Slow EMA={3} | Offset={4} {5}",
                 SymbolName, EmaTimeFrame, FastEmaPeriod, SlowEmaPeriod, EmaOffsetType, EmaOffsetValue);
             Print("Sections: ADX={0} | ADX trend={1} | BBWP={2} | Volume={3} | Price EMA={4} | RSI={5}",
@@ -1170,8 +1170,8 @@ namespace cAlgo.Robots
         {
             try
             {
-                string colored = ToColoredTelegramHtml(text);
-                string encoded = Uri.EscapeDataString(colored);
+                string message = ToTelegramHtml(text);
+                string encoded = Uri.EscapeDataString(message);
                 string url = string.Format(
                     "https://api.telegram.org/bot{0}/sendMessage?chat_id={1}&parse_mode=HTML&text={2}",
                     TelegramBotToken.Trim(),
@@ -1195,58 +1195,35 @@ namespace cAlgo.Robots
         }
 
         /// <summary>
-        /// Telegram bot text cannot set a font color. A diff code block renders
-        /// lines that start with + in green and lines that start with - in red.
+        /// Normal message text. Enabled pass/fail lines get a tick or a cross.
+        /// A line marked off is a disabled setting and stays as plain text.
         /// </summary>
-        private static string ToColoredTelegramHtml(string text)
+        private static string ToTelegramHtml(string text)
         {
             var sb = new StringBuilder();
-            var diff = new StringBuilder();
             string normalized = text.Replace("\r", "");
             string[] lines = normalized.Split('\n');
 
             for (int i = 0; i < lines.Length; i++)
             {
-                string kind = IndicatorLineColor(lines[i]);
-                if (kind == null)
-                {
-                    FlushDiffBlock(sb, diff);
-                    if (lines[i].Length > 0)
-                        sb.Append(HtmlEscape(lines[i]));
-                    if (i < lines.Length - 1)
-                        sb.Append('\n');
-                }
-                else
-                {
-                    diff.Append(kind == "green" ? '+' : '-');
-                    diff.Append(' ');
-                    diff.Append(lines[i]);
-                    diff.Append('\n');
-                }
+                if (lines[i].Length > 0)
+                    sb.Append(HtmlEscape(MarkEnabledResult(lines[i])));
+                if (i < lines.Length - 1)
+                    sb.Append('\n');
             }
 
-            FlushDiffBlock(sb, diff);
             return sb.ToString().TrimEnd();
         }
 
-        private static string IndicatorLineColor(string line)
+        private static string MarkEnabledResult(string line)
         {
+            if (line.IndexOf(" | off") >= 0)
+                return line;
             if (line.IndexOf(" — PASS") >= 0 || line == "Strategy filters: PASS")
-                return "green";
+                return "✅ " + line;
             if (line.IndexOf(" — FAIL") >= 0 || line == "Strategy filters: FAIL")
-                return "red";
-            return null;
-        }
-
-        private static void FlushDiffBlock(StringBuilder sb, StringBuilder diff)
-        {
-            if (diff.Length == 0)
-                return;
-
-            sb.Append("<pre><code class=\"language-diff\">");
-            sb.Append(HtmlEscape(diff.ToString().TrimEnd()));
-            sb.Append("</code></pre>\n");
-            diff.Length = 0;
+                return "❌ " + line;
+            return line;
         }
 
         private static string HtmlEscape(string value)
