@@ -1,25 +1,32 @@
 //───────────────────────────────────────────────────────────────────────────────
 // cBot: EMA Cross Phone Alert
 // Author: Adam Pink
-// Purpose: Send a Telegram message when the cBot starts, then again when two
-//          selected EMAs cross on a closed bar. The message can include:
-//            • ADX ranging or trending, above or below the selected level
-//            • ADX direction: long or short (+DI vs −DI)
-//            • whether the BBWP EMA is above the BBWP% value
-//            • whether tick volume is above or below its selected EMA
-//          Turn each block off when that week's bot is not using it.
-//          The EMA cross itself is the trigger and always runs.
-// Phone delivery: Telegram. Journal always logged.
-// NOTE: Outbound alerts need a DESKTOP/local instance — cTrader Cloud blocks
-//       HTTP and email. Attach this cBot to any chart; the cross uses the
-//       timeframe you pick, not necessarily the chart timeframe.
+// Purpose: Telegram when this cBot starts, then again when the fast EMA crosses
+//          the slow EMA on a closed bar. Each extra block can be switched off
+//          when that week's UltimateTrader2026 set is not using it.
 //
-// BBWP (Bollinger Band Width Percentile), same idea as TradingView ta.percentrank:
-//   band width = (upper − lower) / middle
-//   BBWP%      = 100 × (how many of the previous Lookback widths are <= current) / Lookback
-//   "BBWP EMA is ABOVE the BBWP% value" means the EMA of that series is greater
-//   than the current BBWP%.
+// Readings use the same rules as Ultimatetrader2026:
+//   Double EMA trigger: fast crosses above/below slow, plus the same offset.
+//   Volume trend: tick volume > EMA of tick volume.
+//   BBWP: width = (upper − lower) / middle, stdev multiplier 1, simple basis.
+//         BBWP% = 100 × (count of widths in the lookback window strictly < current) / lookback.
+//         Pass = BBWP% > BBWP EMA, inside the lower/upper thresholds, and the
+//         expansion rule when that mode is on.
+//   ADX momentum: Trending passes when ADX > trending threshold.
+//                 Ranging passes when ADX < ranging threshold.
+//   ADX trend: long when +DI > −DI and the gap is at least the offset.
+//              short when −DI > +DI and the gap is at least the offset.
+//
+// Defaults match the BTCUSD m15 set BTC_100K:
+//   Fast 5 / Slow 21, offset none, entry EMA test of EMA 21
+//   Volume EMA 21 on
+//   BBWP 20 / lookback 252 / EMA 14, thresholds 0–100, expansion off
+//   ADX trending, threshold 18, period 14, m15
+//   ADX trend direction off (ADX Trend Mode is disabled in that set)
+//   Price EMA and RSI are disabled in that set, so they are not in this alert
+//
 // Paste the Bot Token and Chat ID into the cBot parameters. They are not stored here.
+// Run on desktop. cTrader Cloud blocks Telegram and email.
 //───────────────────────────────────────────────────────────────────────────────
 using System;
 using System.Globalization;
@@ -29,40 +36,88 @@ using cAlgo.API.Indicators;
 
 namespace cAlgo.Robots
 {
-    // AccessRights.None — Http.Get still works on desktop for Telegram (.NET 6+).
-    // Cloud blocks outbound HTTP/email anyway.
+    public enum AlertEntryType
+    {
+        OnTrigger,
+        EMATest
+    }
+
+    public enum AlertOffsetType
+    {
+        None,
+        Pips,
+        Percent,
+        ATR
+    }
+
+    public enum AlertAdxCondition
+    {
+        Trending,
+        Ranging
+    }
+
     [Robot(TimeZone = TimeZones.UTC, AccessRights = AccessRights.None)]
     public class AdxPhoneAlert : Robot
     {
         // ===========================
-        // Trigger: two EMAs cross
+        // Trigger: two EMAs cross (Double EMA Trend in the trading bot)
         // ===========================
-        [Parameter("EMA TimeFrame", Group = "EMA Cross", DefaultValue = "Hour")]
+        [Parameter("EMA TimeFrame", Group = "EMA Cross", DefaultValue = "Minute15")]
         public TimeFrame EmaTimeFrame { get; set; }
 
-        [Parameter("Fast EMA Period", Group = "EMA Cross", DefaultValue = 20, MinValue = 1)]
+        [Parameter("Fast EMA Period", Group = "EMA Cross", DefaultValue = 5, MinValue = 1)]
         public int FastEmaPeriod { get; set; }
 
-        [Parameter("Slow EMA Period", Group = "EMA Cross", DefaultValue = 50, MinValue = 1)]
+        [Parameter("Slow EMA Period", Group = "EMA Cross", DefaultValue = 21, MinValue = 1)]
         public int SlowEmaPeriod { get; set; }
 
+        [Parameter("Offset Type", Group = "EMA Cross", DefaultValue = AlertOffsetType.None)]
+        public AlertOffsetType EmaOffsetType { get; set; }
+
+        [Parameter("Offset Value", Group = "EMA Cross", DefaultValue = 0.0)]
+        public double EmaOffsetValue { get; set; }
+
+        [Parameter("Entry Type", Group = "EMA Cross", DefaultValue = AlertEntryType.EMATest)]
+        public AlertEntryType EntryTypeSetting { get; set; }
+
+        [Parameter("Entry EMA Length", Group = "EMA Cross", DefaultValue = 21, MinValue = 1)]
+        public int EntryEmaLength { get; set; }
+
         // ===========================
-        // ADX level (ranging / trending) — optional
+        // ADX momentum — optional
         // ===========================
         [Parameter("Include ADX", Group = "ADX", DefaultValue = true)]
         public bool IncludeAdx { get; set; }
 
-        [Parameter("ADX TimeFrame", Group = "ADX", DefaultValue = "Hour")]
+        [Parameter("ADX TimeFrame", Group = "ADX", DefaultValue = "Minute15")]
         public TimeFrame AdxTimeFrame { get; set; }
 
         [Parameter("ADX Period", Group = "ADX", DefaultValue = 14, MinValue = 1)]
         public int AdxPeriod { get; set; }
 
-        [Parameter("ADX Level", Group = "ADX", DefaultValue = 25.0, MinValue = 0.0, MaxValue = 100.0)]
-        public double AdxLevel { get; set; }
+        [Parameter("ADX Condition", Group = "ADX", DefaultValue = AlertAdxCondition.Trending)]
+        public AlertAdxCondition AdxCondition { get; set; }
 
-        [Parameter("Include Long / Short", Group = "ADX", DefaultValue = true)]
+        [Parameter("Trending Threshold", Group = "ADX", DefaultValue = 18, MinValue = 0, MaxValue = 100)]
+        public int TrendingThreshold { get; set; }
+
+        [Parameter("Ranging Threshold", Group = "ADX", DefaultValue = 20, MinValue = 0, MaxValue = 100)]
+        public int RangingThreshold { get; set; }
+
+        // ===========================
+        // ADX trend direction — optional, off when the trading bot's ADX Trend Mode is disabled
+        // ===========================
+        [Parameter("Include ADX Trend", Group = "ADX Trend", DefaultValue = false)]
         public bool IncludeAdxDirection { get; set; }
+
+        [Parameter("ADX Trend TimeFrame", Group = "ADX Trend", DefaultValue = "Minute15")]
+        public TimeFrame AdxTrendTimeFrame { get; set; }
+
+        [Parameter("ADX Trend Period", Group = "ADX Trend", DefaultValue = 14, MinValue = 1)]
+        public int AdxTrendPeriod { get; set; }
+
+        [Parameter("ADX Trend Offset", Group = "ADX Trend", DefaultValue = 0, MinValue = 0)]
+        public int AdxTrendOffset { get; set; }
 
         // ===========================
         // BBWP — optional
@@ -70,23 +125,38 @@ namespace cAlgo.Robots
         [Parameter("Include BBWP", Group = "BBWP", DefaultValue = true)]
         public bool IncludeBbwp { get; set; }
 
-        [Parameter("BBWP TimeFrame", Group = "BBWP", DefaultValue = "Hour")]
+        [Parameter("BBWP TimeFrame", Group = "BBWP", DefaultValue = "Minute15")]
         public TimeFrame BbwpTimeFrame { get; set; }
 
         [Parameter("BB Period", Group = "BBWP", DefaultValue = 20, MinValue = 2)]
         public int BbPeriod { get; set; }
 
-        [Parameter("BB StdDev", Group = "BBWP", DefaultValue = 2.0, MinValue = 0.1)]
+        [Parameter("BB StdDev", Group = "BBWP", DefaultValue = 1.0, MinValue = 0.1)]
         public double BbStdDev { get; set; }
 
         [Parameter("Basis MA", Group = "BBWP", DefaultValue = MovingAverageType.Simple)]
         public MovingAverageType BbBasisType { get; set; }
 
-        [Parameter("Lookback", Group = "BBWP", DefaultValue = 100, MinValue = 1)]
+        [Parameter("Lookback", Group = "BBWP", DefaultValue = 252, MinValue = 1)]
         public int BbwpLookback { get; set; }
 
-        [Parameter("BBWP EMA Period", Group = "BBWP", DefaultValue = 20, MinValue = 1)]
+        [Parameter("BBWP EMA Period", Group = "BBWP", DefaultValue = 14, MinValue = 1)]
         public int BbwpEmaPeriod { get; set; }
+
+        [Parameter("Upper BBWP Threshold", Group = "BBWP", DefaultValue = 100, MinValue = 0, MaxValue = 100)]
+        public int UpperBbwpThreshold { get; set; }
+
+        [Parameter("Lower BBWP Threshold", Group = "BBWP", DefaultValue = 0, MinValue = 0, MaxValue = 100)]
+        public int LowerBbwpThreshold { get; set; }
+
+        [Parameter("BBWP Expansion", Group = "BBWP", DefaultValue = false)]
+        public bool UseBbwpExpansion { get; set; }
+
+        [Parameter("Expansion Lookback", Group = "BBWP", DefaultValue = 20, MinValue = 1)]
+        public int BbwpExpansionLookback { get; set; }
+
+        [Parameter("Expansion Threshold", Group = "BBWP", DefaultValue = 60, MinValue = 0, MaxValue = 100)]
+        public int BbwpExpansionThreshold { get; set; }
 
         // ===========================
         // Volume trend vs its EMA — optional
@@ -94,20 +164,18 @@ namespace cAlgo.Robots
         [Parameter("Include Volume Trend", Group = "Volume Trend", DefaultValue = true)]
         public bool IncludeVolumeTrend { get; set; }
 
-        [Parameter("Volume TimeFrame", Group = "Volume Trend", DefaultValue = "Hour")]
+        [Parameter("Volume TimeFrame", Group = "Volume Trend", DefaultValue = "Minute15")]
         public TimeFrame VolumeTimeFrame { get; set; }
 
-        [Parameter("Volume EMA Period", Group = "Volume Trend", DefaultValue = 20, MinValue = 1)]
+        [Parameter("Volume EMA Period", Group = "Volume Trend", DefaultValue = 21, MinValue = 1)]
         public int VolumeEmaPeriod { get; set; }
 
         // ===========================
-        // Telegram (phone message)
+        // Telegram
         // ===========================
         [Parameter("Enable Telegram", Group = "Telegram", DefaultValue = true)]
         public bool EnableTelegram { get; set; }
 
-        // Create a bot via @BotFather, then get the chat id via @userinfobot or getUpdates.
-        // Enter both on the cBot instance. Leave them blank in source.
         [Parameter("Bot Token", Group = "Telegram", DefaultValue = "")]
         public string TelegramBotToken { get; set; }
 
@@ -115,7 +183,7 @@ namespace cAlgo.Robots
         public string TelegramChatId { get; set; }
 
         // ===========================
-        // Email (optional phone push via mail app)
+        // Email
         // ===========================
         [Parameter("Enable Email", Group = "Email", DefaultValue = false)]
         public bool EnableEmail { get; set; }
@@ -129,9 +197,13 @@ namespace cAlgo.Robots
         private Bars _crossBars;
         private ExponentialMovingAverage _fastEma;
         private ExponentialMovingAverage _slowEma;
+        private AverageTrueRange _atr;
 
         private Bars _adxBars;
         private DirectionalMovementSystem _dms;
+
+        private Bars _adxTrendBars;
+        private DirectionalMovementSystem _dmsTrend;
 
         private Bars _bbwpBars;
         private BollingerBands _bb;
@@ -143,24 +215,31 @@ namespace cAlgo.Robots
 
         protected override void OnStart()
         {
-            Print("*** EMA Cross Phone Alert BUILD 2026-10-04-v7 ***");
-            Print("Symbol={0} | Cross TF={1} | Fast EMA={2} | Slow EMA={3}",
-                SymbolName, EmaTimeFrame, FastEmaPeriod, SlowEmaPeriod);
-            Print("Sections: ADX={0} | Long/Short={1} | BBWP={2} | Volume trend={3}",
+            Print("*** EMA Cross Phone Alert BUILD 2026-10-05-v8 ***");
+            Print("Symbol={0} | Cross TF={1} | Fast EMA={2} | Slow EMA={3} | Offset={4} {5}",
+                SymbolName, EmaTimeFrame, FastEmaPeriod, SlowEmaPeriod, EmaOffsetType, EmaOffsetValue);
+            Print("Sections: ADX={0} | ADX trend={1} | BBWP={2} | Volume={3}",
                 OnOff(IncludeAdx), OnOff(IncludeAdxDirection), OnOff(IncludeBbwp), OnOff(IncludeVolumeTrend));
+            Print("Entry={0} | Entry EMA={1}", EntryTypeSetting, EntryEmaLength);
 
-            if (FastEmaPeriod == SlowEmaPeriod)
+            if (FastEmaPeriod == SlowEmaPeriod && EmaOffsetType == AlertOffsetType.None)
                 Print("WARNING: Fast EMA and Slow EMA use the same period — a cross may never print.");
 
             if (IncludeAdx)
-                Print("ADX level: {0:0.##} on {1}. Above = TRENDING, below = RANGING.", AdxLevel, AdxTimeFrame);
+            {
+                Print("ADX {0}: period {1} on {2}. Trending passes above {3}. Ranging passes below {4}.",
+                    AdxCondition, AdxPeriod, AdxTimeFrame, TrendingThreshold, RangingThreshold);
+            }
+            if (IncludeAdxDirection)
+                Print("ADX trend: period {0} on {1}, offset {2}.", AdxTrendPeriod, AdxTrendTimeFrame, AdxTrendOffset);
             if (IncludeBbwp)
             {
-                Print("BBWP: BB({0}, {1:0.##}, {2}) lookback {3} | EMA({4}) on {5}.",
-                    BbPeriod, BbStdDev, BbBasisType, BbwpLookback, BbwpEmaPeriod, BbwpTimeFrame);
+                Print("BBWP: BB({0}, {1:0.##}, {2}) lookback {3} | EMA({4}) on {5}. Pass when BBWP% > EMA, inside {6}–{7}. Expansion={8}.",
+                    BbPeriod, BbStdDev, BbBasisType, BbwpLookback, BbwpEmaPeriod, BbwpTimeFrame,
+                    LowerBbwpThreshold, UpperBbwpThreshold, OnOff(UseBbwpExpansion));
             }
             if (IncludeVolumeTrend)
-                Print("Volume trend: tick volume vs EMA({0}) on {1}.", VolumeEmaPeriod, VolumeTimeFrame);
+                Print("Volume trend: tick volume must be above EMA({0}) on {1}.", VolumeEmaPeriod, VolumeTimeFrame);
 
             if (EnableTelegram && (string.IsNullOrWhiteSpace(TelegramBotToken) || string.IsNullOrWhiteSpace(TelegramChatId)))
                 Print("WARNING: Telegram enabled but Bot Token / Chat ID is empty — Telegram alerts disabled.");
@@ -174,12 +253,23 @@ namespace cAlgo.Robots
             _crossBars = GetBars(EmaTimeFrame);
             _fastEma = Indicators.ExponentialMovingAverage(_crossBars.ClosePrices, FastEmaPeriod);
             _slowEma = Indicators.ExponentialMovingAverage(_crossBars.ClosePrices, SlowEmaPeriod);
+            if (EmaOffsetType == AlertOffsetType.ATR)
+                _atr = Indicators.AverageTrueRange(_crossBars, 14, MovingAverageType.Simple);
             _crossBars.BarClosed += OnCrossBarClosed;
 
-            if (IncludeAdx || IncludeAdxDirection)
+            if (IncludeAdx)
             {
                 _adxBars = GetBars(AdxTimeFrame);
                 _dms = Indicators.DirectionalMovementSystem(_adxBars, AdxPeriod);
+            }
+
+            if (IncludeAdxDirection)
+            {
+                _adxTrendBars = GetBars(AdxTrendTimeFrame);
+                if (_dms != null && AdxTrendTimeFrame == AdxTimeFrame && AdxTrendPeriod == AdxPeriod)
+                    _dmsTrend = _dms;
+                else
+                    _dmsTrend = Indicators.DirectionalMovementSystem(_adxTrendBars, AdxTrendPeriod);
             }
 
             if (IncludeBbwp)
@@ -285,27 +375,61 @@ namespace cAlgo.Robots
             if (index < 1)
                 return false;
 
-            double prevFast = _fastEma.Result[index - 1];
-            double prevSlow = _slowEma.Result[index - 1];
-            double fast = _fastEma.Result[index];
-            double slow = _slowEma.Result[index];
-            if (!IsFinite(prevFast) || !IsFinite(prevSlow) || !IsFinite(fast) || !IsFinite(slow))
+            if (!EmaValuesReady(index) || !EmaValuesReady(index - 1))
                 return false;
 
-            // LONG = fast EMA crossed above the slow EMA. SHORT = crossed below.
-            if (prevFast <= prevSlow && fast > slow)
+            bool longNow = IsLongAligned(index);
+            if (!IsLongAligned(index - 1) && longNow)
             {
                 side = "LONG";
                 return true;
             }
 
-            if (prevFast >= prevSlow && fast < slow)
+            if (!IsShortAligned(index - 1) && IsShortAligned(index))
             {
                 side = "SHORT";
                 return true;
             }
 
             return false;
+        }
+
+        private bool EmaValuesReady(int index)
+        {
+            if (index < 0)
+                return false;
+            return IsFinite(_fastEma.Result[index]) && IsFinite(_slowEma.Result[index]);
+        }
+
+        private bool IsLongAligned(int index)
+        {
+            if (!EmaValuesReady(index))
+                return false;
+            double slow = _slowEma.Result[index];
+            return _fastEma.Result[index] > slow + SlowOffset(slow, index);
+        }
+
+        private bool IsShortAligned(int index)
+        {
+            if (!EmaValuesReady(index))
+                return false;
+            double slow = _slowEma.Result[index];
+            return _fastEma.Result[index] < slow - SlowOffset(slow, index);
+        }
+
+        private double SlowOffset(double slow, int index)
+        {
+            if (EmaOffsetType == AlertOffsetType.Pips)
+                return EmaOffsetValue * Symbol.PipSize;
+            if (EmaOffsetType == AlertOffsetType.Percent)
+                return slow * (EmaOffsetValue / 100.0);
+            if (EmaOffsetType == AlertOffsetType.ATR)
+            {
+                if (_atr == null || index < 0 || !IsFinite(_atr.Result[index]))
+                    return 0;
+                return _atr.Result[index] * EmaOffsetValue;
+            }
+            return 0;
         }
 
         private void SendCrossAlert(int index, string side)
@@ -331,25 +455,25 @@ namespace cAlgo.Robots
             sb.AppendFormat(CultureInfo.InvariantCulture,
                 "Fast EMA = {0} | Slow EMA = {1} | close = {2}\n",
                 FormatPrice(fast), FormatPrice(slow), FormatPrice(close));
+            AppendEntryNote(sb);
 
-            if (IncludeAdx || IncludeAdxDirection)
-                AppendAdx(sb, ref adxTag, ref directionTag);
+            if (IncludeAdx)
+                AppendAdx(sb, ref adxTag);
+            if (IncludeAdxDirection)
+                AppendAdxTrend(sb, side, ref directionTag);
             if (IncludeBbwp)
                 AppendBbwp(sb, ref bbwpTag);
             if (IncludeVolumeTrend)
                 AppendVolume(sb, ref volumeTag);
+            AppendFilterSummary(sb, side, adxTag, directionTag, bbwpTag, volumeTag);
 
             var subject = new StringBuilder();
             subject.AppendFormat(CultureInfo.InvariantCulture,
                 "EMA {0} cross {1} {2}", side, SymbolName, EmaTimeFrame);
-            if (!string.IsNullOrEmpty(adxTag))
-                subject.Append(" | ").Append(adxTag);
-            if (!string.IsNullOrEmpty(directionTag))
-                subject.Append(" | ").Append(directionTag);
-            if (!string.IsNullOrEmpty(bbwpTag))
-                subject.Append(" | ").Append(bbwpTag);
-            if (!string.IsNullOrEmpty(volumeTag))
-                subject.Append(" | ").Append(volumeTag);
+            AppendSubjectTag(subject, adxTag);
+            AppendSubjectTag(subject, directionTag);
+            AppendSubjectTag(subject, bbwpTag);
+            AppendSubjectTag(subject, volumeTag);
 
             Deliver(sb.ToString().TrimEnd(), subject.ToString());
         }
@@ -367,45 +491,115 @@ namespace cAlgo.Robots
             sb.AppendFormat(CultureInfo.InvariantCulture,
                 "Watching Fast EMA({0}) and Slow EMA({1})\n", FastEmaPeriod, SlowEmaPeriod);
             sb.AppendFormat(CultureInfo.InvariantCulture,
-                "Sections: ADX {0} | Long/Short {1} | BBWP {2} | Volume {3}\n",
+                "Sections: ADX {0} | ADX trend {1} | BBWP {2} | Volume {3}\n",
                 OnOff(IncludeAdx), OnOff(IncludeAdxDirection), OnOff(IncludeBbwp), OnOff(IncludeVolumeTrend));
+            AppendEntryNote(sb);
 
             if (_crossBars != null && _fastEma != null && _slowEma != null && _crossBars.Count >= 3)
             {
                 int closed = _crossBars.Count - 2;
-                double fast = _fastEma.Result[closed];
-                double slow = _slowEma.Result[closed];
-                double close = _crossBars.ClosePrices[closed];
-                if (IsFinite(fast) && IsFinite(slow) && IsFinite(close))
+                if (EmaValuesReady(closed))
                 {
-                    string position = fast > slow ? "ABOVE" : fast < slow ? "BELOW" : "EQUAL TO";
+                    string position = IsLongAligned(closed) ? "ABOVE"
+                        : IsShortAligned(closed) ? "BELOW"
+                        : EmaOffsetType == AlertOffsetType.None ? "EQUAL TO" : "INSIDE THE OFFSET";
                     sb.AppendFormat(CultureInfo.InvariantCulture,
                         "Now: Fast EMA is {0} Slow EMA | Fast {1} | Slow {2} | close {3}\n",
-                        position, FormatPrice(fast), FormatPrice(slow), FormatPrice(close));
+                        position,
+                        FormatPrice(_fastEma.Result[closed]),
+                        FormatPrice(_slowEma.Result[closed]),
+                        FormatPrice(_crossBars.ClosePrices[closed]));
                 }
             }
 
             sb.Append("Next alert when the fast EMA crosses the slow EMA on a closed bar.\n");
 
-            if (IncludeAdx || IncludeAdxDirection)
-                AppendAdx(sb, ref adxTag, ref directionTag);
+            if (IncludeAdx)
+                AppendAdx(sb, ref adxTag);
+            if (IncludeAdxDirection)
+                AppendAdxTrend(sb, null, ref directionTag);
             if (IncludeBbwp)
                 AppendBbwp(sb, ref bbwpTag);
             if (IncludeVolumeTrend)
                 AppendVolume(sb, ref volumeTag);
+            AppendFilterSummary(sb, null, adxTag, directionTag, bbwpTag, volumeTag);
 
             var subject = new StringBuilder();
             subject.AppendFormat(CultureInfo.InvariantCulture, "EMA alert started {0} {1}", SymbolName, EmaTimeFrame);
-            if (!string.IsNullOrEmpty(adxTag))
-                subject.Append(" | ").Append(adxTag);
-            if (!string.IsNullOrEmpty(directionTag))
-                subject.Append(" | ").Append(directionTag);
-            if (!string.IsNullOrEmpty(bbwpTag))
-                subject.Append(" | ").Append(bbwpTag);
-            if (!string.IsNullOrEmpty(volumeTag))
-                subject.Append(" | ").Append(volumeTag);
+            AppendSubjectTag(subject, adxTag);
+            AppendSubjectTag(subject, directionTag);
+            AppendSubjectTag(subject, bbwpTag);
+            AppendSubjectTag(subject, volumeTag);
 
             Deliver(sb.ToString().TrimEnd(), subject.ToString());
+        }
+
+        private void AppendEntryNote(StringBuilder sb)
+        {
+            if (EntryTypeSetting == AlertEntryType.EMATest)
+            {
+                sb.AppendFormat(CultureInfo.InvariantCulture,
+                    "Bot entry: EMA test of EMA({0}). A passing cross arms the trade. The fill is a later bar that wicks through that EMA.\n",
+                    EntryEmaLength);
+            }
+            else
+            {
+                sb.Append("Bot entry: market entry on the cross when the filters pass.\n");
+            }
+        }
+
+        private void AppendFilterSummary(StringBuilder sb, string side, string adxTag, string directionTag, string bbwpTag, string volumeTag)
+        {
+            bool any = false;
+            bool fail = false;
+            bool waiting = false;
+
+            NoteFilter(adxTag, ref any, ref fail, ref waiting);
+            NoteFilter(bbwpTag, ref any, ref fail, ref waiting);
+            NoteFilter(volumeTag, ref any, ref fail, ref waiting);
+
+            if (directionTag != null)
+            {
+                any = true;
+                if (directionTag == "WAIT")
+                    waiting = true;
+                else if (side == null)
+                {
+                    if (directionTag == "FLAT")
+                        fail = true;
+                }
+                else if (directionTag != side)
+                {
+                    fail = true;
+                }
+            }
+
+            if (!any)
+                return;
+
+            if (waiting)
+                sb.Append("Strategy filters: NOT READY\n");
+            else if (fail)
+                sb.Append("Strategy filters: FAIL\n");
+            else
+                sb.Append("Strategy filters: PASS\n");
+        }
+
+        private static void NoteFilter(string tag, ref bool any, ref bool fail, ref bool waiting)
+        {
+            if (tag == null)
+                return;
+            any = true;
+            if (tag == "FAIL")
+                fail = true;
+            if (tag == "WAIT")
+                waiting = true;
+        }
+
+        private static void AppendSubjectTag(StringBuilder subject, string tag)
+        {
+            if (!string.IsNullOrEmpty(tag))
+                subject.Append(" | ").Append(tag);
         }
 
         private void Deliver(string message, string emailSubject)
@@ -435,81 +629,88 @@ namespace cAlgo.Robots
             }
         }
 
-        private void AppendAdx(StringBuilder sb, ref string adxTag, ref string directionTag)
+        private void AppendAdx(StringBuilder sb, ref string adxTag)
         {
             if (_dms == null || _adxBars == null || _adxBars.Count < AdxPeriod + 2)
             {
                 sb.Append("ADX: not ready (need more bars)\n");
+                adxTag = "WAIT";
                 return;
             }
 
             int closed = _adxBars.Count - 2;
             double adx = _dms.ADX[closed];
-            double diPlus = _dms.DIPlus[closed];
-            double diMinus = _dms.DIMinus[closed];
             if (!IsFinite(adx))
             {
                 sb.Append("ADX: not ready (need more bars)\n");
+                adxTag = "WAIT";
                 return;
             }
 
-            if (IncludeAdx)
+            bool pass;
+            string versus;
+            int level;
+            if (AdxCondition == AlertAdxCondition.Trending)
             {
-                string regime;
-                string versus;
-                if (adx > AdxLevel)
-                {
-                    regime = "TRENDING";
-                    versus = "ABOVE";
-                }
-                else if (adx < AdxLevel)
-                {
-                    regime = "RANGING";
-                    versus = "BELOW";
-                }
-                else
-                {
-                    regime = "ON LEVEL";
-                    versus = "ON";
-                }
-
-                adxTag = regime + " " + versus + " " + AdxLevel.ToString("0.##", CultureInfo.InvariantCulture);
-                sb.AppendFormat(CultureInfo.InvariantCulture,
-                    "ADX({0}) {1} = {2:0.00} — {3} — {4} the {5:0.##} line\n",
-                    AdxPeriod, AdxTimeFrame, adx, regime, versus, AdxLevel);
-            }
-
-            if (!IncludeAdxDirection)
-                return;
-
-            if (!IsFinite(diPlus) || !IsFinite(diMinus))
-            {
-                sb.Append("ADX trend: not ready\n");
-                return;
-            }
-
-            string direction;
-            string detail;
-            if (diPlus > diMinus)
-            {
-                direction = "LONG";
-                detail = "+DI > −DI";
-            }
-            else if (diMinus > diPlus)
-            {
-                direction = "SHORT";
-                detail = "−DI > +DI";
+                pass = adx > TrendingThreshold;
+                versus = pass ? "ABOVE" : "NOT ABOVE";
+                level = TrendingThreshold;
             }
             else
             {
-                direction = "FLAT";
-                detail = "+DI = −DI";
+                pass = adx < RangingThreshold;
+                versus = pass ? "BELOW" : "NOT BELOW";
+                level = RangingThreshold;
             }
 
-            directionTag = "ADX " + direction;
+            adxTag = pass ? "PASS" : "FAIL";
             sb.AppendFormat(CultureInfo.InvariantCulture,
-                "ADX trend: {0} ({1} | +DI {2:0.00} | −DI {3:0.00})\n",
-                direction, detail, diPlus, diMinus);
+                "ADX({0}) {1} = {2:0.00} — {3} — {4} {5} — {6}\n",
+                AdxPeriod, AdxTimeFrame, adx, AdxCondition, versus, level, adxTag);
+        }
+
+        private void AppendAdxTrend(StringBuilder sb, string crossSide, ref string directionTag)
+        {
+            if (_dmsTrend == null || _adxTrendBars == null || _adxTrendBars.Count < AdxTrendPeriod + 2)
+            {
+                sb.Append("ADX trend: not ready (need more bars)\n");
+                directionTag = "WAIT";
+                return;
+            }
+
+            int closed = _adxTrendBars.Count - 2;
+            double diPlus = _dmsTrend.DIPlus[closed];
+            double diMinus = _dmsTrend.DIMinus[closed];
+            if (!IsFinite(diPlus) || !IsFinite(diMinus))
+            {
+                sb.Append("ADX trend: not ready (need more bars)\n");
+                directionTag = "WAIT";
+                return;
+            }
+
+            double gap = Math.Abs(diPlus - diMinus);
+            string direction;
+            if (gap < AdxTrendOffset)
+                direction = "FLAT";
+            else if (diPlus > diMinus)
+                direction = "LONG";
+            else if (diMinus > diPlus)
+                direction = "SHORT";
+            else
+                direction = "FLAT";
+
+            directionTag = direction;
+            string result = "PASS";
+            if (direction == "FLAT")
+                result = "FAIL";
+            else if (crossSide != null && direction != crossSide)
+                result = "FAIL";
+
+            sb.AppendFormat(CultureInfo.InvariantCulture,
+                "ADX trend: {0} ({1} | +DI {2:0.00} | −DI {3:0.00} | gap {4:0.00} | offset {5}) — {6}\n",
+                direction,
+                direction == "LONG" ? "+DI > −DI" : direction == "SHORT" ? "−DI > +DI" : "gap below offset",
+                diPlus, diMinus, gap, AdxTrendOffset, result);
         }
 
         private void AppendBbwp(StringBuilder sb, ref string bbwpTag)
@@ -517,6 +718,7 @@ namespace cAlgo.Robots
             if (_bb == null || _bbwpBars == null || _bbwpBars.Count < 3)
             {
                 sb.Append("BBWP: not ready (need more bars)\n");
+                bbwpTag = "WAIT";
                 return;
             }
 
@@ -524,9 +726,11 @@ namespace cAlgo.Robots
             double bbwp;
             double bbwpEma;
             bool hasEma;
-            if (!TryComputeBbwp(closed, out bbwp, out bbwpEma, out hasEma))
+            bool expansionOk;
+            if (!TryComputeBbwp(closed, out bbwp, out bbwpEma, out hasEma, out expansionOk))
             {
                 sb.Append("BBWP: not ready (need more bars)\n");
+                bbwpTag = "WAIT";
                 return;
             }
 
@@ -537,29 +741,34 @@ namespace cAlgo.Robots
             if (!hasEma)
             {
                 sb.Append(" | EMA not ready\n");
+                bbwpTag = "WAIT";
                 return;
             }
 
-            string relation;
-            if (bbwpEma > bbwp)
-            {
-                relation = "BBWP EMA is ABOVE the BBWP% value";
-                bbwpTag = "BBWP EMA ABOVE";
-            }
-            else if (bbwpEma < bbwp)
-            {
-                relation = "BBWP EMA is BELOW the BBWP% value";
-                bbwpTag = "BBWP EMA BELOW";
-            }
-            else
-            {
-                relation = "BBWP EMA is EQUAL to the BBWP% value";
-                bbwpTag = "BBWP EMA EQUAL";
-            }
+            bool aboveEma = bbwp > bbwpEma;
+            bool inside = bbwp <= UpperBbwpThreshold && bbwp >= LowerBbwpThreshold;
+            bool pass = aboveEma && inside && expansionOk;
+            bbwpTag = pass ? "PASS" : "FAIL";
+
+            string relation = aboveEma
+                ? "BBWP% is ABOVE the EMA"
+                : bbwp < bbwpEma
+                    ? "BBWP% is BELOW the EMA"
+                    : "BBWP% is EQUAL to the EMA";
 
             sb.AppendFormat(CultureInfo.InvariantCulture,
-                " | EMA({0}) = {1:0.00}\n{2}\n",
+                " | EMA({0}) = {1:0.00}\n{2}",
                 BbwpEmaPeriod, bbwpEma, relation);
+
+            if (!inside)
+            {
+                sb.AppendFormat(CultureInfo.InvariantCulture,
+                    " | outside {0}–{1}", LowerBbwpThreshold, UpperBbwpThreshold);
+            }
+            if (UseBbwpExpansion && !expansionOk)
+                sb.Append(" | expansion not met");
+
+            sb.Append(" — ").Append(bbwpTag).Append('\n');
         }
 
         private void AppendVolume(StringBuilder sb, ref string volumeTag)
@@ -567,6 +776,7 @@ namespace cAlgo.Robots
             if (_volumeEma == null || _volumeBars == null || _volumeBars.Count < VolumeEmaPeriod + 2)
             {
                 sb.Append("Volume trend: not ready (need more bars)\n");
+                volumeTag = "WAIT";
                 return;
             }
 
@@ -574,6 +784,7 @@ namespace cAlgo.Robots
             if (closed < VolumeEmaPeriod)
             {
                 sb.Append("Volume trend: not ready (need more bars)\n");
+                volumeTag = "WAIT";
                 return;
             }
 
@@ -582,6 +793,7 @@ namespace cAlgo.Robots
             if (!IsFinite(volume) || !IsFinite(ema))
             {
                 sb.Append("Volume trend: not ready (need more bars)\n");
+                volumeTag = "WAIT";
                 return;
             }
 
@@ -589,69 +801,99 @@ namespace cAlgo.Robots
             if (volume > ema)
             {
                 relation = "ABOVE";
-                volumeTag = "Volume ABOVE EMA";
+                volumeTag = "PASS";
             }
             else if (volume < ema)
             {
                 relation = "BELOW";
-                volumeTag = "Volume BELOW EMA";
+                volumeTag = "FAIL";
             }
             else
             {
                 relation = "EQUAL TO";
-                volumeTag = "Volume ON EMA";
+                volumeTag = "FAIL";
             }
 
             sb.AppendFormat(CultureInfo.InvariantCulture,
-                "Volume trend {0}: {1} the EMA({2}) | volume {3} | EMA {4}\n",
+                "Volume trend {0}: {1} the EMA({2}) — {3} | volume {4} | EMA {5}\n",
                 VolumeTimeFrame,
                 relation,
                 VolumeEmaPeriod,
+                volumeTag,
                 volume.ToString("0.##", CultureInfo.InvariantCulture),
                 ema.ToString("0.##", CultureInfo.InvariantCulture));
         }
 
-        private bool TryComputeBbwp(int closedIndex, out double bbwp, out double bbwpEma, out bool hasEma)
+        private bool TryComputeBbwp(int closedIndex, out double bbwp, out double bbwpEma, out bool hasEma, out bool expansionOk)
         {
             bbwp = 0;
             bbwpEma = 0;
             hasEma = false;
+            expansionOk = !UseBbwpExpansion;
 
-            if (closedIndex < BbPeriod)
+            if (closedIndex < BbPeriod - 1)
                 return false;
 
             var width = new double[closedIndex + 1];
+            var bbwpAt = new double[closedIndex + 1];
             for (int i = 0; i <= closedIndex; i++)
-                width[i] = BandWidth(i);
-
-            int start = -1;
-            for (int i = BbwpLookback; i <= closedIndex; i++)
             {
-                if (IsCompleteWindow(width, i))
-                {
-                    start = i;
-                    break;
-                }
+                width[i] = BandWidth(i);
+                bbwpAt[i] = double.NaN;
             }
 
-            if (start < 0 || !IsCompleteWindow(width, closedIndex))
+            int first = -1;
+            for (int i = 0; i <= closedIndex; i++)
+            {
+                if (!IsFinite(width[i]))
+                    continue;
+                bbwpAt[i] = BotBbwp(width, i);
+                if (first < 0)
+                    first = i;
+            }
+
+            if (first < 0 || !IsFinite(bbwpAt[closedIndex]))
                 return false;
 
-            int length = closedIndex - start + 1;
+            int length = 0;
+            for (int i = first; i <= closedIndex; i++)
+            {
+                if (IsFinite(bbwpAt[i]))
+                    length++;
+            }
+
             var series = new double[length];
-            for (int i = start; i <= closedIndex; i++)
-                series[i - start] = PercentRank(width, i);
+            int n = 0;
+            for (int i = first; i <= closedIndex; i++)
+            {
+                if (IsFinite(bbwpAt[i]))
+                    series[n++] = bbwpAt[i];
+            }
 
-            bbwp = series[length - 1];
-            if (!IsFinite(bbwp))
-                return false;
-
+            bbwp = bbwpAt[closedIndex];
             if (length < BbwpEmaPeriod)
                 return true;
 
             bbwpEma = ExponentialAverage(series, BbwpEmaPeriod);
             hasEma = IsFinite(bbwpEma);
+            if (UseBbwpExpansion)
+                expansionOk = ExpansionMet(bbwpAt, closedIndex);
             return true;
+        }
+
+        private bool ExpansionMet(double[] bbwpAt, int closedIndex)
+        {
+            int start = closedIndex - BbwpExpansionLookback + 1;
+            if (start < 0)
+                start = 0;
+
+            for (int i = start; i <= closedIndex; i++)
+            {
+                if (IsFinite(bbwpAt[i]) && bbwpAt[i] <= BbwpExpansionThreshold)
+                    return true;
+            }
+
+            return false;
         }
 
         private double BandWidth(int index)
@@ -668,32 +910,29 @@ namespace cAlgo.Robots
             return (upper - lower) / basis;
         }
 
-        private bool IsCompleteWindow(double[] width, int index)
-        {
-            if (index < BbwpLookback || !IsFinite(width[index]))
-                return false;
-
-            for (int j = index - BbwpLookback; j < index; j++)
-            {
-                if (!IsFinite(width[j]))
-                    return false;
-            }
-
-            return true;
-        }
-
-        private double PercentRank(double[] width, int index)
+        /// <summary>
+        /// Same percentile as Ultimatetrader2026: count widths in the lookback window
+        /// that are strictly below the current width, including the current bar, then
+        /// divide by the full lookback.
+        /// </summary>
+        private double BotBbwp(double[] width, int index)
         {
             double current = width[index];
-            int rank = 0;
-            int from = index - BbwpLookback;
-            for (int j = from; j < index; j++)
+            if (!IsFinite(current))
+                return double.NaN;
+
+            int start = index - BbwpLookback + 1;
+            if (start < 0)
+                start = 0;
+
+            int countBelow = 0;
+            for (int i = start; i <= index; i++)
             {
-                if (width[j] <= current)
-                    rank++;
+                if (IsFinite(width[i]) && width[i] < current)
+                    countBelow++;
             }
 
-            return 100.0 * rank / BbwpLookback;
+            return 100.0 * countBelow / BbwpLookback;
         }
 
         private static double ExponentialAverage(double[] values, int period)
