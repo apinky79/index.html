@@ -259,7 +259,7 @@ namespace cAlgo.Robots
 
         protected override void OnStart()
         {
-            Print("*** EMA Cross Phone Alert BUILD 2026-10-05-v12 ***");
+            Print("*** EMA Cross Phone Alert BUILD 2026-10-05-v13 ***");
             Print("Symbol={0} | Cross TF={1} | Fast EMA={2} | Slow EMA={3} | Offset={4} {5}",
                 SymbolName, EmaTimeFrame, FastEmaPeriod, SlowEmaPeriod, EmaOffsetType, EmaOffsetValue);
             Print("Sections: ADX={0} | ADX trend={1} | BBWP={2} | Volume={3} | Price EMA={4} | RSI={5}",
@@ -520,7 +520,6 @@ namespace cAlgo.Robots
             sb.AppendFormat(CultureInfo.InvariantCulture,
                 "Fast EMA = {0} | Slow EMA = {1} | close = {2}\n",
                 FormatPrice(fast), FormatPrice(slow), FormatPrice(close));
-            AppendEntryNote(sb);
 
             if (IncludeAdx)
                 AppendAdx(sb, ref adxTag);
@@ -561,10 +560,7 @@ namespace cAlgo.Robots
             var sb = new StringBuilder();
             sb.AppendFormat(CultureInfo.InvariantCulture,
                 "EMA Cross Alert STARTED | {0} | TF {1}\n", SymbolName, EmaTimeFrame);
-            sb.AppendFormat(CultureInfo.InvariantCulture,
-                "Watching Fast EMA({0}) and Slow EMA({1})\n", FastEmaPeriod, SlowEmaPeriod);
             AppendEnabledFilters(sb);
-            AppendEntryNote(sb);
 
             if (_crossBars != null && _fastEma != null && _slowEma != null && _crossBars.Count >= 3)
             {
@@ -582,8 +578,6 @@ namespace cAlgo.Robots
                         FormatPrice(_crossBars.ClosePrices[closed]));
                 }
             }
-
-            sb.Append("Next alert when the fast EMA crosses the slow EMA on a closed bar.\n");
 
             if (IncludeAdx)
                 AppendAdx(sb, ref adxTag);
@@ -633,20 +627,6 @@ namespace cAlgo.Robots
             sb.Append(any ? " | " : " ");
             sb.Append(name);
             return true;
-        }
-
-        private void AppendEntryNote(StringBuilder sb)
-        {
-            if (EntryTypeSetting == AlertEntryType.EMATest)
-            {
-                sb.AppendFormat(CultureInfo.InvariantCulture,
-                    "Bot entry: EMA test of EMA({0}). A passing cross arms the trade. The fill is a later bar that wicks through that EMA.\n",
-                    EntryEmaLength);
-            }
-            else
-            {
-                sb.Append("Bot entry: market entry on the cross when the filters pass.\n");
-            }
         }
 
         private void AppendFilterSummary(StringBuilder sb, string side, string adxTag, string directionTag, string bbwpTag, string volumeTag, string priceEmaTag, string rsiTag)
