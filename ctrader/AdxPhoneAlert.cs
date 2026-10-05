@@ -16,6 +16,14 @@
 //                 Ranging passes when ADX < ranging threshold.
 //   ADX trend: long when +DI > −DI and the gap is at least the offset.
 //              short when −DI > +DI and the gap is at least the offset.
+//   Price EMA: long when Ask is above the closed-bar EMA.
+//              short when Bid is below that EMA.
+//   RSI: long when the closed-bar RSI is above the long threshold.
+//        short when it is below the short threshold.
+//   Price EMA and RSI are directional. A cross checks that side only.
+//   The startup message shows both sides. A one-sided miss does not fail
+//   the startup summary. The lines still print when Include is off. They
+//   change Strategy filters only after Include is turned on.
 //
 // Defaults match the BTCUSD m15 set BTC_100K:
 //   Fast 5 / Slow 21, offset none, entry EMA test of EMA 21
@@ -23,7 +31,8 @@
 //   BBWP 20 / lookback 252 / EMA 14, thresholds 0–100, expansion off
 //   ADX trending, threshold 18, period 14, m15
 //   ADX trend direction off (ADX Trend Mode is disabled in that set)
-//   Price EMA and RSI are disabled in that set, so they are not in this alert
+//   Price EMA length 21, off (Price EMA Trend is disabled in that set)
+//   RSI length 14, long above 60, short below 40, off (RSI is disabled in that set)
 //
 // Paste the Bot Token and Chat ID into the cBot parameters. They are not stored here.
 // Run on desktop. cTrader Cloud blocks Telegram and email.
@@ -171,6 +180,36 @@ namespace cAlgo.Robots
         public int VolumeEmaPeriod { get; set; }
 
         // ===========================
+        // Price EMA trend — optional, off when the trading bot's Price EMA is disabled
+        // ===========================
+        [Parameter("Include Price EMA", Group = "Price EMA", DefaultValue = false)]
+        public bool IncludePriceEma { get; set; }
+
+        [Parameter("Price EMA TimeFrame", Group = "Price EMA", DefaultValue = "Minute15")]
+        public TimeFrame PriceEmaTimeFrame { get; set; }
+
+        [Parameter("Price EMA Period", Group = "Price EMA", DefaultValue = 21, MinValue = 1)]
+        public int PriceEmaPeriod { get; set; }
+
+        // ===========================
+        // RSI threshold — optional, off when the trading bot's RSI is disabled
+        // ===========================
+        [Parameter("Include RSI", Group = "RSI", DefaultValue = false)]
+        public bool IncludeRsi { get; set; }
+
+        [Parameter("RSI TimeFrame", Group = "RSI", DefaultValue = "Minute15")]
+        public TimeFrame RsiTimeFrame { get; set; }
+
+        [Parameter("RSI Period", Group = "RSI", DefaultValue = 14, MinValue = 1)]
+        public int RsiPeriod { get; set; }
+
+        [Parameter("Long RSI Threshold", Group = "RSI", DefaultValue = 60, MinValue = 0, MaxValue = 100)]
+        public int LongRsiThreshold { get; set; }
+
+        [Parameter("Short RSI Threshold", Group = "RSI", DefaultValue = 40, MinValue = 0, MaxValue = 100)]
+        public int ShortRsiThreshold { get; set; }
+
+        // ===========================
         // Telegram
         // ===========================
         [Parameter("Enable Telegram", Group = "Telegram", DefaultValue = true)]
@@ -211,15 +250,22 @@ namespace cAlgo.Robots
         private Bars _volumeBars;
         private ExponentialMovingAverage _volumeEma;
 
+        private Bars _priceEmaBars;
+        private ExponentialMovingAverage _priceEma;
+
+        private Bars _rsiBars;
+        private RelativeStrengthIndex _rsi;
+
         private DateTime _lastEvaluatedOpenTime = DateTime.MinValue;
 
         protected override void OnStart()
         {
-            Print("*** EMA Cross Phone Alert BUILD 2026-10-05-v9 ***");
+            Print("*** EMA Cross Phone Alert BUILD 2026-10-05-v10 ***");
             Print("Symbol={0} | Cross TF={1} | Fast EMA={2} | Slow EMA={3} | Offset={4} {5}",
                 SymbolName, EmaTimeFrame, FastEmaPeriod, SlowEmaPeriod, EmaOffsetType, EmaOffsetValue);
-            Print("Sections: ADX={0} | ADX trend={1} | BBWP={2} | Volume={3}",
-                OnOff(IncludeAdx), OnOff(IncludeAdxDirection), OnOff(IncludeBbwp), OnOff(IncludeVolumeTrend));
+            Print("Sections: ADX={0} | ADX trend={1} | BBWP={2} | Volume={3} | Price EMA={4} | RSI={5}",
+                OnOff(IncludeAdx), OnOff(IncludeAdxDirection), OnOff(IncludeBbwp), OnOff(IncludeVolumeTrend),
+                OnOff(IncludePriceEma), OnOff(IncludeRsi));
             Print("Entry={0} | Entry EMA={1}", EntryTypeSetting, EntryEmaLength);
 
             if (FastEmaPeriod == SlowEmaPeriod && EmaOffsetType == AlertOffsetType.None)
@@ -240,6 +286,10 @@ namespace cAlgo.Robots
             }
             if (IncludeVolumeTrend)
                 Print("Volume trend: tick volume must be above EMA({0}) on {1}.", VolumeEmaPeriod, VolumeTimeFrame);
+            Print("Price EMA: {0}, length {1} on {2}. Long passes when Ask is above the EMA. Short passes when Bid is below the EMA.",
+                OnOff(IncludePriceEma), PriceEmaPeriod, PriceEmaTimeFrame);
+            Print("RSI: {0}, length {1} on {2}. Long passes above {3}. Short passes below {4}.",
+                OnOff(IncludeRsi), RsiPeriod, RsiTimeFrame, LongRsiThreshold, ShortRsiThreshold);
 
             if (EnableTelegram && (string.IsNullOrWhiteSpace(TelegramBotToken) || string.IsNullOrWhiteSpace(TelegramChatId)))
                 Print("WARNING: Telegram enabled but Bot Token / Chat ID is empty — Telegram alerts disabled.");
@@ -283,6 +333,12 @@ namespace cAlgo.Robots
                 _volumeBars = GetBars(VolumeTimeFrame);
                 _volumeEma = Indicators.ExponentialMovingAverage(_volumeBars.TickVolumes, VolumeEmaPeriod);
             }
+
+            _priceEmaBars = GetBars(PriceEmaTimeFrame);
+            _priceEma = Indicators.ExponentialMovingAverage(_priceEmaBars.ClosePrices, PriceEmaPeriod);
+
+            _rsiBars = GetBars(RsiTimeFrame);
+            _rsi = Indicators.RelativeStrengthIndex(_rsiBars.ClosePrices, RsiPeriod);
 
             ArmCrossWatch();
             SendStartupAlert();
@@ -443,6 +499,8 @@ namespace cAlgo.Robots
             string directionTag = null;
             string bbwpTag = null;
             string volumeTag = null;
+            string priceEmaTag = null;
+            string rsiTag = null;
 
             var sb = new StringBuilder();
             sb.AppendFormat(CultureInfo.InvariantCulture,
@@ -465,7 +523,9 @@ namespace cAlgo.Robots
                 AppendBbwp(sb, ref bbwpTag);
             if (IncludeVolumeTrend)
                 AppendVolume(sb, ref volumeTag);
-            AppendFilterSummary(sb, side, adxTag, directionTag, bbwpTag, volumeTag);
+            AppendPriceEma(sb, side, ref priceEmaTag);
+            AppendRsi(sb, side, ref rsiTag);
+            AppendFilterSummary(sb, side, adxTag, directionTag, bbwpTag, volumeTag, priceEmaTag, rsiTag);
 
             var subject = new StringBuilder();
             subject.AppendFormat(CultureInfo.InvariantCulture,
@@ -474,6 +534,8 @@ namespace cAlgo.Robots
             AppendSubjectTag(subject, directionTag);
             AppendSubjectTag(subject, bbwpTag);
             AppendSubjectTag(subject, volumeTag);
+            AppendSubjectTag(subject, priceEmaTag);
+            AppendSubjectTag(subject, rsiTag);
 
             Deliver(sb.ToString().TrimEnd(), subject.ToString());
         }
@@ -484,6 +546,8 @@ namespace cAlgo.Robots
             string directionTag = null;
             string bbwpTag = null;
             string volumeTag = null;
+            string priceEmaTag = null;
+            string rsiTag = null;
 
             var sb = new StringBuilder();
             sb.AppendFormat(CultureInfo.InvariantCulture,
@@ -491,8 +555,9 @@ namespace cAlgo.Robots
             sb.AppendFormat(CultureInfo.InvariantCulture,
                 "Watching Fast EMA({0}) and Slow EMA({1})\n", FastEmaPeriod, SlowEmaPeriod);
             sb.AppendFormat(CultureInfo.InvariantCulture,
-                "Sections: ADX {0} | ADX trend {1} | BBWP {2} | Volume {3}\n",
-                OnOff(IncludeAdx), OnOff(IncludeAdxDirection), OnOff(IncludeBbwp), OnOff(IncludeVolumeTrend));
+                "Sections: ADX {0} | ADX trend {1} | BBWP {2} | Volume {3} | Price EMA {4} | RSI {5}\n",
+                OnOff(IncludeAdx), OnOff(IncludeAdxDirection), OnOff(IncludeBbwp), OnOff(IncludeVolumeTrend),
+                OnOff(IncludePriceEma), OnOff(IncludeRsi));
             AppendEntryNote(sb);
 
             if (_crossBars != null && _fastEma != null && _slowEma != null && _crossBars.Count >= 3)
@@ -522,7 +587,9 @@ namespace cAlgo.Robots
                 AppendBbwp(sb, ref bbwpTag);
             if (IncludeVolumeTrend)
                 AppendVolume(sb, ref volumeTag);
-            AppendFilterSummary(sb, null, adxTag, directionTag, bbwpTag, volumeTag);
+            AppendPriceEma(sb, null, ref priceEmaTag);
+            AppendRsi(sb, null, ref rsiTag);
+            AppendFilterSummary(sb, null, adxTag, directionTag, bbwpTag, volumeTag, priceEmaTag, rsiTag);
 
             var subject = new StringBuilder();
             subject.AppendFormat(CultureInfo.InvariantCulture, "EMA alert started {0} {1}", SymbolName, EmaTimeFrame);
@@ -530,6 +597,8 @@ namespace cAlgo.Robots
             AppendSubjectTag(subject, directionTag);
             AppendSubjectTag(subject, bbwpTag);
             AppendSubjectTag(subject, volumeTag);
+            AppendSubjectTag(subject, priceEmaTag);
+            AppendSubjectTag(subject, rsiTag);
 
             Deliver(sb.ToString().TrimEnd(), subject.ToString());
         }
@@ -548,7 +617,7 @@ namespace cAlgo.Robots
             }
         }
 
-        private void AppendFilterSummary(StringBuilder sb, string side, string adxTag, string directionTag, string bbwpTag, string volumeTag)
+        private void AppendFilterSummary(StringBuilder sb, string side, string adxTag, string directionTag, string bbwpTag, string volumeTag, string priceEmaTag, string rsiTag)
         {
             bool any = false;
             bool fail = false;
@@ -557,6 +626,8 @@ namespace cAlgo.Robots
             NoteFilter(adxTag, ref any, ref fail, ref waiting);
             NoteFilter(bbwpTag, ref any, ref fail, ref waiting);
             NoteFilter(volumeTag, ref any, ref fail, ref waiting);
+            NoteFilter(priceEmaTag, ref any, ref fail, ref waiting);
+            NoteFilter(rsiTag, ref any, ref fail, ref waiting);
 
             if (directionTag != null)
             {
@@ -822,6 +893,123 @@ namespace cAlgo.Robots
                 volumeTag,
                 volume.ToString("0.##", CultureInfo.InvariantCulture),
                 ema.ToString("0.##", CultureInfo.InvariantCulture));
+        }
+
+        private void AppendPriceEma(StringBuilder sb, string crossSide, ref string priceEmaTag)
+        {
+            double ema;
+            if (!TryGetClosedPriceEma(out ema) || !IsFinite(Symbol.Ask) || !IsFinite(Symbol.Bid))
+            {
+                sb.Append("Price EMA: not ready (need more bars)\n");
+                if (IncludePriceEma)
+                    priceEmaTag = "WAIT";
+                return;
+            }
+
+            if (crossSide == null)
+            {
+                AppendPriceEmaLine(sb, true, ema);
+                AppendPriceEmaLine(sb, false, ema);
+                return;
+            }
+
+            bool pass = AppendPriceEmaLine(sb, crossSide == "LONG", ema);
+            if (IncludePriceEma)
+                priceEmaTag = pass ? "PASS" : "FAIL";
+        }
+
+        private bool AppendPriceEmaLine(StringBuilder sb, bool isLong, double ema)
+        {
+            double price = isLong ? Symbol.Ask : Symbol.Bid;
+            bool pass = isLong ? price > ema : price < ema;
+            string result = pass ? "PASS" : "FAIL";
+            string relation = pass
+                ? (isLong ? "ABOVE" : "BELOW")
+                : (isLong ? "NOT ABOVE" : "NOT BELOW");
+
+            sb.AppendFormat(CultureInfo.InvariantCulture,
+                "Price EMA({0}) {1} {2}: {3} {4} is {5} the EMA {6} — {7}",
+                PriceEmaPeriod,
+                PriceEmaTimeFrame,
+                isLong ? "long" : "short",
+                isLong ? "Ask" : "Bid",
+                FormatPrice(price),
+                relation,
+                FormatPrice(ema),
+                result);
+            if (!IncludePriceEma)
+                sb.Append(" | off");
+            sb.Append('\n');
+            return pass;
+        }
+
+        private bool TryGetClosedPriceEma(out double ema)
+        {
+            ema = 0;
+            if (_priceEma == null || _priceEmaBars == null || _priceEmaBars.Count < PriceEmaPeriod + 2)
+                return false;
+
+            int closed = _priceEmaBars.Count - 2;
+            ema = _priceEma.Result[closed];
+            return IsFinite(ema);
+        }
+
+        private void AppendRsi(StringBuilder sb, string crossSide, ref string rsiTag)
+        {
+            double rsi;
+            if (!TryGetClosedRsi(out rsi))
+            {
+                sb.Append("RSI: not ready (need more bars)\n");
+                if (IncludeRsi)
+                    rsiTag = "WAIT";
+                return;
+            }
+
+            if (crossSide == null)
+            {
+                AppendRsiLine(sb, true, rsi);
+                AppendRsiLine(sb, false, rsi);
+                return;
+            }
+
+            bool pass = AppendRsiLine(sb, crossSide == "LONG", rsi);
+            if (IncludeRsi)
+                rsiTag = pass ? "PASS" : "FAIL";
+        }
+
+        private bool AppendRsiLine(StringBuilder sb, bool isLong, double rsi)
+        {
+            int threshold = isLong ? LongRsiThreshold : ShortRsiThreshold;
+            bool pass = isLong ? rsi > threshold : rsi < threshold;
+            string result = pass ? "PASS" : "FAIL";
+            string relation = pass
+                ? (isLong ? "ABOVE" : "BELOW")
+                : (isLong ? "NOT ABOVE" : "NOT BELOW");
+
+            sb.AppendFormat(CultureInfo.InvariantCulture,
+                "RSI({0}) {1} {2}: {3:0.00} is {4} {5} — {6}",
+                RsiPeriod,
+                RsiTimeFrame,
+                isLong ? "long" : "short",
+                rsi,
+                relation,
+                threshold,
+                result);
+            if (!IncludeRsi)
+                sb.Append(" | off");
+            sb.Append('\n');
+            return pass;
+        }
+
+        private bool TryGetClosedRsi(out double rsi)
+        {
+            rsi = 0;
+            if (_rsi == null || _rsiBars == null || _rsiBars.Count < RsiPeriod + 2)
+                return false;
+
+            int closed = _rsiBars.Count - 2;
+            rsi = _rsi.Result[closed];
+            return IsFinite(rsi);
         }
 
         private bool TryComputeBbwp(int closedIndex, out double bbwp, out double bbwpEma, out bool hasEma, out bool expansionOk)
