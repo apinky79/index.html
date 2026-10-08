@@ -4,21 +4,21 @@ import qrcode from "./qrcode.mjs";
 const STORAGE_KEY = "digital-business-card-v1";
 
 const defaults = {
-  name: "Alex Morgan",
-  title: "Founder & CEO",
-  company: "Northbridge Studio",
-  phone: "+1 415 555 0142",
-  email: "alex@northbridgestudio.com",
-  website: "https://northbridgestudio.com",
-  linkedin: "https://linkedin.com/in/alexmorgan",
-  location: "San Francisco, CA",
-  tagline: "Design · Strategy · Product",
+  name: "",
+  title: "",
+  company: "",
+  phone: "",
+  email: "",
+  website: "",
+  linkedin: "",
+  location: "",
+  tagline: "",
   brandColor: "#0f172a",
   accentColor: "#38bdf8",
   textColor: "#ffffff",
   passTypeIdentifier: "pass.com.yourcompany.businesscard",
   teamIdentifier: "YOUR_TEAM_ID",
-  organizationName: "Northbridge Studio",
+  organizationName: "",
 };
 
 const fields = [
@@ -52,6 +52,10 @@ function writeForm(data) {
   for (const key of fields) {
     const el = document.getElementById(key);
     if (el) el.value = data[key] ?? "";
+  }
+  if (!data.organizationName && data.company) {
+    const org = document.getElementById("organizationName");
+    if (org) org.value = data.company;
   }
 }
 
@@ -103,7 +107,7 @@ function renderPreview(data) {
     if (el) el.textContent = value || "—";
   };
 
-  set("preview-name", data.name);
+  set("preview-name", data.name || "Your name");
   set("preview-tagline", data.tagline);
   set("preview-title", data.title);
   set("preview-company", data.company);
@@ -134,6 +138,11 @@ function bind() {
   const form = document.getElementById("card-form");
   const onChange = () => {
     const data = readForm();
+    if (!data.organizationName && data.company) {
+      const org = document.getElementById("organizationName");
+      if (org) org.value = data.company;
+      data.organizationName = data.company;
+    }
     save(data);
     renderPreview(data);
   };
@@ -148,12 +157,6 @@ function bind() {
 
   document.getElementById("btn-export-config")?.addEventListener("click", () => {
     exportConfig(readForm());
-  });
-
-  document.getElementById("btn-reset")?.addEventListener("click", () => {
-    writeForm(defaults);
-    save(defaults);
-    renderPreview(defaults);
   });
 
   const initial = load();

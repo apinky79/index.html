@@ -46,10 +46,136 @@ header.hero h1 {
   letter-spacing: -0.02em;
 }
 
-header.hero p {
+header.hero p,
+header.hero .hero-lead {
   margin: 0;
   color: var(--muted);
   max-width: 52ch;
+}
+
+.steps {
+  list-style: none;
+  margin: 0 0 24px;
+  padding: 16px 18px;
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  display: grid;
+  gap: 10px;
+}
+
+@media (min-width: 640px) {
+  .steps {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+}
+
+.steps li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 0.92rem;
+  color: var(--muted);
+}
+
+.steps li strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.step-num {
+  flex-shrink: 0;
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #04101f;
+  font-weight: 700;
+  font-size: 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+.btn-large {
+  width: 100%;
+  padding: 14px 20px;
+  font-size: 1.05rem;
+}
+
+.btn-small {
+  font-size: 0.85rem;
+  padding: 8px 12px;
+}
+
+.actions-primary {
+  margin-top: 20px;
+}
+
+.help-after-btn {
+  margin: 12px 0 0;
+  font-size: 0.88rem;
+  color: var(--muted);
+  max-width: 42ch;
+}
+
+.optional-block summary {
+  cursor: pointer;
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+
+.optional-inner {
+  margin-top: 12px;
+}
+
+.wallet-advanced {
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+
+.wallet-advanced summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.wallet-advanced-body {
+  margin-top: 12px;
+  font-size: 0.92rem;
+  color: var(--muted);
+}
+
+.wallet-advanced-body p {
+  margin: 0 0 10px;
+}
+
+.wallet-advanced-body a {
+  color: var(--accent);
+}
+
+.preview-caption {
+  margin: -8px 0 14px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.tech-line {
+  margin: 12px 0 0;
 }
 
 .grid {

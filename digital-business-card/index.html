@@ -3,30 +3,36 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="description" content="Create a digital business card for Apple Wallet and Contacts.">
+  <meta name="description" content="Make a digital business card and save it on your iPhone.">
   <meta name="theme-color" content="#0b1020">
-  <title>Digital Business Card · Apple Wallet</title>
+  <title>Digital business card</title>
   <link rel="stylesheet" href="css/app.css">
 </head>
 <body>
   <div class="wrap">
     <header class="hero">
-      <h1>Digital business card</h1>
-      <p>Design your card, save a contact file instantly, and generate a signed <strong>Apple Wallet</strong> pass (<code>.pkpass</code>) on your Mac when you are ready.</p>
+      <h1>Your digital business card</h1>
+      <p class="hero-lead">Fill in your details, then save the card to your iPhone. That takes about a minute.</p>
     </header>
+
+    <ol class="steps" aria-label="How to save on iPhone">
+      <li><span class="step-num">1</span> Enter your info below</li>
+      <li><span class="step-num">2</span> Tap <strong>Save to iPhone</strong></li>
+      <li><span class="step-num">3</span> Open the file → <strong>Add to Contacts</strong></li>
+    </ol>
 
     <div class="grid">
       <section class="panel">
-        <h2>Your details</h2>
+        <h2 class="sr-only">Your details</h2>
         <form id="card-form" autocomplete="on">
           <div class="field">
-            <label for="name">Full name</label>
-            <input id="name" name="name" required autocomplete="name">
+            <label for="name">Your name</label>
+            <input id="name" name="name" required autocomplete="name" placeholder="Jane Smith">
           </div>
           <div class="field-row">
             <div class="field">
               <label for="title">Job title</label>
-              <input id="title" name="title" autocomplete="organization-title">
+              <input id="title" name="title" autocomplete="organization-title" placeholder="Designer">
             </div>
             <div class="field">
               <label for="company">Company</label>
@@ -35,7 +41,7 @@
           </div>
           <div class="field-row">
             <div class="field">
-              <label for="phone">Phone</label>
+              <label for="phone">Mobile</label>
               <input id="phone" name="phone" type="tel" autocomplete="tel">
             </div>
             <div class="field">
@@ -44,72 +50,76 @@
             </div>
           </div>
           <div class="field">
-            <label for="website">Website (used for Wallet QR code)</label>
-            <input id="website" name="website" type="url" inputmode="url" placeholder="https://">
-          </div>
-          <div class="field">
-            <label for="linkedin">LinkedIn URL</label>
-            <input id="linkedin" name="linkedin" type="url" inputmode="url">
-          </div>
-          <div class="field">
-            <label for="location">Location</label>
-            <input id="location" name="location" autocomplete="address-level2">
-          </div>
-          <div class="field">
-            <label for="tagline">Short tagline</label>
-            <textarea id="tagline" name="tagline" maxlength="120"></textarea>
+            <label for="website">Website</label>
+            <input id="website" name="website" type="url" inputmode="url" placeholder="https://yoursite.com">
           </div>
 
-          <details class="field">
-            <summary>Colors &amp; Apple Developer IDs</summary>
-            <div class="field-row" style="margin-top:12px">
+          <details class="field optional-block">
+            <summary>More fields (optional)</summary>
+            <div class="optional-inner">
               <div class="field">
-                <label for="brandColor">Card background</label>
-                <input id="brandColor" name="brandColor" type="color">
+                <label for="linkedin">LinkedIn</label>
+                <input id="linkedin" name="linkedin" type="url" inputmode="url">
               </div>
               <div class="field">
-                <label for="accentColor">Accent / labels</label>
-                <input id="accentColor" name="accentColor" type="color">
+                <label for="location">City or area</label>
+                <input id="location" name="location" autocomplete="address-level2">
               </div>
-            </div>
-            <div class="field">
-              <label for="textColor">Text color</label>
-              <input id="textColor" name="textColor" type="color">
-            </div>
-            <div class="field">
-              <label for="organizationName">Organization name (on pass)</label>
-              <input id="organizationName" name="organizationName">
-            </div>
-            <div class="field">
-              <label for="passTypeIdentifier">Pass Type ID</label>
-              <input id="passTypeIdentifier" name="passTypeIdentifier" placeholder="pass.com.you.businesscard">
-            </div>
-            <div class="field">
-              <label for="teamIdentifier">Apple Team ID</label>
-              <input id="teamIdentifier" name="teamIdentifier" placeholder="AB12CD34EF">
+              <div class="field">
+                <label for="tagline">One-line intro</label>
+                <textarea id="tagline" name="tagline" maxlength="120" placeholder="What you do in a few words"></textarea>
+              </div>
             </div>
           </details>
+
+          <details class="field optional-block">
+            <summary>Card colours (optional)</summary>
+            <div class="optional-inner">
+              <div class="field-row">
+                <div class="field">
+                  <label for="brandColor">Background</label>
+                  <input id="brandColor" name="brandColor" type="color">
+                </div>
+                <div class="field">
+                  <label for="accentColor">Accent</label>
+                  <input id="accentColor" name="accentColor" type="color">
+                </div>
+              </div>
+              <div class="field">
+                <label for="textColor">Text</label>
+                <input id="textColor" name="textColor" type="color">
+              </div>
+            </div>
+          </details>
+
+          <!-- Hidden: only used if you build an Apple Wallet pass on a Mac -->
+          <input type="hidden" id="organizationName" name="organizationName">
+          <input type="hidden" id="passTypeIdentifier" name="passTypeIdentifier">
+          <input type="hidden" id="teamIdentifier" name="teamIdentifier">
         </form>
 
-        <div class="actions">
-          <button type="button" class="btn btn-primary" id="btn-vcard">Download vCard (.vcf)</button>
-          <button type="button" class="btn" id="btn-export-config">Export Wallet config</button>
-          <button type="button" class="btn" id="btn-reset">Reset example</button>
+        <div class="actions actions-primary">
+          <button type="button" class="btn btn-primary btn-large" id="btn-vcard">Save to iPhone</button>
         </div>
+        <p class="help-after-btn">Downloads a contact file. On iPhone: tap the file, then <strong>Add to Contacts</strong>. You can share it like any contact.</p>
 
-        <div class="note">
-          <strong>Apple Wallet</strong> requires a signed pass from an Apple Developer account ($99/year).
-          Export your config, add signing certificates (see <code>WALLET-SIGNING.md</code>), then run
-          <code>npm run build</code> and open the <code>.pkpass</code> on your iPhone.
-        </div>
+        <details class="wallet-advanced">
+          <summary>Want the card inside Apple Wallet?</summary>
+          <div class="wallet-advanced-body">
+            <p>Apple Wallet is the app with boarding passes and tickets. Putting a business card there is possible, but <strong>Apple does not let websites create Wallet cards directly</strong>. You need a Mac, an Apple Developer account ($99/year), and a one-time technical setup.</p>
+            <p>If you still want that, we included a builder in this folder. Read <a href="WALLET-SIGNING.md">WALLET-SIGNING.md</a> (or ask someone technical to run it for you). For most people, <strong>Contacts is enough</strong> — your details are on your phone and easy to share.</p>
+            <p class="tech-line"><button type="button" class="btn btn-small" id="btn-export-config">Download config for Mac builder</button></p>
+          </div>
+        </details>
       </section>
 
       <aside class="panel wallet-preview">
-        <h2>Wallet preview</h2>
-        <div class="pass-card" aria-label="Apple Wallet style preview">
+        <h2>Preview</h2>
+        <p class="preview-caption">This is how your card can look in Wallet. Saving to <strong>Contacts</strong> uses the same details.</p>
+        <div class="pass-card" aria-label="Card preview">
           <div class="pass-strip">
-            <div class="name" id="preview-name">Alex Morgan</div>
-            <div class="tagline" id="preview-tagline">Design · Strategy · Product</div>
+            <div class="name" id="preview-name">Your name</div>
+            <div class="tagline" id="preview-tagline"></div>
           </div>
           <div class="pass-body">
             <div class="pass-row">
@@ -133,17 +143,9 @@
               </div>
             </div>
             <div class="pass-qr">
-              <canvas id="qr-canvas" width="168" height="168" aria-label="QR code preview"></canvas>
+              <canvas id="qr-canvas" width="168" height="168" aria-label="QR code to your website or email"></canvas>
             </div>
           </div>
-          <div class="pass-footer">Add to Apple Wallet after generating your signed pass</div>
-        </div>
-        <div class="wallet-badge" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="2" y="5" width="20" height="14" rx="3" stroke="currentColor" stroke-width="1.5"/>
-            <path d="M2 10h20" stroke="currentColor" stroke-width="1.5"/>
-          </svg>
-          Works with Apple Wallet on iPhone &amp; Watch
         </div>
       </aside>
     </div>
