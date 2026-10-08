@@ -1,0 +1,18 @@
+{
+  "name": "digital-business-card",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Digital business card with Apple Wallet (.pkpass) and vCard export",
+  "scripts": {
+    "generate:assets": "node scripts/generate-assets.mjs",
+    "generate:pass": "node scripts/generate-pass.mjs",
+    "build": "npm run generate:assets && npm run generate:pass",
+    "serve": "node scripts/serve.mjs"
+  },
+  "dependencies": {
+    "passkit-generator": "^3.3.1",
+    "qrcode-generator": "^2.0.4",
+    "sharp": "^0.33.5"
+  }
+}
