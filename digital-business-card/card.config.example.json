@@ -1,0 +1,17 @@
+{
+  "name": "Alex Morgan",
+  "title": "Founder & CEO",
+  "company": "Northbridge Studio",
+  "phone": "+1 415 555 0142",
+  "email": "alex@northbridgestudio.com",
+  "website": "https://northbridgestudio.com",
+  "linkedin": "https://linkedin.com/in/alexmorgan",
+  "location": "San Francisco, CA",
+  "tagline": "Design · Strategy · Product",
+  "brandColor": "#0f172a",
+  "accentColor": "#38bdf8",
+  "textColor": "#ffffff",
+  "passTypeIdentifier": "pass.com.yourcompany.businesscard",
+  "teamIdentifier": "YOUR_TEAM_ID",
+  "organizationName": "Northbridge Studio"
+}

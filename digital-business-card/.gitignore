@@ -1,0 +1,6 @@
+node_modules/
+certs/
+output/
+card.config.json
+*.pkpass
+.DS_Store

@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="description" content="Make a digital business card and save it on your iPhone.">
+  <meta name="theme-color" content="#0b1020">
+  <title>Digital business card</title>
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <div class="wrap">
+    <header class="hero">
+      <h1>Your digital business card</h1>
+      <p class="hero-lead">Fill in your details, then save the card to your iPhone. That takes about a minute.</p>
+    </header>
+
+    <ol class="steps" aria-label="How to save on iPhone">
+      <li><span class="step-num">1</span> Enter your info below</li>
+      <li><span class="step-num">2</span> Tap <strong>Save to iPhone</strong></li>
+      <li><span class="step-num">3</span> Open the file → <strong>Add to Contacts</strong></li>
+    </ol>
+
+    <div class="grid">
+      <section class="panel">
+        <h2 class="sr-only">Your details</h2>
+        <form id="card-form" autocomplete="on">
+          <div class="field">
+            <label for="name">Your name</label>
+            <input id="name" name="name" required autocomplete="name" placeholder="Jane Smith">
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label for="title">Job title</label>
+              <input id="title" name="title" autocomplete="organization-title" placeholder="Designer">
+            </div>
+            <div class="field">
+              <label for="company">Company</label>
+              <input id="company" name="company" autocomplete="organization">
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label for="phone">Mobile</label>
+              <input id="phone" name="phone" type="tel" autocomplete="tel">
+            </div>
+            <div class="field">
+              <label for="email">Email</label>
+              <input id="email" name="email" type="email" autocomplete="email">
+            </div>
+          </div>
+          <div class="field">
+            <label for="website">Website</label>
+            <input id="website" name="website" type="url" inputmode="url" placeholder="https://yoursite.com">
+          </div>
+
+          <details class="field optional-block">
+            <summary>More fields (optional)</summary>
+            <div class="optional-inner">
+              <div class="field">
+                <label for="linkedin">LinkedIn</label>
+                <input id="linkedin" name="linkedin" type="url" inputmode="url">
+              </div>
+              <div class="field">
+                <label for="location">City or area</label>
+                <input id="location" name="location" autocomplete="address-level2">
+              </div>
+              <div class="field">
+                <label for="tagline">One-line intro</label>
+                <textarea id="tagline" name="tagline" maxlength="120" placeholder="What you do in a few words"></textarea>
+              </div>
+            </div>
+          </details>
+
+          <details class="field optional-block">
+            <summary>Card colours (optional)</summary>
+            <div class="optional-inner">
+              <div class="field-row">
+                <div class="field">
+                  <label for="brandColor">Background</label>
+                  <input id="brandColor" name="brandColor" type="color">
+                </div>
+                <div class="field">
+                  <label for="accentColor">Accent</label>
+                  <input id="accentColor" name="accentColor" type="color">
+                </div>
+              </div>
+              <div class="field">
+                <label for="textColor">Text</label>
+                <input id="textColor" name="textColor" type="color">
+              </div>
+            </div>
+          </details>
+
+          <!-- Hidden: only used if you build an Apple Wallet pass on a Mac -->
+          <input type="hidden" id="organizationName" name="organizationName">
+          <input type="hidden" id="passTypeIdentifier" name="passTypeIdentifier">
+          <input type="hidden" id="teamIdentifier" name="teamIdentifier">
+        </form>
+
+        <div class="actions actions-primary">
+          <button type="button" class="btn btn-primary btn-large" id="btn-vcard">Save to iPhone</button>
+        </div>
+        <p class="help-after-btn">Downloads a contact file. On iPhone: tap the file, then <strong>Add to Contacts</strong>. You can share it like any contact.</p>
+
+        <details class="wallet-advanced">
+          <summary>Want the card inside Apple Wallet?</summary>
+          <div class="wallet-advanced-body">
+            <p>Apple Wallet is the app with boarding passes and tickets. Putting a business card there is possible, but <strong>Apple does not let websites create Wallet cards directly</strong>. You need a Mac, an Apple Developer account ($99/year), and a one-time technical setup.</p>
+            <p><strong>Have an Apple Developer account?</strong> You still don’t need an App Store app — only a Pass Type ID and certificates on your Mac. Follow <a href="WALLET-QUICKSTART.md">WALLET-QUICKSTART.md</a> (about 15–20 minutes once). Otherwise, <strong>Contacts</strong> is usually enough.</p>
+            <p class="tech-line"><button type="button" class="btn btn-small" id="btn-export-config">Download config for Mac builder</button></p>
+          </div>
+        </details>
+      </section>
+
+      <aside class="panel wallet-preview">
+        <h2>Preview</h2>
+        <p class="preview-caption">This is how your card can look in Wallet. Saving to <strong>Contacts</strong> uses the same details.</p>
+        <div class="pass-card" aria-label="Card preview">
+          <div class="pass-strip">
+            <div class="name" id="preview-name">Your name</div>
+            <div class="tagline" id="preview-tagline"></div>
+          </div>
+          <div class="pass-body">
+            <div class="pass-row">
+              <div class="pass-field">
+                <div class="label">Title</div>
+                <div class="value" id="preview-title">—</div>
+              </div>
+              <div class="pass-field">
+                <div class="label">Company</div>
+                <div class="value" id="preview-company">—</div>
+              </div>
+            </div>
+            <div class="pass-row">
+              <div class="pass-field">
+                <div class="label">Phone</div>
+                <div class="value" id="preview-phone">—</div>
+              </div>
+              <div class="pass-field">
+                <div class="label">Email</div>
+                <div class="value" id="preview-email">—</div>
+              </div>
+            </div>
+            <div class="pass-qr">
+              <canvas id="qr-canvas" width="168" height="168" aria-label="QR code to your website or email"></canvas>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
